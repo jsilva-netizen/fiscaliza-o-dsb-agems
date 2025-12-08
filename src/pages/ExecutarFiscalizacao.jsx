@@ -124,7 +124,7 @@ export default function ExecutarFiscalizacao() {
                             <p className="text-2xl font-bold text-green-600">
                                 {unidades.reduce((acc, u) => acc + (u.total_constatacoes || 0), 0)}
                             </p>
-                            <p className="text-xs text-gray-500">Conforme</p>
+                            <p className="text-xs text-gray-500">Constatações</p>
                         </CardContent>
                     </Card>
                     <Card className="bg-red-50">

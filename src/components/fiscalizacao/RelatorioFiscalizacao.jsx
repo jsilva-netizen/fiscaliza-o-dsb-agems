@@ -125,7 +125,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             pdf.setFont('helvetica', 'normal');
             pdf.text(`• Unidades Vistoriadas: ${unidades.length}`, margin + 2, yPos);
             yPos += 6;
-            pdf.text(`• Total de Conformidades: ${fiscalizacao.total_conformidades || 0}`, margin + 2, yPos);
+            pdf.text(`• Total de Constatações: ${fiscalizacao.total_conformidades || 0}`, margin + 2, yPos);
             yPos += 6;
             pdf.text(`• Total de Não Conformidades: ${fiscalizacao.total_nao_conformidades || 0}`, margin + 2, yPos);
             yPos += 6;

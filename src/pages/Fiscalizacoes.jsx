@@ -149,7 +149,7 @@ export default function Fiscalizacoes() {
                                             <div className="flex gap-4 mt-3 pt-3 border-t text-xs">
                                                 <span className="flex items-center gap-1 text-green-600">
                                                     <CheckCircle2 className="h-3 w-3" />
-                                                    {fisc.total_conformidades || 0} Conformidades
+                                                    {fisc.total_conformidades || 0} Constatações
                                                 </span>
                                                 <span className="flex items-center gap-1 text-red-600">
                                                     <AlertTriangle className="h-3 w-3" />
