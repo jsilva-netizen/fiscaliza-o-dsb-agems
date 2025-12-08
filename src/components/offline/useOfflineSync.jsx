@@ -102,11 +102,20 @@ export function useOfflineSync() {
         }
     }, [isOnline, isSyncing, updatePendingCount]);
 
+    // Clear all sync errors
+    const clearErrors = useCallback(async () => {
+        await clearSyncErrors();
+        await updatePendingCount();
+    }, [updatePendingCount]);
+
     return {
         isOnline,
         isSyncing,
         pendingCount,
+        syncProgress,
+        syncErrors,
         syncData,
-        updatePendingCount
+        updatePendingCount,
+        clearErrors
     };
 }

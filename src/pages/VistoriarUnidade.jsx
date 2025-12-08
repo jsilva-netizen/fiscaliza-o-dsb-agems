@@ -18,6 +18,8 @@ import ChecklistItem from '@/components/fiscalizacao/ChecklistItem';
 import PhotoGrid from '@/components/fiscalizacao/PhotoGrid';
 import RelatorioUnidade from '@/components/fiscalizacao/RelatorioUnidade';
 import OfflineIndicator from '@/components/OfflineIndicator';
+import useOfflineCache from '@/components/offline/useOfflineCache';
+import { addPendingOperation } from '@/components/offline/offlineStorage';
 
 export default function VistoriarUnidade() {
     const queryClient = useQueryClient();
@@ -48,11 +50,12 @@ export default function VistoriarUnidade() {
         enabled: !!unidade?.fiscalizacao_id
     });
 
-    const { data: itensChecklist = [] } = useQuery({
-        queryKey: ['checklist', unidade?.tipo_unidade_id],
-        queryFn: () => base44.entities.ItemChecklist.filter({ tipo_unidade_id: unidade?.tipo_unidade_id }, 'ordem', 100),
-        enabled: !!unidade?.tipo_unidade_id
-    });
+    // Use offline cache for checklist items
+    const { data: itensChecklist = [], fromCache: checklistFromCache } = useOfflineCache(
+        `checklist_${unidade?.tipo_unidade_id}`,
+        () => base44.entities.ItemChecklist.filter({ tipo_unidade_id: unidade?.tipo_unidade_id }, 'ordem', 100),
+        1440 // 24 hours cache
+    );
 
     const { data: respostasExistentes = [] } = useQuery({
         queryKey: ['respostas', unidadeId],
@@ -167,7 +170,7 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
         }
     };
 
-    // Mutations
+    // Mutations with offline support
     const salvarRespostaMutation = useMutation({
         mutationFn: async ({ itemId, data, usarIA }) => {
             const item = itensChecklist.find(i => i.id === itemId);
@@ -185,6 +188,28 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
                 ...data
             };
 
+            // If offline, queue the operation
+            if (!navigator.onLine) {
+                if (existente) {
+                    await addPendingOperation({
+                        operation: 'update',
+                        entity: 'RespostaChecklist',
+                        id: existente.id,
+                        data: payload,
+                        priority: 2
+                    });
+                } else {
+                    await addPendingOperation({
+                        operation: 'create',
+                        entity: 'RespostaChecklist',
+                        data: payload,
+                        priority: 2
+                    });
+                }
+                return;
+            }
+
+            // If online, execute immediately
             if (existente) {
                 await base44.entities.RespostaChecklist.update(existente.id, payload);
             } else {
