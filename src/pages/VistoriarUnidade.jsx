@@ -495,10 +495,13 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
                                         {/* Fotos da NC */}
                                         <div className="mt-3 pt-3 border-t">
                                             <PhotoGrid
-                                                fotos={(nc.fotos || []).map(url => ({ url }))}
+                                                fotos={(nc.fotos || []).map((f, i) => 
+                                                    typeof f === 'string' ? { url: f } : f
+                                                )}
                                                 minFotos={1}
                                                 onAddFoto={(fotoData) => {
-                                                    const novasFotos = [...(nc.fotos || []), fotoData.url];
+                                                    const fotosAtuais = (nc.fotos || []).map(f => typeof f === 'string' ? { url: f } : f);
+                                                    const novasFotos = [...fotosAtuais, fotoData];
                                                     base44.entities.NaoConformidade.update(nc.id, {
                                                         fotos: novasFotos,
                                                         latitude_foto: fotoData.latitude,
@@ -508,14 +511,23 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
                                                     });
                                                 }}
                                                 onRemoveFoto={(index) => {
-                                                    const novasFotos = (nc.fotos || []).filter((_, i) => i !== index);
+                                                    const fotosAtuais = (nc.fotos || []).map(f => typeof f === 'string' ? { url: f } : f);
+                                                    const novasFotos = fotosAtuais.filter((_, i) => i !== index);
                                                     base44.entities.NaoConformidade.update(nc.id, {
                                                         fotos: novasFotos
                                                     }).then(() => {
                                                         queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
                                                     });
                                                 }}
-                                                onUpdateLegenda={() => {}}
+                                                onUpdateLegenda={(index, legenda) => {
+                                                    const fotosAtuais = (nc.fotos || []).map(f => typeof f === 'string' ? { url: f } : f);
+                                                    fotosAtuais[index] = { ...fotosAtuais[index], legenda };
+                                                    base44.entities.NaoConformidade.update(nc.id, {
+                                                        fotos: fotosAtuais
+                                                    }).then(() => {
+                                                        queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
+                                                    });
+                                                }}
                                                 titulo={`Fotos da ${nc.numero_nc}`}
                                             />
                                         </div>
