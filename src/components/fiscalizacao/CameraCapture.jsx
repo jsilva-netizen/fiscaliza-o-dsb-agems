@@ -9,18 +9,23 @@ export default function CameraCapture({ onCapture, onCancel, minPhotos = 1, curr
     const [stream, setStream] = useState(null);
     const [capturedImage, setCapturedImage] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isCameraReady, setIsCameraReady] = useState(false);
     const [error, setError] = useState(null);
     const [location, setLocation] = useState(null);
 
     const startCamera = async () => {
         try {
             setError(null);
+            setIsCameraReady(false);
             const mediaStream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
             });
             setStream(mediaStream);
             if (videoRef.current) {
                 videoRef.current.srcObject = mediaStream;
+                videoRef.current.onloadedmetadata = () => {
+                    setIsCameraReady(true);
+                };
             }
             
             // Obter localização
@@ -147,14 +152,14 @@ export default function CameraCapture({ onCapture, onCancel, minPhotos = 1, curr
             </div>
 
             {/* Controls */}
-            <div className="bg-black/80 p-6 flex justify-center gap-6">
+            <div className="bg-black/80 p-6 flex justify-center gap-6 items-center">
                 {capturedImage ? (
                     <>
                         <Button 
                             variant="outline" 
                             size="lg" 
                             onClick={retakePhoto}
-                            className="bg-white/10 border-white/30 text-white"
+                            className="bg-white/10 border-white/30 text-white hover:bg-white/20"
                         >
                             <RotateCcw className="h-5 w-5 mr-2" />
                             Refazer
@@ -163,20 +168,29 @@ export default function CameraCapture({ onCapture, onCancel, minPhotos = 1, curr
                             size="lg" 
                             onClick={confirmPhoto}
                             disabled={isLoading}
-                            className="bg-green-600 hover:bg-green-700"
+                            className="bg-green-600 hover:bg-green-700 text-white"
                         >
                             <Check className="h-5 w-5 mr-2" />
                             {isLoading ? 'Salvando...' : 'Confirmar'}
                         </Button>
                     </>
                 ) : (
-                    <Button 
-                        size="lg" 
-                        onClick={capturePhoto}
-                        className="w-20 h-20 rounded-full bg-white hover:bg-gray-200"
-                    >
-                        <Camera className="h-8 w-8 text-black" />
-                    </Button>
+                    <div className="flex flex-col items-center gap-3">
+                        {!isCameraReady && !error && (
+                            <p className="text-white text-sm">Iniciando câmera...</p>
+                        )}
+                        <Button 
+                            size="lg" 
+                            onClick={capturePhoto}
+                            disabled={!isCameraReady || error}
+                            className="w-20 h-20 rounded-full bg-white hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <Camera className="h-8 w-8 text-black" />
+                        </Button>
+                        {isCameraReady && (
+                            <p className="text-white text-xs">Toque para capturar</p>
+                        )}
+                    </div>
                 )}
             </div>
         </div>
