@@ -93,7 +93,7 @@ export default function VistoriarUnidade() {
     const obterSugestoesIA = async (item, observacao) => {
         setLoadingIA(true);
         try {
-            const prompt = `Você é um especialista em fiscalização de saneamento da AGEMS (Mato Grosso do Sul).
+            const prompt = `Você é um especialista em fiscalização de saneamento da AGEMS (Agência Estadual de Regulação de Serviços Públicos de Mato Grosso do Sul).
 
 CONTEXTO DA FISCALIZAÇÃO:
 - Tipo de Unidade: ${unidade?.tipo_unidade_nome}
@@ -104,15 +104,40 @@ ITEM DO CHECKLIST QUE GEROU NC:
 - Pergunta: ${item.pergunta}
 - Observação do fiscal: ${observacao || 'Nenhuma'}
 
-TAREFA:
-Analisar esta não conformidade e sugerir:
-1. Artigo/Inciso específico das Portarias AGEMS mais adequado
-2. Texto técnico detalhado da Não Conformidade
-3. Determinação clara e objetiva para correção
-4. Prazo em dias adequado para cumprimento
-5. Recomendações adicionais (se houver)
+CONHECIMENTO REGULATÓRIO - PORTARIA AGEMS Nº 233/2022:
+A Portaria AGEMS nº 233, de 15 de dezembro de 2022, define as penalidades e infrações aplicáveis aos prestadores de serviços de saneamento.
 
-Seja técnico, específico e baseado nas normas de saneamento.`;
+Principais artigos relevantes para Água e Esgoto:
+- Art. 18: Infrações de natureza LEVE (Grupo II)
+- Art. 20: Infrações de natureza GRAVE (Grupo IV) - obrigações operacionais críticas
+- Art. 21: Infrações de natureza GRAVÍSSIMA (Grupo V) - questões de qualidade e segurança
+
+Exemplos de obrigações conforme Art. 20 (GRAVE):
+- Inciso VII: Cumprir normas técnicas e procedimentos para operação das instalações
+- Inciso X: Realizar limpeza de reservatórios e redes conforme legislação
+- Inciso XI: Obter licenças ambientais necessárias
+
+Exemplos de obrigações conforme Art. 21 (GRAVÍSSIMA):
+- Inciso I: Dispor adequadamente água e resíduos de ETAs, Reservatórios e ETEs
+- Inciso IX: Atender requisitos de qualidade dos efluentes das ETEs conforme legislação
+
+FORMATO ESPERADO DO RELATÓRIO AGEMS:
+Baseado no modelo RFP-CATESA-CRES, o relatório deve conter:
+- Constatações (C1, C2, C3...)
+- Não Conformidades (NC1, NC2...) com artigo da portaria
+- Determinações (D1, D2...) com prazo específico
+- Recomendações (R1, R2...) quando aplicável
+
+TAREFA:
+Analisar esta não conformidade identificada durante a fiscalização e sugerir:
+
+1. **Artigo/Inciso da Portaria AGEMS nº 233/2022** mais adequado (especifique Art. XX, inciso Y)
+2. **Texto técnico da Não Conformidade** (padrão AGEMS: objetivo, técnico, referenciando a constatação)
+3. **Determinação** clara para correção (use linguagem imperativa: "Determina-se..." ou "Sanar...")
+4. **Prazo em dias** adequado (considere: 30 dias para questões administrativas, 60 dias para adequações operacionais, 90+ dias para obras)
+5. **Recomendações adicionais** baseadas em boas práticas (se aplicável)
+
+Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de relatórios da AGEMS.`;
 
             const resultado = await base44.integrations.Core.InvokeLLM({
                 prompt,
