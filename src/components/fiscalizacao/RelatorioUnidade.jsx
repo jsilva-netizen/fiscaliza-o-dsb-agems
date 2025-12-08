@@ -86,15 +86,16 @@ export default function RelatorioUnidade({
             drawCell('Constatações', margin, yPos, tableWidth, rowHeight, true, true, [192, 192, 192]);
             yPos += rowHeight;
 
-            const constatacoes = respostas.filter(r => r.resposta === 'SIM' || r.resposta === 'NA');
+            const constatacoes = respostas.filter(r => r.resposta !== 'NA');
             constatacoes.forEach((resp, idx) => {
-                const texto = `C${idx + 1}. ${resp.pergunta}${resp.observacao ? ` - ${resp.observacao}` : ''}`;
+                const numConst = resp.numero_constatacao || `C${idx + 1}`;
+                const texto = `${numConst}. ${resp.pergunta}${resp.observacao ? ` - ${resp.observacao}` : ''}`;
                 const lines = pdf.splitTextToSize(texto, tableWidth - 4);
                 const cellHeight = Math.max(rowHeight, lines.length * 4 + 2);
                 
                 pdf.rect(margin, yPos, tableWidth, cellHeight, 'S');
                 pdf.setFont('helvetica', 'bold');
-                pdf.text(`C${idx + 1}.`, margin + 2, yPos + 5);
+                pdf.text(numConst, margin + 2, yPos + 5);
                 pdf.setFont('helvetica', 'normal');
                 const restText = texto.substring(texto.indexOf('.') + 2);
                 const restLines = pdf.splitTextToSize(restText, tableWidth - 15);

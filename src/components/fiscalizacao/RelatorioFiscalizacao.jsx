@@ -189,9 +189,9 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                 drawCell('Constatações', margin, yPos, tableWidth, rowHeight, true, true, [192, 192, 192]);
                 yPos += rowHeight;
 
-                const constatacoes = respostas.filter(r => r.resposta === 'SIM' || r.resposta === 'NA');
+                const constatacoes = respostas.filter(r => r.resposta !== 'NA');
                 constatacoes.forEach((resp, i) => {
-                    const texto = `C${i + 1}. ${resp.pergunta}${resp.observacao ? ` - ${resp.observacao}` : ''}`;
+                    const texto = `${resp.numero_constatacao || `C${i + 1}`}. ${resp.pergunta}${resp.observacao ? ` - ${resp.observacao}` : ''}`;
                     const lines = pdf.splitTextToSize(texto, tableWidth - 4);
                     const cellHeight = Math.max(rowHeight, lines.length * 4 + 2);
                     
@@ -203,7 +203,8 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     
                     pdf.rect(margin, yPos, tableWidth, cellHeight, 'S');
                     pdf.setFont('helvetica', 'bold');
-                    pdf.text(`C${i + 1}.`, margin + 2, yPos + 5);
+                    const numConst = resp.numero_constatacao || `C${i + 1}`;
+                    pdf.text(numConst, margin + 2, yPos + 5);
                     pdf.setFont('helvetica', 'normal');
                     const restText = texto.substring(texto.indexOf('.') + 2);
                     const restLines = pdf.splitTextToSize(restText, tableWidth - 15);

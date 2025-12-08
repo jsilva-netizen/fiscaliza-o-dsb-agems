@@ -173,11 +173,15 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
             const item = itensChecklist.find(i => i.id === itemId);
             const existente = respostasExistentes.find(r => r.item_checklist_id === itemId);
             
+            // Determinar o número da constatação
+            const constatacaoNum = respostasExistentes.length + 1;
+            
             const payload = {
                 unidade_fiscalizada_id: unidadeId,
                 item_checklist_id: itemId,
                 pergunta: item.pergunta,
                 gera_nc: item.gera_nc,
+                numero_constatacao: `C${constatacaoNum}`,
                 ...data
             };
 
@@ -315,7 +319,7 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
 
             await base44.entities.UnidadeFiscalizada.update(unidadeId, {
                 status: 'finalizada',
-                total_constatacoes: Object.values(respostas).filter(r => r.resposta === 'SIM' || r.resposta === 'NA').length,
+                total_constatacoes: Object.values(respostas).filter(r => r.resposta !== 'NA').length,
                 total_ncs: ncsExistentes.length
             });
         },

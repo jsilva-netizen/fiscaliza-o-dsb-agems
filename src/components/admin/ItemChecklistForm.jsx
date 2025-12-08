@@ -10,6 +10,8 @@ import { Save, X } from 'lucide-react';
 export default function ItemChecklistForm({ item, onSave, onCancel }) {
     const [formData, setFormData] = useState({
         pergunta: '',
+        texto_constatacao_sim: '',
+        texto_constatacao_nao: '',
         gera_nc: false,
         artigo_portaria: '',
         texto_nc: '',
@@ -53,6 +55,32 @@ export default function ItemChecklistForm({ item, onSave, onCancel }) {
                             placeholder="Ex: A unidade possui licença ambiental válida?"
                             required
                         />
+                    </div>
+
+                    <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h4 className="font-medium text-blue-800">Constatações</h4>
+                        
+                        <div>
+                            <Label htmlFor="texto_constatacao_sim">Texto da Constatação (Resposta SIM)</Label>
+                            <Textarea
+                                id="texto_constatacao_sim"
+                                value={formData.texto_constatacao_sim}
+                                onChange={(e) => setFormData({...formData, texto_constatacao_sim: e.target.value})}
+                                placeholder="Texto quando a resposta for SIM..."
+                                rows={2}
+                            />
+                        </div>
+
+                        <div>
+                            <Label htmlFor="texto_constatacao_nao">Texto da Constatação (Resposta NÃO)</Label>
+                            <Textarea
+                                id="texto_constatacao_nao"
+                                value={formData.texto_constatacao_nao}
+                                onChange={(e) => setFormData({...formData, texto_constatacao_nao: e.target.value})}
+                                placeholder="Texto quando a resposta for NÃO..."
+                                rows={2}
+                            />
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
