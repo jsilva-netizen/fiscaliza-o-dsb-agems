@@ -209,10 +209,11 @@ export default function RelatorioUnidade({
                     if (fotosBase64[i]?.base64) {
                         try {
                             pdf.addImage(fotosBase64[i].base64, 'JPEG', leftX + 2, yPos + 2, imgWidth, imgHeight);
-                            pdf.setFontSize(8);
+                            pdf.setFontSize(7);
                             pdf.setFont('helvetica', 'normal');
-                            const legenda = fotosBase64[i].legenda || `Figura ${i + 1}`;
-                            pdf.text(legenda, leftX + imgCellWidth / 2, yPos + imgHeight + 6, { align: 'center' });
+                            const legenda = fotosBase64[i].legenda || `Figura ${i + 1} – ${unidade.tipo_unidade_nome}.`;
+                            const lines = pdf.splitTextToSize(legenda, imgCellWidth - 4);
+                            pdf.text(lines, leftX + imgCellWidth / 2, yPos + imgHeight + 5, { align: 'center' });
                         } catch (err) {
                             console.error('Erro ao adicionar foto:', err);
                         }
@@ -223,10 +224,11 @@ export default function RelatorioUnidade({
                     if (fotosBase64[i + 1]?.base64) {
                         try {
                             pdf.addImage(fotosBase64[i + 1].base64, 'JPEG', rightX + 2, yPos + 2, imgWidth, imgHeight);
-                            pdf.setFontSize(8);
+                            pdf.setFontSize(7);
                             pdf.setFont('helvetica', 'normal');
-                            const legenda = fotosBase64[i + 1].legenda || `Figura ${i + 2}`;
-                            pdf.text(legenda, rightX + imgCellWidth / 2, yPos + imgHeight + 6, { align: 'center' });
+                            const legenda = fotosBase64[i + 1].legenda || `Figura ${i + 2} – ${unidade.tipo_unidade_nome}.`;
+                            const lines = pdf.splitTextToSize(legenda, imgCellWidth - 4);
+                            pdf.text(lines, rightX + imgCellWidth / 2, yPos + imgHeight + 5, { align: 'center' });
                         } catch (err) {
                             console.error('Erro ao adicionar foto:', err);
                         }

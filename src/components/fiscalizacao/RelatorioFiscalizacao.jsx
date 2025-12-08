@@ -72,6 +72,67 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             const margin = 10;
             let yPos = margin;
 
+            // Capa - Resumo Executivo
+            pdf.setFillColor(30, 64, 175);
+            pdf.rect(0, 0, pageWidth, 60, 'F');
+            
+            pdf.setTextColor(255, 255, 255);
+            pdf.setFontSize(20);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('RELATÓRIO DE FISCALIZAÇÃO', pageWidth / 2, 25, { align: 'center' });
+            
+            pdf.setFontSize(14);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(fiscalizacao.municipio_nome.toUpperCase(), pageWidth / 2, 35, { align: 'center' });
+            pdf.text(fiscalizacao.servico, pageWidth / 2, 45, { align: 'center' });
+
+            pdf.setTextColor(0, 0, 0);
+            yPos = 75;
+
+            // Informações da Fiscalização
+            pdf.setFontSize(12);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('INFORMAÇÕES DA FISCALIZAÇÃO', margin, yPos);
+            yPos += 8;
+
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(`Município: ${fiscalizacao.municipio_nome}`, margin + 2, yPos);
+            yPos += 6;
+            pdf.text(`Serviço: ${fiscalizacao.servico}`, margin + 2, yPos);
+            yPos += 6;
+            pdf.text(`Data Início: ${format(new Date(fiscalizacao.data_inicio), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, margin + 2, yPos);
+            yPos += 6;
+            if (fiscalizacao.data_fim) {
+                pdf.text(`Data Fim: ${format(new Date(fiscalizacao.data_fim), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, margin + 2, yPos);
+                yPos += 6;
+            }
+            if (fiscalizacao.fiscal_nome) {
+                pdf.text(`Fiscal: ${fiscalizacao.fiscal_nome}`, margin + 2, yPos);
+                yPos += 6;
+            }
+            yPos += 8;
+
+            // Resumo Executivo
+            pdf.setFillColor(220, 220, 220);
+            pdf.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F');
+            pdf.setFontSize(12);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('RESUMO EXECUTIVO', margin + 2, yPos + 5.5);
+            yPos += 10;
+
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(`• Unidades Vistoriadas: ${unidades.length}`, margin + 2, yPos);
+            yPos += 6;
+            pdf.text(`• Total de Conformidades: ${fiscalizacao.total_conformidades || 0}`, margin + 2, yPos);
+            yPos += 6;
+            pdf.text(`• Total de Não Conformidades: ${fiscalizacao.total_nao_conformidades || 0}`, margin + 2, yPos);
+            yPos += 6;
+            pdf.text(`• Total de Recomendações: ${fiscalizacao.total_recomendacoes || 0}`, margin + 2, yPos);
+            yPos += 6;
+            pdf.text(`• Total de Determinações: ${fiscalizacao.total_determinacoes || 0}`, margin + 2, yPos);
+
             const tableWidth = pageWidth - 2 * margin;
             const rowHeight = 7;
             
@@ -103,9 +164,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                 const fotos = todasFotos[idx] || [];
 
                 // Nova página para cada unidade
-                if (idx > 0) {
-                    pdf.addPage();
-                }
+                pdf.addPage();
                 yPos = margin;
 
                 pdf.setFontSize(9);
@@ -293,10 +352,11 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                         if (fotosBase64[i]?.base64) {
                             try {
                                 pdf.addImage(fotosBase64[i].base64, 'JPEG', leftX + 2, yPos + 2, imgWidth, imgHeight);
-                                pdf.setFontSize(8);
+                                pdf.setFontSize(7);
                                 pdf.setFont('helvetica', 'normal');
-                                const legenda = fotosBase64[i].legenda || `Figura ${i + 1}`;
-                                pdf.text(legenda, leftX + imgCellWidth / 2, yPos + imgHeight + 6, { align: 'center' });
+                                const legenda = fotosBase64[i].legenda || `Figura ${i + 1} – ${unidade.tipo_unidade_nome}.`;
+                                const lines = pdf.splitTextToSize(legenda, imgCellWidth - 4);
+                                pdf.text(lines, leftX + imgCellWidth / 2, yPos + imgHeight + 5, { align: 'center' });
                             } catch (err) {
                                 console.error('Erro ao adicionar foto:', err);
                             }
@@ -307,10 +367,11 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                         if (fotosBase64[i + 1]?.base64) {
                             try {
                                 pdf.addImage(fotosBase64[i + 1].base64, 'JPEG', rightX + 2, yPos + 2, imgWidth, imgHeight);
-                                pdf.setFontSize(8);
+                                pdf.setFontSize(7);
                                 pdf.setFont('helvetica', 'normal');
-                                const legenda = fotosBase64[i + 1].legenda || `Figura ${i + 2}`;
-                                pdf.text(legenda, rightX + imgCellWidth / 2, yPos + imgHeight + 6, { align: 'center' });
+                                const legenda = fotosBase64[i + 1].legenda || `Figura ${i + 2} – ${unidade.tipo_unidade_nome}.`;
+                                const lines = pdf.splitTextToSize(legenda, imgCellWidth - 4);
+                                pdf.text(lines, rightX + imgCellWidth / 2, yPos + imgHeight + 5, { align: 'center' });
                             } catch (err) {
                                 console.error('Erro ao adicionar foto:', err);
                             }
