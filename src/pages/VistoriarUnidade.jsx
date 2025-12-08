@@ -481,7 +481,7 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
                                         {nc.artigo_portaria && (
                                             <Badge variant="outline">{nc.artigo_portaria}</Badge>
                                         )}
-                                        
+
                                         {/* Determinação relacionada */}
                                         {determinacoesExistentes.filter(d => d.nao_conformidade_id === nc.id).map(det => (
                                             <div key={det.id} className="bg-white p-3 rounded border">
@@ -493,12 +493,30 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
 
                                         {/* Fotos da NC */}
                                         <div className="mt-3 pt-3 border-t">
-                                            <p className="text-xs font-medium mb-2">
-                                                Fotos da NC {nc.fotos?.length > 0 ? `(${nc.fotos.length})` : '(obrigatório)'}
-                                            </p>
-                                            {(!nc.fotos || nc.fotos.length === 0) && (
-                                                <p className="text-xs text-red-600">⚠️ Mínimo 1 foto obrigatória</p>
-                                            )}
+                                            <PhotoGrid
+                                                fotos={(nc.fotos || []).map(url => ({ url }))}
+                                                minFotos={1}
+                                                onAddFoto={(fotoData) => {
+                                                    const novasFotos = [...(nc.fotos || []), fotoData.url];
+                                                    base44.entities.NaoConformidade.update(nc.id, {
+                                                        fotos: novasFotos,
+                                                        latitude_foto: fotoData.latitude,
+                                                        longitude_foto: fotoData.longitude
+                                                    }).then(() => {
+                                                        queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
+                                                    });
+                                                }}
+                                                onRemoveFoto={(index) => {
+                                                    const novasFotos = (nc.fotos || []).filter((_, i) => i !== index);
+                                                    base44.entities.NaoConformidade.update(nc.id, {
+                                                        fotos: novasFotos
+                                                    }).then(() => {
+                                                        queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
+                                                    });
+                                                }}
+                                                onUpdateLegenda={() => {}}
+                                                titulo={`Fotos da ${nc.numero_nc}`}
+                                            />
                                         </div>
                                     </CardContent>
                                 </Card>
