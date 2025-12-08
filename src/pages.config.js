@@ -8,6 +8,7 @@ import AdicionarUnidade from './pages/AdicionarUnidade';
 import VistoriarUnidade from './pages/VistoriarUnidade';
 import Fiscalizacoes from './pages/Fiscalizacoes';
 import Relatorios from './pages/Relatorios';
+import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
@@ -26,4 +27,5 @@ export const PAGES = {
 export const pagesConfig = {
     mainPage: "Home",
     Pages: PAGES,
+    Layout: __Layout,
 };

@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
     ArrowLeft, ClipboardCheck, Camera, AlertTriangle, FileText, 
-    CheckCircle2, Loader2, Plus, Save
+    CheckCircle2, Loader2, Plus, Save, Sparkles
 } from 'lucide-react';
 import ChecklistItem from '@/components/fiscalizacao/ChecklistItem';
 import PhotoGrid from '@/components/fiscalizacao/PhotoGrid';
@@ -29,6 +29,9 @@ export default function VistoriarUnidade() {
     const [fotosNC, setFotosNC] = useState({});
     const [showAddRecomendacao, setShowAddRecomendacao] = useState(false);
     const [novaRecomendacao, setNovaRecomendacao] = useState('');
+    const [showIASugestao, setShowIASugestao] = useState(false);
+    const [iaSugestao, setIASugestao] = useState(null);
+    const [loadingIA, setLoadingIA] = useState(false);
 
     // Queries
     const { data: unidade, isLoading: loadingUnidade } = useQuery({
@@ -86,9 +89,60 @@ export default function VistoriarUnidade() {
         setRespostas(respostasMap);
     }, [unidade, respostasExistentes]);
 
+    // Função para obter sugestões da IA
+    const obterSugestoesIA = async (item, observacao) => {
+        setLoadingIA(true);
+        try {
+            const prompt = `Você é um especialista em fiscalização de saneamento da AGEMS (Mato Grosso do Sul).
+
+CONTEXTO DA FISCALIZAÇÃO:
+- Tipo de Unidade: ${unidade?.tipo_unidade_nome}
+- Serviço: ${fiscalizacao?.servico}
+- Município: ${fiscalizacao?.municipio_nome}
+
+ITEM DO CHECKLIST QUE GEROU NC:
+- Pergunta: ${item.pergunta}
+- Observação do fiscal: ${observacao || 'Nenhuma'}
+
+TAREFA:
+Analisar esta não conformidade e sugerir:
+1. Artigo/Inciso específico das Portarias AGEMS mais adequado
+2. Texto técnico detalhado da Não Conformidade
+3. Determinação clara e objetiva para correção
+4. Prazo em dias adequado para cumprimento
+5. Recomendações adicionais (se houver)
+
+Seja técnico, específico e baseado nas normas de saneamento.`;
+
+            const resultado = await base44.integrations.Core.InvokeLLM({
+                prompt,
+                response_json_schema: {
+                    type: "object",
+                    properties: {
+                        artigo_portaria: { type: "string" },
+                        texto_nc: { type: "string" },
+                        texto_determinacao: { type: "string" },
+                        prazo_dias: { type: "number" },
+                        recomendacoes: {
+                            type: "array",
+                            items: { type: "string" }
+                        }
+                    }
+                }
+            });
+
+            setIASugestao(resultado);
+            setShowIASugestao(true);
+        } catch (err) {
+            console.error('Erro ao obter sugestões da IA:', err);
+        } finally {
+            setLoadingIA(false);
+        }
+    };
+
     // Mutations
     const salvarRespostaMutation = useMutation({
-        mutationFn: async ({ itemId, data }) => {
+        mutationFn: async ({ itemId, data, usarIA }) => {
             const item = itensChecklist.find(i => i.id === itemId);
             const existente = respostasExistentes.find(r => r.item_checklist_id === itemId);
             
@@ -106,10 +160,17 @@ export default function VistoriarUnidade() {
                 await base44.entities.RespostaChecklist.create(payload);
             }
 
-            // Se NÃO e gera NC, criar NC e Determinação
+            // Se NÃO e gera NC
             if (data.resposta === 'NAO' && item.gera_nc) {
                 const ncExistente = ncsExistentes.find(nc => nc.resposta_checklist_id === itemId);
                 if (!ncExistente) {
+                    // Chamar IA se solicitado
+                    if (usarIA) {
+                        await obterSugestoesIA(item, data.observacao);
+                        return; // Aguarda aprovação do usuário
+                    }
+
+                    // Criar NC normal
                     const ncNum = ncsExistentes.length + 1;
                     const nc = await base44.entities.NaoConformidade.create({
                         unidade_fiscalizada_id: unidadeId,
@@ -136,6 +197,50 @@ export default function VistoriarUnidade() {
             queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
             queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
             queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
+        }
+    });
+
+    const aplicarSugestaoIAMutation = useMutation({
+        mutationFn: async ({ itemId, sugestao }) => {
+            const ncNum = ncsExistentes.length + 1;
+            const nc = await base44.entities.NaoConformidade.create({
+                unidade_fiscalizada_id: unidadeId,
+                resposta_checklist_id: itemId,
+                numero_nc: `NC${ncNum}`,
+                artigo_portaria: sugestao.artigo_portaria,
+                descricao: sugestao.texto_nc,
+                fotos: []
+            });
+
+            await base44.entities.Determinacao.create({
+                unidade_fiscalizada_id: unidadeId,
+                nao_conformidade_id: nc.id,
+                numero_determinacao: `D${ncNum}`,
+                descricao: sugestao.texto_determinacao,
+                prazo_dias: sugestao.prazo_dias || 30,
+                status: 'pendente'
+            });
+
+            // Adicionar recomendações se houver
+            if (sugestao.recomendacoes && sugestao.recomendacoes.length > 0) {
+                for (const rec of sugestao.recomendacoes) {
+                    const recNum = recomendacoesExistentes.length + 1;
+                    await base44.entities.Recomendacao.create({
+                        unidade_fiscalizada_id: unidadeId,
+                        numero_recomendacao: `R${recNum}`,
+                        descricao: rec,
+                        origem: 'checklist'
+                    });
+                }
+            }
+
+            queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
+            queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
+            queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
+        },
+        onSuccess: () => {
+            setShowIASugestao(false);
+            setIASugestao(null);
         }
     });
 
@@ -195,9 +300,9 @@ export default function VistoriarUnidade() {
         }
     });
 
-    const handleResponder = (itemId, data) => {
+    const handleResponder = (itemId, data, usarIA = false) => {
         setRespostas(prev => ({ ...prev, [itemId]: data }));
-        salvarRespostaMutation.mutate({ itemId, data });
+        salvarRespostaMutation.mutate({ itemId, data, usarIA });
     };
 
     const handleAddFoto = (fotoData) => {
@@ -307,7 +412,9 @@ export default function VistoriarUnidade() {
                                     item={item}
                                     resposta={respostas[item.id]}
                                     onResponder={(data) => handleResponder(item.id, data)}
+                                    onResponderComIA={(data) => handleResponder(item.id, data, true)}
                                     numero={index + 1}
+                                    loadingIA={loadingIA}
                                 />
                             ))
                         )}
@@ -445,6 +552,74 @@ export default function VistoriarUnidade() {
                             </Button>
                         </div>
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog Sugestão IA */}
+            <Dialog open={showIASugestao} onOpenChange={setShowIASugestao}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Sparkles className="h-5 w-5 text-purple-500" />
+                            Sugestões da IA
+                        </DialogTitle>
+                    </DialogHeader>
+                    {iaSugestao && (
+                        <div className="space-y-4">
+                            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                                <p className="text-xs text-purple-600 font-medium mb-2">Artigo da Portaria AGEMS</p>
+                                <p className="text-sm font-medium">{iaSugestao.artigo_portaria}</p>
+                            </div>
+
+                            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                                <p className="text-xs text-red-600 font-medium mb-2">Texto da Não Conformidade</p>
+                                <p className="text-sm">{iaSugestao.texto_nc}</p>
+                            </div>
+
+                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                <p className="text-xs text-blue-600 font-medium mb-2">Determinação</p>
+                                <p className="text-sm">{iaSugestao.texto_determinacao}</p>
+                                <p className="text-xs text-gray-500 mt-2">Prazo: {iaSugestao.prazo_dias} dias</p>
+                            </div>
+
+                            {iaSugestao.recomendacoes && iaSugestao.recomendacoes.length > 0 && (
+                                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                                    <p className="text-xs text-green-600 font-medium mb-2">Recomendações Adicionais</p>
+                                    <ul className="space-y-2">
+                                        {iaSugestao.recomendacoes.map((rec, i) => (
+                                            <li key={i} className="text-sm flex items-start gap-2">
+                                                <span className="text-green-600">•</span>
+                                                <span>{rec}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            <div className="flex gap-2 pt-4">
+                                <Button 
+                                    className="flex-1 bg-purple-600 hover:bg-purple-700"
+                                    onClick={() => {
+                                        const itemId = respostasExistentes[respostasExistentes.length - 1]?.item_checklist_id;
+                                        if (itemId) {
+                                            aplicarSugestaoIAMutation.mutate({ itemId, sugestao: iaSugestao });
+                                        }
+                                    }}
+                                    disabled={aplicarSugestaoIAMutation.isPending}
+                                >
+                                    <Sparkles className="h-4 w-4 mr-2" />
+                                    {aplicarSugestaoIAMutation.isPending ? 'Aplicando...' : 'Aplicar Sugestões'}
+                                </Button>
+                                <Button variant="outline" onClick={() => setShowIASugestao(false)}>
+                                    Cancelar
+                                </Button>
+                            </div>
+
+                            <p className="text-xs text-gray-500 text-center">
+                                ⚠️ Revise as sugestões antes de aplicar. A IA é uma ferramenta de apoio.
+                            </p>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>
