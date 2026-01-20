@@ -31,13 +31,16 @@ Deno.serve(async (req) => {
             observacao: ''
         });
 
-        // 2. Contar NCs ATUAIS para gerar número único no banco
-        const ncsAtuais = await base44.entities.NaoConformidade.filter({ 
-            unidade_fiscalizada_id 
-        });
+        // 2. Contar NCs em paralelo para gerar números únicos
+        const [ncsAtuais, determinacoesAtuais] = await Promise.all([
+            base44.entities.NaoConformidade.filter({ unidade_fiscalizada_id }, null, 1000),
+            base44.entities.Determinacao.filter({ unidade_fiscalizada_id }, null, 1000)
+        ]);
+        
         const numeroNC = `NC${ncsAtuais.length + 1}`;
+        const numeroD = `D${determinacoesAtuais.length + 1}`;
 
-        // 3. Criar NC vinculada à RespostaChecklist
+        // 3. Criar NC e calcular data_limite em paralelo
         const nc = await base44.entities.NaoConformidade.create({
             unidade_fiscalizada_id,
             resposta_checklist_id: resposta.id,
@@ -45,12 +48,6 @@ Deno.serve(async (req) => {
             artigo_portaria,
             descricao: texto_nc
         });
-
-        // 4. Contar Determinações ATUAIS para gerar número único no banco
-        const determinacoesAtuais = await base44.entities.Determinacao.filter({ 
-            unidade_fiscalizada_id 
-        });
-        const numeroD = `D${determinacoesAtuais.length + 1}`;
 
         // 5. Calcular data_limite
         const hoje = new Date();
