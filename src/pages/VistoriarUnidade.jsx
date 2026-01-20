@@ -192,10 +192,23 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
             // Determinar o número da constatação
             const constatacaoNum = respostasExistentes.length + 1;
             
+            // Determinar o texto da constatação baseado na resposta
+            let textoConstatacao = '';
+            if (data.resposta === 'SIM' && item.texto_constatacao_sim) {
+                textoConstatacao = item.texto_constatacao_sim;
+            } else if (data.resposta === 'NAO' && item.texto_constatacao_nao) {
+                textoConstatacao = item.texto_constatacao_nao;
+            } else {
+                // Fallback: construir texto a partir da pergunta
+                textoConstatacao = data.resposta === 'NAO' 
+                    ? item.pergunta.replace('?', '').replace(/^([A-Z])/, (match) => match.toLowerCase()).trim()
+                    : item.pergunta.replace('?', '').trim();
+            }
+
             const payload = {
                 unidade_fiscalizada_id: unidadeId,
                 item_checklist_id: itemId,
-                pergunta: item.pergunta,
+                pergunta: textoConstatacao,
                 gera_nc: item.gera_nc,
                 numero_constatacao: `C${constatacaoNum}`,
                 ...data
@@ -241,21 +254,26 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
 
                     // Criar NC normal
                     const ncNum = ncsExistentes.length + 1;
+                    const textoNC = item.texto_nc 
+                        ? `A Constatação C${constatacaoNum} não cumpre o disposto no ${item.artigo_portaria || 'regulamento aplicável'}. ${item.texto_nc}`
+                        : `A Constatação C${constatacaoNum} não cumpre o disposto no ${item.artigo_portaria || 'regulamento aplicável'}.`;
+
                     const nc = await base44.entities.NaoConformidade.create({
                         unidade_fiscalizada_id: unidadeId,
                         resposta_checklist_id: itemId,
                         numero_nc: `NC${ncNum}`,
                         artigo_portaria: item.artigo_portaria,
-                        descricao: item.texto_nc || item.pergunta,
+                        descricao: textoNC,
                         fotos: []
                     });
 
                     if (item.texto_determinacao) {
+                        const textoDeterminacao = `Para sanar a NC${ncNum}, ${item.texto_determinacao.charAt(0).toLowerCase()}${item.texto_determinacao.slice(1)}`;
                         await base44.entities.Determinacao.create({
                             unidade_fiscalizada_id: unidadeId,
                             nao_conformidade_id: nc.id,
                             numero_determinacao: `D${ncNum}`,
-                            descricao: item.texto_determinacao,
+                            descricao: textoDeterminacao,
                             prazo_dias: 30,
                             status: 'pendente'
                         });
@@ -270,25 +288,30 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
     });
 
     const aplicarSugestaoIAMutation = useMutation({
-        mutationFn: async ({ itemId, sugestao }) => {
-            const ncNum = ncsExistentes.length + 1;
-            const nc = await base44.entities.NaoConformidade.create({
-                unidade_fiscalizada_id: unidadeId,
-                resposta_checklist_id: itemId,
-                numero_nc: `NC${ncNum}`,
-                artigo_portaria: sugestao.artigo_portaria,
-                descricao: sugestao.texto_nc,
-                fotos: []
-            });
+            mutationFn: async ({ itemId, sugestao, constatacaoNum }) => {
+                const ncNum = ncsExistentes.length + 1;
+                const textoNC = `A Constatação C${constatacaoNum} não cumpre o disposto no ${sugestao.artigo_portaria}. ${sugestao.texto_nc}`;
+                const nc = await base44.entities.NaoConformidade.create({
+                    unidade_fiscalizada_id: unidadeId,
+                    resposta_checklist_id: itemId,
+                    numero_nc: `NC${ncNum}`,
+                    artigo_portaria: sugestao.artigo_portaria,
+                    descricao: textoNC,
+                    fotos: []
+                });
 
-            await base44.entities.Determinacao.create({
-                unidade_fiscalizada_id: unidadeId,
-                nao_conformidade_id: nc.id,
-                numero_determinacao: `D${ncNum}`,
-                descricao: sugestao.texto_determinacao,
-                prazo_dias: sugestao.prazo_dias || 30,
-                status: 'pendente'
-            });
+                const textoDeterminacao = sugestao.texto_determinacao.startsWith('Para sanar') 
+                    ? sugestao.texto_determinacao.replace(/Para sanar[^,]*,/, `Para sanar a NC${ncNum},`)
+                    : `Para sanar a NC${ncNum}, ${sugestao.texto_determinacao.charAt(0).toLowerCase()}${sugestao.texto_determinacao.slice(1)}`;
+
+                await base44.entities.Determinacao.create({
+                    unidade_fiscalizada_id: unidadeId,
+                    nao_conformidade_id: nc.id,
+                    numero_determinacao: `D${ncNum}`,
+                    descricao: textoDeterminacao,
+                    prazo_dias: sugestao.prazo_dias || 30,
+                    status: 'pendente'
+                });
 
             // Adicionar recomendações se houver
             if (Array.isArray(sugestao.recomendacoes) && sugestao.recomendacoes.length > 0) {
@@ -710,9 +733,11 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
                                 <Button 
                                     className="flex-1 bg-purple-600 hover:bg-purple-700"
                                     onClick={() => {
-                                        const itemId = respostasExistentes[respostasExistentes.length - 1]?.item_checklist_id;
+                                        const ultimaResposta = respostasExistentes[respostasExistentes.length - 1];
+                                        const itemId = ultimaResposta?.item_checklist_id;
+                                        const constatacaoNum = parseInt(ultimaResposta?.numero_constatacao?.replace('C', '') || '1');
                                         if (itemId) {
-                                            aplicarSugestaoIAMutation.mutate({ itemId, sugestao: iaSugestao });
+                                            aplicarSugestaoIAMutation.mutate({ itemId, sugestao: iaSugestao, constatacaoNum });
                                         }
                                     }}
                                     disabled={aplicarSugestaoIAMutation.isPending}

@@ -191,25 +191,26 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
                 const constatacoes = respostas.filter(r => r.resposta === 'NAO');
                 constatacoes.forEach((resp, i) => {
-                    const texto = `${resp.numero_constatacao || `C${i + 1}`}. ${resp.pergunta}${resp.observacao ? ` - ${resp.observacao}` : ''}`;
+                    const numConst = resp.numero_constatacao || `C${i + 1}`;
+                    const textoConstatacao = resp.pergunta;
+                    const texto = `${numConst}. ${textoConstatacao}${resp.observacao ? ` Observação: ${resp.observacao}` : ''}`;
                     const lines = pdf.splitTextToSize(texto, tableWidth - 4);
                     const cellHeight = Math.max(rowHeight, lines.length * 4 + 2);
-                    
+
                     // Check page break
                     if (yPos + cellHeight > pageHeight - margin) {
                         pdf.addPage();
                         yPos = margin;
                     }
-                    
+
                     pdf.rect(margin, yPos, tableWidth, cellHeight, 'S');
                     pdf.setFont('helvetica', 'bold');
-                    const numConst = resp.numero_constatacao || `C${i + 1}`;
-                    pdf.text(numConst, margin + 2, yPos + 5);
+                    pdf.text(numConst + '.', margin + 2, yPos + 5);
                     pdf.setFont('helvetica', 'normal');
                     const restText = texto.substring(texto.indexOf('.') + 2);
                     const restLines = pdf.splitTextToSize(restText, tableWidth - 15);
                     pdf.text(restLines, margin + 12, yPos + 5);
-                    
+
                     yPos += cellHeight;
                 });
 
@@ -223,15 +224,15 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     yPos += rowHeight;
 
                     ncs.forEach((nc) => {
-                        const texto = `${nc.numero_nc}. ${nc.descricao}${nc.artigo_portaria ? ` (${nc.artigo_portaria})` : ''}`;
+                        const texto = `${nc.numero_nc}. ${nc.descricao}`;
                         const lines = pdf.splitTextToSize(texto, tableWidth - 4);
                         const cellHeight = Math.max(rowHeight, lines.length * 4 + 2);
-                        
+
                         if (yPos + cellHeight > pageHeight - margin) {
                             pdf.addPage();
                             yPos = margin;
                         }
-                        
+
                         pdf.rect(margin, yPos, tableWidth, cellHeight, 'S');
                         pdf.setFont('helvetica', 'bold');
                         pdf.text(nc.numero_nc + '.', margin + 2, yPos + 5);
@@ -239,7 +240,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                         const restText = texto.substring(texto.indexOf('.') + 2);
                         const restLines = pdf.splitTextToSize(restText, tableWidth - 15);
                         pdf.text(restLines, margin + 12, yPos + 5);
-                        
+
                         yPos += cellHeight;
                     });
                 }
@@ -288,20 +289,20 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                         const texto = `${det.numero_determinacao}. ${det.descricao} Prazo: ${det.prazo_dias} dias.`;
                         const lines = pdf.splitTextToSize(texto, tableWidth - 4);
                         const cellHeight = Math.max(rowHeight, lines.length * 4 + 2);
-                        
+
                         if (yPos + cellHeight > pageHeight - margin) {
                             pdf.addPage();
                             yPos = margin;
                         }
-                        
+
                         pdf.rect(margin, yPos, tableWidth, cellHeight, 'S');
                         pdf.setFont('helvetica', 'bold');
                         pdf.text(det.numero_determinacao + '.', margin + 2, yPos + 5);
                         pdf.setFont('helvetica', 'normal');
-                        const restText = texto.substring(texto.indexOf('.') + 2);
+                        const restText = `${det.descricao} Prazo: ${det.prazo_dias} dias.`;
                         const restLines = pdf.splitTextToSize(restText, tableWidth - 15);
                         pdf.text(restLines, margin + 12, yPos + 5);
-                        
+
                         yPos += cellHeight;
                     });
                 }
