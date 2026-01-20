@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import OfflineIndicator from '@/components/OfflineIndicator';
-import SyncManager from '@/components/offline/SyncManager';
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -109,9 +108,7 @@ export default function Fiscalizacoes() {
     const finalizadas = fiscalizacoes.filter(f => f.status === 'finalizada').length;
 
     return (
-        <SyncManager>
-            <OfflineIndicator />
-            <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50">
                 {/* Header */}
             <div className="bg-blue-900 text-white">
                 <div className="max-w-4xl mx-auto px-4 py-4">
@@ -376,6 +373,5 @@ export default function Fiscalizacoes() {
                 </AlertDialogContent>
             </AlertDialog>
             </div>
-        </SyncManager>
-    );
+            );
 }

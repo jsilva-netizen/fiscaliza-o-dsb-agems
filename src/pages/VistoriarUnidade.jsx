@@ -70,7 +70,6 @@ export default function VistoriarUnidade() {
     const [activeTab, setActiveTab] = useState('checklist');
     const [respostas, setRespostas] = useState({});
     const [fotos, setFotos] = useState([]);
-    const [fotosNC, setFotosNC] = useState({});
     const [showAddRecomendacao, setShowAddRecomendacao] = useState(false);
     const [novaRecomendacao, setNovaRecomendacao] = useState('');
 
@@ -145,15 +144,12 @@ export default function VistoriarUnidade() {
         gcTime: 300000
     });
 
-    // Load existing data - sincronizar apenas na inicialização
     useEffect(() => {
         if (unidade?.fotos_unidade) {
             const fotosCarregadas = unidade.fotos_unidade.map(foto => 
                 typeof foto === 'string' ? { url: foto } : foto
             );
             setFotos(fotosCarregadas);
-            
-
         }
     }, [unidade?.fotos_unidade]);
 
@@ -168,12 +164,7 @@ export default function VistoriarUnidade() {
         }
     }, [respostasExistentes.length]);
 
-
-
-
-
-    // Mutations with atomic operations
-     const salvarRespostaMutation = useMutation({
+    const salvarRespostaMutation = useMutation({
          mutationFn: async ({ itemId, data }) => {
              const item = itensChecklist.find(i => i.id === itemId);
              if (!item) return;
@@ -232,9 +223,7 @@ export default function VistoriarUnidade() {
          }
      });
 
-
-
-    const salvarFotosMutation = useMutation({
+     const salvarFotosMutation = useMutation({
         mutationFn: async (fotosData) => {
             await base44.entities.UnidadeFiscalizada.update(unidadeId, {
                 fotos_unidade: fotosData
@@ -277,7 +266,7 @@ export default function VistoriarUnidade() {
     });
 
     const finalizarUnidadeMutation = useMutation({
-         mutationFn: async () => {
+        mutationFn: async () => {
              // Validar fotos (estado local é fonte da verdade)
              if (fotos.length < 2) {
                  throw new Error(`Mínimo de 2 fotos obrigatórias (você tem ${fotos.length}).`);
@@ -301,7 +290,7 @@ export default function VistoriarUnidade() {
                  total_constatacoes: totalConstatacoes,
                  total_ncs: ncsAtuais.length
              });
-         },
+             },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['unidades-fiscalizacao'] });
             navigate(createPageUrl('ExecutarFiscalizacao') + `?id=${unidade.fiscalizacao_id}`);
