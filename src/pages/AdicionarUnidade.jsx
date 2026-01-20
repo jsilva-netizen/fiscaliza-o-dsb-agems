@@ -22,6 +22,7 @@ export default function AdicionarUnidade() {
         endereco: ''
     });
     const [location, setLocation] = useState(null);
+    const [loadingAddress, setLoadingAddress] = useState(false);
 
     const { data: fiscalizacao } = useQuery({
         queryKey: ['fiscalizacao', fiscalizacaoId],
@@ -34,10 +35,46 @@ export default function AdicionarUnidade() {
         queryFn: () => base44.entities.TipoUnidade.list('nome', 100)
     });
 
+    const { data: unidadesExistentes = [] } = useQuery({
+        queryKey: ['unidades-existentes', fiscalizacaoId],
+        queryFn: () => base44.entities.UnidadeFiscalizada.filter({ fiscalizacao_id: fiscalizacaoId }, 'created_date', 500),
+        enabled: !!fiscalizacaoId
+    });
+
+    // Obter GPS e endereço
     useEffect(() => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                async (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    setLocation({ lat, lng });
+
+                    // Reverse geocoding para obter endereço
+                    setLoadingAddress(true);
+                    try {
+                        const response = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+                            { headers: { 'User-Agent': 'AGEMS-Fiscalizacao' } }
+                        );
+                        const data = await response.json();
+                        
+                        if (data.address) {
+                            const endereco = [
+                                data.address.road || '',
+                                data.address.house_number || '',
+                                data.address.suburb || data.address.neighbourhood || '',
+                                data.address.city || data.address.town || data.address.village || ''
+                            ].filter(Boolean).join(', ');
+                            
+                            setFormData(prev => ({ ...prev, endereco }));
+                        }
+                    } catch (err) {
+                        console.error('Erro ao obter endereço:', err);
+                    } finally {
+                        setLoadingAddress(false);
+                    }
+                },
                 () => {}
             );
         }
@@ -46,6 +83,43 @@ export default function AdicionarUnidade() {
     const tiposFiltrados = tipos.filter(t => 
         t.servicos_aplicaveis && fiscalizacao?.servico && t.servicos_aplicaveis.includes(fiscalizacao.servico)
     );
+
+    // Mapeamento de siglas por tipo de unidade
+    const siglasUnidade = {
+        'Atendimento Comercial ao Usuário': 'ACU',
+        'Almoxarifado/SSA': 'ALM-SSA',
+        'Poço Tubular Profundo': 'PTP',
+        'Captação Superficial': 'CAF',
+        'Estação de Tratamento de Água': 'ETA',
+        'Unidade Dosadora de Cloro': 'UTA',
+        'Unidade de Tratamento de Água': 'UTA',
+        'Reservatório Apoiado': 'RAP',
+        'Reservatório Elevado': 'REL',
+        'Reservatório Enterrado': 'REN',
+        'Reservatório Semienterrado': 'RES'
+    };
+
+    // Gerar código automático quando seleciona tipo
+    const handleTipoChange = (tipoId) => {
+        const tipo = tipos.find(t => t.id === tipoId);
+        if (!tipo) return;
+
+        // Obter sigla do tipo
+        const sigla = siglasUnidade[tipo.nome] || tipo.nome.substring(0, 3).toUpperCase();
+
+        // Contar quantas unidades deste tipo já existem
+        const unidadesMesmoTipo = unidadesExistentes.filter(u => u.tipo_unidade_id === tipoId);
+        const proximoNumero = unidadesMesmoTipo.length + 1;
+        const codigo = `${sigla}-${String(proximoNumero).padStart(3, '0')}`;
+
+        // Atualizar form
+        setFormData({
+            ...formData,
+            tipo_unidade_id: tipoId,
+            codigo_unidade: codigo,
+            nome_unidade: tipo.nome
+        });
+    };
 
     const createMutation = useMutation({
         mutationFn: async (data) => {
@@ -119,7 +193,7 @@ export default function AdicionarUnidade() {
                         <Label>Tipo de Unidade *</Label>
                         <Select 
                             value={formData.tipo_unidade_id} 
-                            onValueChange={(v) => setFormData({...formData, tipo_unidade_id: v})}
+                            onValueChange={handleTipoChange}
                         >
                             <SelectTrigger>
                                 <SelectValue placeholder="Selecione o tipo..." />
@@ -172,7 +246,11 @@ export default function AdicionarUnidade() {
                             value={formData.endereco}
                             onChange={(e) => setFormData({...formData, endereco: e.target.value})}
                             placeholder="Rua, número, bairro..."
+                            disabled={loadingAddress}
                         />
+                        {loadingAddress && (
+                            <p className="text-xs text-gray-500">Obtendo endereço do GPS...</p>
+                        )}
                     </div>
 
                     {/* Submit */}
