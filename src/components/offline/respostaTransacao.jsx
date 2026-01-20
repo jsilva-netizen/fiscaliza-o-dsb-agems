@@ -1,5 +1,5 @@
 // Operação TRANSACIONAL para Resposta + NC + Determinação
-// Garante atomicidade e consistência
+// REQUER CONEXÃO ONLINE
 
 export const criarRespostaComNCDeterminacao = async (params) => {
     const {
@@ -12,6 +12,11 @@ export const criarRespostaComNCDeterminacao = async (params) => {
         ncsExistentes,
         determinacoesExistentes
     } = params;
+
+    // OBRIGATÓRIO: Verificar conexão
+    if (!navigator.onLine) {
+        throw new Error('Esta operação requer conexão com a internet');
+    }
 
     // 1. ETAPA 1: Validar e preparar dados
     if (!item || !data.resposta) {
