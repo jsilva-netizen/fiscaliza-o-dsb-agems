@@ -22,7 +22,7 @@ import SyncManager from '@/components/offline/SyncManager';
 import useOfflineCache from '@/components/offline/useOfflineCache';
 import { addPendingOperation } from '@/components/offline/offlineStorage';
 import { preloadImages } from '@/components/offline/preloadImages';
-import { gerarNumeroConstatacao, gerarNumeroNC, gerarNumeroDeterminacao } from '@/components/offline/numerationHelper';
+import { gerarNumeroConstatacao, gerarNumeroNCTemporario, gerarNumeroDeterminacaoTemporario } from '@/components/offline/numerationHelper';
 
 // Wrapper para calcular offset das figuras
 function RelatorioUnidadeWrapper({ unidade, ...props }) {
@@ -298,10 +298,10 @@ export default function VistoriarUnidade() {
                  const deveExistirNC = (data.resposta === 'NAO' && item.gera_nc === true);
 
                  if (deveExistirNC && !ncExistente) {
-                     // Criar NC
-                     const numeroNC = gerarNumeroNC(ncsExistentes);
-                     const numNC = parseInt(numeroNC.replace('NC', ''));
-                     const constatacaoNum = numeroConstatacao?.replace('C', '') || '?';
+                     // Gerar números com proteção contra colisão
+                     const timestamp = new Date();
+                     const { numero: numeroNC, tempId: ncTempId } = gerarNumeroNCTemporario(ncsExistentes, timestamp);
+                     const { numero: numeroDet, tempId: detTempId } = gerarNumeroDeterminacaoTemporario(determinacoesExistentes, timestamp);
 
                      const textoNC = item.texto_nc 
                          ? `A Constatação ${numeroConstatacao} não cumpre o disposto no ${item.artigo_portaria || 'regulamento aplicável'}. ${item.texto_nc}`
@@ -313,12 +313,12 @@ export default function VistoriarUnidade() {
                          numero_nc: numeroNC,
                          artigo_portaria: item.artigo_portaria || '',
                          descricao: textoNC,
-                         fotos: []
+                         fotos: [],
+                         _temp_nc_id: ncTempId // Marcador para detecção de colisão no servidor
                      });
 
                      // Criar Determinação se houver texto
                      if (item.texto_determinacao) {
-                         const numeroDet = gerarNumeroDeterminacao(determinacoesExistentes);
                          const textoDet = `Para sanar ${numeroNC}, ${item.texto_determinacao.charAt(0).toLowerCase()}${item.texto_determinacao.slice(1)}`;
 
                          await base44.entities.Determinacao.create({
@@ -327,7 +327,8 @@ export default function VistoriarUnidade() {
                              numero_determinacao: numeroDet,
                              descricao: textoDet,
                              prazo_dias: 30,
-                             status: 'pendente'
+                             status: 'pendente',
+                             _temp_det_id: detTempId
                          });
                      }
 
