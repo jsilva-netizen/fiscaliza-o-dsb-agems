@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Camera, Trash2, MapPin, Clock, X, Image } from 'lucide-react';
-import CameraCaptureOffline from './CameraCaptureOffline';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { base44 } from '@/api/base44Client';
@@ -17,15 +16,10 @@ export default function PhotoGrid({
     fiscalizacaoId,
     unidadeId
 }) {
-    const [showCamera, setShowCamera] = useState(false);
     const [selectedFoto, setSelectedFoto] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef(null);
-
-    const handleCapture = (fotoData) => {
-        onAddFoto(fotoData);
-        setShowCamera(false);
-    };
+    const cameraInputRef = useRef(null);
 
     const handleFileSelect = async (e) => {
         const file = e.target.files?.[0];
@@ -82,6 +76,14 @@ export default function PhotoGrid({
                         onChange={handleFileSelect}
                         className="hidden"
                     />
+                    <input
+                        ref={cameraInputRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                    />
                     <Button 
                         onClick={() => fileInputRef.current?.click()} 
                         size="sm"
@@ -91,9 +93,13 @@ export default function PhotoGrid({
                         <Image className="h-4 w-4 mr-2" />
                         {isUploading ? 'Enviando...' : 'Galeria'}
                     </Button>
-                    <Button onClick={() => setShowCamera(true)} size="sm">
+                    <Button 
+                        onClick={() => cameraInputRef.current?.click()} 
+                        size="sm"
+                        disabled={isUploading}
+                    >
                         <Camera className="h-4 w-4 mr-2" />
-                        Câmera
+                        {isUploading ? 'Enviando...' : 'Câmera'}
                     </Button>
                 </div>
             </div>
@@ -144,16 +150,6 @@ export default function PhotoGrid({
                 <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm text-yellow-800">
                     ⚠️ Mínimo de {minFotos} foto(s) obrigatória(s). Faltam {faltam}.
                 </div>
-            )}
-
-            {/* Camera modal */}
-            {showCamera && (
-                <CameraCaptureOffline
-                    onCapture={handleCapture}
-                    onCancel={() => setShowCamera(false)}
-                    fiscalizacaoId={fiscalizacaoId}
-                    unidadeId={unidadeId}
-                />
             )}
 
             {/* Visualização ampliada */}
