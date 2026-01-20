@@ -73,8 +73,12 @@ export default function RelatorioUnidade({
             pdf.text(unidade.tipo_unidade_nome.toUpperCase(), pageWidth / 2, yPos + 4.5, { align: 'center' });
             yPos += rowHeight;
 
-            // ID Unidade
+            // Localidade
             pdf.setFontSize(9);
+            drawCell(`Localidade: ${fiscalizacao?.municipio_nome || '-'}`, margin, yPos, tableWidth, rowHeight, true);
+            yPos += rowHeight;
+
+            // ID Unidade
             drawCell(`ID Unidade: ${unidade.codigo_unidade || unidade.nome_unidade || '-'}`, margin, yPos, tableWidth, rowHeight, true);
             yPos += rowHeight;
 
