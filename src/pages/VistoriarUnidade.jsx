@@ -72,6 +72,7 @@ export default function VistoriarUnidade() {
     const [fotos, setFotos] = useState([]);
     const [showAddRecomendacao, setShowAddRecomendacao] = useState(false);
     const [novaRecomendacao, setNovaRecomendacao] = useState('');
+    const [recomendacoesCache, setRecomendacoesCache] = useState(null);
 
     // Queries
     const { data: unidade, isLoading: loadingUnidade } = useQuery({
@@ -165,63 +166,62 @@ export default function VistoriarUnidade() {
     }, [respostasExistentes.length]);
 
     const salvarRespostaMutation = useMutation({
-         mutationFn: async ({ itemId, data }) => {
-             const item = itensChecklist.find(i => i.id === itemId);
-             if (!item) return;
+        mutationFn: async ({ itemId, data }) => {
+            const item = itensChecklist.find(i => i.id === itemId);
+            if (!item) return;
 
-             const resposta = respostasExistentes.find(r => r.item_checklist_id === itemId);
-             const numero = resposta?.numero_constatacao || `C${respostasExistentes.length + 1}`;
+            const resposta = respostasExistentes.find(r => r.item_checklist_id === itemId);
+            const numero = resposta?.numero_constatacao || `C${respostasExistentes.length + 1}`;
 
-             if (resposta?.id) {
-                 await base44.entities.RespostaChecklist.update(resposta.id, {
-                     resposta: data.resposta,
-                     observacao: data.observacao
-                 });
-             } else {
-                 const novaResposta = await base44.entities.RespostaChecklist.create({
-                     unidade_fiscalizada_id: unidadeId,
-                     item_checklist_id: itemId,
-                     pergunta: item.pergunta,
-                     resposta: data.resposta,
-                     gera_nc: item.gera_nc,
-                     numero_constatacao: numero,
-                     observacao: data.observacao
-                 });
+            if (resposta?.id) {
+                await base44.entities.RespostaChecklist.update(resposta.id, {
+                    resposta: data.resposta,
+                    observacao: data.observacao
+                });
+            } else {
+                const novaResposta = await base44.entities.RespostaChecklist.create({
+                    unidade_fiscalizada_id: unidadeId,
+                    item_checklist_id: itemId,
+                    pergunta: item.pergunta,
+                    resposta: data.resposta,
+                    gera_nc: item.gera_nc,
+                    numero_constatacao: numero,
+                    observacao: data.observacao
+                });
 
-                 if (item.gera_nc && data.resposta === 'NAO') {
-                     const numeroNC = `NC${ncsExistentes.length + 1}`;
-                     const determinacoes = determinacoesExistentes.filter(d => d.unidade_fiscalizada_id === unidadeId);
-                     const numeroD = `D${determinacoes.length + 1}`;
+                if (item.gera_nc && data.resposta === 'NAO') {
+                    const numeroNC = `NC${ncsExistentes.length + 1}`;
+                    const determinacoes = determinacoesExistentes.filter(d => d.unidade_fiscalizada_id === unidadeId);
+                    const numeroD = `D${determinacoes.length + 1}`;
 
-                     await base44.entities.NaoConformidade.create({
-                         unidade_fiscalizada_id: unidadeId,
-                         resposta_checklist_id: novaResposta.id,
-                         numero_nc: numeroNC,
-                         artigo_portaria: item.artigo_portaria,
-                         descricao: `A Constatação ${numero} não cumpre o disposto no ${item.artigo_portaria || 'regulamento'}. ${item.texto_nc}`
-                     });
+                    const nc = await base44.entities.NaoConformidade.create({
+                        unidade_fiscalizada_id: unidadeId,
+                        resposta_checklist_id: novaResposta.id,
+                        numero_nc: numeroNC,
+                        artigo_portaria: item.artigo_portaria,
+                        descricao: `A Constatação ${numero} não cumpre o disposto no ${item.artigo_portaria || 'regulamento'}. ${item.texto_nc}`
+                    });
 
-                     const nc = await base44.entities.NaoConformidade.filter({ numero_nc: numeroNC }).then(r => r[0]);
-
-                     await base44.entities.Determinacao.create({
-                         unidade_fiscalizada_id: unidadeId,
-                         nao_conformidade_id: nc?.id,
-                         numero_determinacao: numeroD,
-                         descricao: item.texto_determinacao,
-                         prazo_dias: 30
-                     });
-                 }
-             }
-         },
-         onSuccess: () => {
-             queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
-             queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
-             queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
-         },
-         onError: (err) => {
-             alert(err.message);
-         }
-     });
+                    // Usar backend function para criar determinação com data_limite automática
+                    await base44.functions.invoke('createDeterminacaoWithDataLimite', {
+                        unidade_fiscalizada_id: unidadeId,
+                        nao_conformidade_id: nc?.id,
+                        numero_determinacao: numeroD,
+                        descricao: item.texto_determinacao,
+                        prazo_dias: 30
+                    });
+                }
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
+            queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
+            queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
+        },
+        onError: (err) => {
+            alert(err.message);
+        }
+    });
 
      const salvarFotosMutation = useMutation({
         mutationFn: async (fotosData) => {
