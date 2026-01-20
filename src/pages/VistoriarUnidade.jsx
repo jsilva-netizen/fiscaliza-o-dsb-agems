@@ -380,8 +380,12 @@ export default function VistoriarUnidade() {
 
     const finalizarUnidadeMutation = useMutation({
         mutationFn: async () => {
+            // Buscar unidade atualizada do banco para validar
+            const unidadeAtualizada = await base44.entities.UnidadeFiscalizada.filter({ id: unidadeId }).then(r => r[0]);
+            const fotosUnidade = Array.isArray(unidadeAtualizada?.fotos_unidade) ? unidadeAtualizada.fotos_unidade : [];
+            
             // Validações
-            if (fotos.length < 2) {
+            if (fotosUnidade.length < 2) {
                 throw new Error('Mínimo de 2 fotos da unidade obrigatórias.');
             }
 
