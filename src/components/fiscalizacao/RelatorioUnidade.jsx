@@ -86,7 +86,7 @@ export default function RelatorioUnidade({
             drawCell('Constatações', margin, yPos, tableWidth, rowHeight, true, true, [192, 192, 192]);
             yPos += rowHeight;
 
-            const constatacoes = respostas.filter(r => r.resposta === 'NAO').sort((a, b) => {
+            const constatacoes = respostas.filter(r => r.resposta === 'SIM' || r.resposta === 'NAO').sort((a, b) => {
                 const numA = parseInt(a.numero_constatacao?.replace('C', '') || '999');
                 const numB = parseInt(b.numero_constatacao?.replace('C', '') || '999');
                 return numA - numB;

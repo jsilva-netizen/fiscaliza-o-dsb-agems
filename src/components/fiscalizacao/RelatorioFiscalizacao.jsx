@@ -119,7 +119,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             yPos += 10;
 
             // Calcular totais reais
-            const totalConstatacoes = todasRespostas.flat().filter(r => r.resposta === 'NAO').length;
+            const totalConstatacoes = todasRespostas.flat().filter(r => r.resposta === 'SIM' || r.resposta === 'NAO').length;
             const totalNCs = todasNcs.flat().length;
             const totalDeterminacoes = todasDeterminacoes.flat().length;
             const totalRecomendacoes = todasRecomendacoes.flat().length;
@@ -195,7 +195,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                 drawCell('Constatações', margin, yPos, tableWidth, rowHeight, true, true, [192, 192, 192]);
                 yPos += rowHeight;
 
-                const constatacoes = respostas.filter(r => r.resposta === 'NAO').sort((a, b) => {
+                const constatacoes = respostas.filter(r => r.resposta === 'SIM' || r.resposta === 'NAO').sort((a, b) => {
                     const numA = parseInt(a.numero_constatacao?.replace('C', '') || '999');
                     const numB = parseInt(b.numero_constatacao?.replace('C', '') || '999');
                     return numA - numB;

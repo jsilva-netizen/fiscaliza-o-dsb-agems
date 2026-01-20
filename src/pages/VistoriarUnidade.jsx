@@ -196,20 +196,20 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
                 500
             );
 
-            // Determinar o número da constatação de forma única e sequencial
+            // Determinar o número da constatação - TODAS as respostas (SIM e NAO) geram constatação
             let constatacaoNum;
-            if (existente && existente.resposta === 'NAO' && data.resposta === 'NAO') {
-                // Se já era NAO e continua NAO, mantém o número
+            if (existente && existente.numero_constatacao && (data.resposta === 'SIM' || data.resposta === 'NAO')) {
+                // Se já tinha número e a resposta continua sendo SIM ou NAO, mantém o número
                 constatacaoNum = parseInt(existente.numero_constatacao?.replace('C', '') || '1');
-            } else if (data.resposta === 'NAO') {
+            } else if (data.resposta === 'SIM' || data.resposta === 'NAO') {
                 // Nova constatação: busca o maior número existente no banco + 1
                 const numeros = todasRespostas
-                    .filter(r => r.resposta === 'NAO' && r.item_checklist_id !== itemId)
+                    .filter(r => (r.resposta === 'SIM' || r.resposta === 'NAO') && r.item_checklist_id !== itemId)
                     .map(r => parseInt(r.numero_constatacao?.replace('C', '') || '0'))
                     .filter(n => !isNaN(n));
                 constatacaoNum = numeros.length > 0 ? Math.max(...numeros) + 1 : 1;
             } else {
-                constatacaoNum = null; // Não é NAO, não tem número
+                constatacaoNum = null; // N/A não tem número
             }
             
             // Determinar o texto da constatação baseado na resposta
@@ -453,7 +453,7 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
 
             await base44.entities.UnidadeFiscalizada.update(unidadeId, {
                 status: 'finalizada',
-                total_constatacoes: Object.values(respostas).filter(r => r.resposta === 'NAO').length,
+                total_constatacoes: Object.values(respostas).filter(r => r.resposta === 'SIM' || r.resposta === 'NAO').length,
                 total_ncs: ncsExistentes.length
             });
         },
