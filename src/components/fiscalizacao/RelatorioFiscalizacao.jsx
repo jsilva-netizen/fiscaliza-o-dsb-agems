@@ -157,6 +157,9 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                 }
             };
 
+            // Calcular offset global de figuras
+            let offsetGlobalFiguras = 0;
+
             // Para cada unidade
             for (let idx = 0; idx < unidades.length; idx++) {
                 const unidade = unidades[idx];
@@ -377,7 +380,8 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                                 pdf.addImage(fotosBase64[i].base64, 'JPEG', leftX + 2, yPos + 2, imgWidth, imgHeight);
                                 pdf.setFontSize(7);
                                 pdf.setFont('helvetica', 'normal');
-                                const legenda = fotosBase64[i].legenda ? `Figura ${i + 1} – ${fotosBase64[i].legenda}` : `Figura ${i + 1} – ${unidade.tipo_unidade_nome}.`;
+                                const numFigura = offsetGlobalFiguras + i + 1;
+                                const legenda = fotosBase64[i].legenda ? `Figura ${numFigura} – ${fotosBase64[i].legenda}` : `Figura ${numFigura} – ${unidade.tipo_unidade_nome}.`;
                                 const lines = pdf.splitTextToSize(legenda, imgCellWidth - 4);
                                 pdf.text(lines, leftX + imgCellWidth / 2, yPos + imgHeight + 5, { align: 'center' });
                             } catch (err) {
@@ -392,7 +396,8 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                                 pdf.addImage(fotosBase64[i + 1].base64, 'JPEG', rightX + 2, yPos + 2, imgWidth, imgHeight);
                                 pdf.setFontSize(7);
                                 pdf.setFont('helvetica', 'normal');
-                                const legenda = fotosBase64[i + 1].legenda ? `Figura ${i + 2} – ${fotosBase64[i + 1].legenda}` : `Figura ${i + 2} – ${unidade.tipo_unidade_nome}.`;
+                                const numFigura = offsetGlobalFiguras + i + 2;
+                                const legenda = fotosBase64[i + 1].legenda ? `Figura ${numFigura} – ${fotosBase64[i + 1].legenda}` : `Figura ${numFigura} – ${unidade.tipo_unidade_nome}.`;
                                 const lines = pdf.splitTextToSize(legenda, imgCellWidth - 4);
                                 pdf.text(lines, rightX + imgCellWidth / 2, yPos + imgHeight + 5, { align: 'center' });
                             } catch (err) {
@@ -401,6 +406,10 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                         }
 
                         yPos += totalCellHeight;
+                    }
+
+                    // Atualizar offset para próxima unidade
+                    offsetGlobalFiguras += fotosBase64.length;
                     }
                 }
             }
