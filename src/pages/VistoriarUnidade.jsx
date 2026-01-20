@@ -369,9 +369,7 @@ export default function VistoriarUnidade() {
     const progresso = totalItens > 0 ? Math.round((totalRespondidas / totalItens) * 100) : 0;
 
     return (
-        <SyncManager>
-            <div className="min-h-screen bg-gray-100 pb-24">
-                <OfflineIndicator />
+        <div className="min-h-screen bg-gray-100 pb-24">
             
             {/* Header */}
             <div className="bg-blue-900 text-white sticky top-0 z-40">
