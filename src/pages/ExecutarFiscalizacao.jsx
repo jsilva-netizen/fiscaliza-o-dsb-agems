@@ -45,10 +45,19 @@ export default function ExecutarFiscalizacao() {
 
     const finalizarMutation = useMutation({
         mutationFn: async () => {
+            // Recarregar unidades do banco para validação precisa
+            const unidadesAtualizadas = await base44.entities.UnidadeFiscalizada.filter({ 
+                fiscalizacao_id: fiscalizacaoId 
+            });
+            
             // Verificar se todas as unidades estão completas
-            for (const unidade of unidades) {
-                if ((unidade.fotos_unidade?.length || 0) < 2) {
-                    throw new Error(`Unidade "${unidade.nome_unidade || unidade.tipo_unidade_nome}" precisa de pelo menos 2 fotos.`);
+            for (const unidade of unidadesAtualizadas) {
+                const fotos = Array.isArray(unidade.fotos_unidade) ? unidade.fotos_unidade : [];
+                if (fotos.length < 2) {
+                    throw new Error(`Unidade "${unidade.nome_unidade || unidade.tipo_unidade_nome}" precisa de pelo menos 2 fotos (tem ${fotos.length}).`);
+                }
+                if (unidade.status !== 'finalizada') {
+                    throw new Error(`Finalize a vistoria da unidade "${unidade.nome_unidade || unidade.tipo_unidade_nome}" antes de finalizar a fiscalização.`);
                 }
             }
             
@@ -58,6 +67,7 @@ export default function ExecutarFiscalizacao() {
             });
         },
         onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['fiscalizacoes'] });
             navigate(createPageUrl('Fiscalizacoes'));
         },
         onError: (err) => {

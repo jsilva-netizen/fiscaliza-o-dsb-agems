@@ -439,18 +439,31 @@ export default function VistoriarUnidade() {
 
     const finalizarUnidadeMutation = useMutation({
         mutationFn: async () => {
-            // Validar usando o estado local (fonte da verdade)
+            // Validar fotos (estado local é fonte da verdade)
             if (fotos.length < 2) {
-                throw new Error('Mínimo de 2 fotos da unidade obrigatórias.');
+                throw new Error(`Mínimo de 2 fotos obrigatórias (você tem ${fotos.length}).`);
             }
+
+            // Recarregar dados do banco para contagens precisas
+            const respostasAtuais = await base44.entities.RespostaChecklist.filter({ 
+                unidade_fiscalizada_id: unidadeId 
+            });
+            const ncsAtuais = await base44.entities.NaoConformidade.filter({ 
+                unidade_fiscalizada_id: unidadeId 
+            });
+
+            const totalConstatacoes = respostasAtuais.filter(r => 
+                r.resposta === 'SIM' || r.resposta === 'NAO'
+            ).length;
 
             await base44.entities.UnidadeFiscalizada.update(unidadeId, {
                 status: 'finalizada',
-                total_constatacoes: Object.values(respostas).filter(r => r.resposta === 'SIM' || r.resposta === 'NAO').length,
-                total_ncs: ncsExistentes.length
+                total_constatacoes: totalConstatacoes,
+                total_ncs: ncsAtuais.length
             });
         },
         onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['unidades-fiscalizacao'] });
             navigate(createPageUrl('ExecutarFiscalizacao') + `?id=${unidade.fiscalizacao_id}`);
         },
         onError: (err) => {
