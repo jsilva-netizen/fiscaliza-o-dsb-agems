@@ -21,6 +21,48 @@ import OfflineIndicator from '@/components/OfflineIndicator';
 import useOfflineCache from '@/components/offline/useOfflineCache';
 import { addPendingOperation } from '@/components/offline/offlineStorage';
 
+// Wrapper para calcular offset das figuras
+function RelatorioUnidadeWrapper({ unidade, ...props }) {
+    const [offsetFiguras, setOffsetFiguras] = React.useState(0);
+    
+    React.useEffect(() => {
+        const calcularOffset = async () => {
+            // Buscar todas as unidades da fiscalização criadas antes desta
+            const todasUnidades = await base44.entities.UnidadeFiscalizada.filter(
+                { fiscalizacao_id: unidade.fiscalizacao_id },
+                'created_date',
+                500
+            );
+            
+            let totalFotos = 0;
+            for (const u of todasUnidades) {
+                // Contar apenas fotos de unidades anteriores (created_date menor)
+                if (new Date(u.created_date) < new Date(unidade.created_date)) {
+                    const fotosUnidade = Array.isArray(u.fotos_unidade) ? u.fotos_unidade : [];
+                    totalFotos += fotosUnidade.length;
+                    
+                    // Contar fotos das NCs desta unidade
+                    const ncsUnidade = await base44.entities.NaoConformidade.filter(
+                        { unidade_fiscalizada_id: u.id }
+                    );
+                    for (const nc of ncsUnidade) {
+                        const fotosNC = Array.isArray(nc.fotos) ? nc.fotos : [];
+                        totalFotos += fotosNC.length;
+                    }
+                }
+            }
+            
+            setOffsetFiguras(totalFotos);
+        };
+        
+        if (unidade?.fiscalizacao_id) {
+            calcularOffset();
+        }
+    }, [unidade]);
+    
+    return <RelatorioUnidade unidade={unidade} offsetFiguras={offsetFiguras} {...props} />;
+}
+
 export default function VistoriarUnidade() {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
@@ -598,7 +640,7 @@ export default function VistoriarUnidade() {
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-50">
                 <div className="max-w-4xl mx-auto space-y-2">
                     {unidade?.status === 'finalizada' ? (
-                        <RelatorioUnidade
+                        <RelatorioUnidadeWrapper
                             unidade={unidade}
                             fiscalizacao={fiscalizacao}
                             respostas={respostasExistentes}
