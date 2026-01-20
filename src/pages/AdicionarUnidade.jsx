@@ -3,6 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import OfflineIndicator from '@/components/OfflineIndicator';
+import SyncManager from '@/components/offline/SyncManager';
+import { addPendingOperation } from '@/components/offline/offlineStorage';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,7 +127,7 @@ export default function AdicionarUnidade() {
     const createMutation = useMutation({
         mutationFn: async (data) => {
             const tipo = tipos.find(t => t.id === data.tipo_unidade_id);
-            return base44.entities.UnidadeFiscalizada.create({
+            const unidadeData = {
                 ...data,
                 fiscalizacao_id: fiscalizacaoId,
                 tipo_unidade_nome: tipo?.nome,
@@ -133,7 +136,21 @@ export default function AdicionarUnidade() {
                 data_hora_vistoria: new Date().toISOString(),
                 status: 'em_andamento',
                 fotos_unidade: []
-            });
+            };
+
+            // Suporte offline
+            if (!navigator.onLine) {
+                await addPendingOperation({
+                    operation: 'create',
+                    entity: 'UnidadeFiscalizada',
+                    data: unidadeData,
+                    priority: 9
+                });
+                // Retorna ID temporário para navegação
+                return { id: 'temp_' + Date.now() };
+            }
+
+            return base44.entities.UnidadeFiscalizada.create(unidadeData);
         },
         onSuccess: (result) => {
             navigate(createPageUrl('VistoriarUnidade') + `?id=${result.id}`);
@@ -150,8 +167,10 @@ export default function AdicionarUnidade() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
+        <SyncManager>
+            <OfflineIndicator />
+            <div className="min-h-screen bg-gray-50">
+                {/* Header */}
             <div className="bg-blue-900 text-white">
                 <div className="max-w-lg mx-auto px-4 py-4">
                     <div className="flex items-center gap-3">
@@ -270,6 +289,6 @@ export default function AdicionarUnidade() {
                     </Button>
                 </form>
             </div>
-        </div>
+        </SyncManager>
     );
 }

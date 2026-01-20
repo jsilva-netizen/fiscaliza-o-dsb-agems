@@ -18,6 +18,7 @@ import ChecklistItem from '@/components/fiscalizacao/ChecklistItem';
 import PhotoGrid from '@/components/fiscalizacao/PhotoGrid';
 import RelatorioUnidade from '@/components/fiscalizacao/RelatorioUnidade';
 import OfflineIndicator from '@/components/OfflineIndicator';
+import SyncManager from '@/components/offline/SyncManager';
 import useOfflineCache from '@/components/offline/useOfflineCache';
 import { addPendingOperation } from '@/components/offline/offlineStorage';
 import { preloadImages } from '@/components/offline/preloadImages';
@@ -508,8 +509,9 @@ export default function VistoriarUnidade() {
     const progresso = totalItens > 0 ? Math.round((totalRespondidas / totalItens) * 100) : 0;
 
     return (
-        <div className="min-h-screen bg-gray-100 pb-24">
-            <OfflineIndicator />
+        <SyncManager>
+            <div className="min-h-screen bg-gray-100 pb-24">
+                <OfflineIndicator />
             
             {/* Header */}
             <div className="bg-blue-900 text-white sticky top-0 z-40">
@@ -775,6 +777,7 @@ export default function VistoriarUnidade() {
             </Dialog>
 
 
-        </div>
+            </div>
+        </SyncManager>
     );
 }

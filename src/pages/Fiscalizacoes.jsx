@@ -107,8 +107,10 @@ export default function Fiscalizacoes() {
     const finalizadas = fiscalizacoes.filter(f => f.status === 'finalizada').length;
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
+        <SyncManager>
+            <OfflineIndicator />
+            <div className="min-h-screen bg-gray-50">
+                {/* Header */}
             <div className="bg-blue-900 text-white">
                 <div className="max-w-4xl mx-auto px-4 py-4">
                     <div className="flex items-center justify-between">

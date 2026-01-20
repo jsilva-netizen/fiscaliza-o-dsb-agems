@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import OfflineIndicator from '@/components/OfflineIndicator';
+import SyncManager from '@/components/offline/SyncManager';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -96,8 +98,10 @@ export default function ExecutarFiscalizacao() {
     );
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            {/* Header */}
+        <SyncManager>
+            <OfflineIndicator />
+            <div className="min-h-screen bg-gray-100">
+                {/* Header */}
             <div className="bg-blue-900 text-white sticky top-0 z-40">
                 <div className="max-w-4xl mx-auto px-4 py-3">
                     <div className="flex items-center justify-between">
@@ -256,6 +260,7 @@ export default function ExecutarFiscalizacao() {
                     </div>
                 )}
             </div>
-        </div>
+            </div>
+        </SyncManager>
     );
 }

@@ -187,6 +187,54 @@ export const removeOfflinePhoto = async (id) => {
     });
 };
 
+// Marcar operação como em processamento
+export const markOperationProcessing = async (id) => {
+    const database = await initDB();
+    return new Promise((resolve, reject) => {
+        const transaction = database.transaction([STORES.PENDING_OPERATIONS], 'readwrite');
+        const store = transaction.objectStore(STORES.PENDING_OPERATIONS);
+        const getRequest = store.get(id);
+        
+        getRequest.onsuccess = () => {
+            const operation = getRequest.result;
+            if (operation) {
+                operation.status = 'processing';
+                const updateRequest = store.put(operation);
+                updateRequest.onsuccess = () => resolve();
+                updateRequest.onerror = () => reject(updateRequest.error);
+            } else {
+                resolve();
+            }
+        };
+        getRequest.onerror = () => reject(getRequest.error);
+    });
+};
+
+// Atualizar status da operação
+export const updateOperationStatus = async (id, status, error = null) => {
+    const database = await initDB();
+    return new Promise((resolve, reject) => {
+        const transaction = database.transaction([STORES.PENDING_OPERATIONS], 'readwrite');
+        const store = transaction.objectStore(STORES.PENDING_OPERATIONS);
+        const getRequest = store.get(id);
+        
+        getRequest.onsuccess = () => {
+            const operation = getRequest.result;
+            if (operation) {
+                operation.status = status;
+                operation.error = error;
+                operation.lastAttempt = new Date().toISOString();
+                const updateRequest = store.put(operation);
+                updateRequest.onsuccess = () => resolve();
+                updateRequest.onerror = () => reject(updateRequest.error);
+            } else {
+                resolve();
+            }
+        };
+        getRequest.onerror = () => reject(getRequest.error);
+    });
+};
+
 // Limpar todos os dados offline (após sincronização completa)
 export const clearOfflineData = async () => {
     const database = await initDB();
@@ -204,6 +252,12 @@ export const clearOfflineData = async () => {
             request.onerror = () => reject(request.error);
         })
     ]);
+};
+
+// Obter contagem de operações pendentes
+export const getPendingOperationsCount = async () => {
+    const operations = await getPendingOperations();
+    return operations.filter(op => op.status === 'pending').length;
 };
 
 // ===========================
