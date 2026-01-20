@@ -189,14 +189,21 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
             if (!item) return;
             const existente = respostasExistentes.find(r => r.item_checklist_id === itemId);
 
-            // Determinar o número da constatação de forma única
+            // Buscar TODAS as respostas atualizadas do banco antes de numerar
+            const todasRespostas = await base44.entities.RespostaChecklist.filter(
+                { unidade_fiscalizada_id: unidadeId }, 
+                'created_date', 
+                500
+            );
+
+            // Determinar o número da constatação de forma única e sequencial
             let constatacaoNum;
             if (existente && existente.resposta === 'NAO' && data.resposta === 'NAO') {
                 // Se já era NAO e continua NAO, mantém o número
                 constatacaoNum = parseInt(existente.numero_constatacao?.replace('C', '') || '1');
             } else if (data.resposta === 'NAO') {
-                // Nova constatação: pega o maior número existente + 1
-                const numeros = respostasExistentes
+                // Nova constatação: busca o maior número existente no banco + 1
+                const numeros = todasRespostas
                     .filter(r => r.resposta === 'NAO' && r.item_checklist_id !== itemId)
                     .map(r => parseInt(r.numero_constatacao?.replace('C', '') || '0'))
                     .filter(n => !isNaN(n));
@@ -265,8 +272,13 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
                         return; // Aguarda aprovação do usuário
                     }
 
-                    // Criar NC normal - pega o maior número existente + 1
-                    const numerosNC = ncsExistentes
+                    // Buscar TODAS as NCs do banco antes de numerar
+                    const todasNCs = await base44.entities.NaoConformidade.filter(
+                        { unidade_fiscalizada_id: unidadeId },
+                        'created_date',
+                        500
+                    );
+                    const numerosNC = todasNCs
                         .map(nc => parseInt(nc.numero_nc?.replace('NC', '') || '0'))
                         .filter(n => !isNaN(n));
                     const ncNum = numerosNC.length > 0 ? Math.max(...numerosNC) + 1 : 1;
@@ -287,8 +299,13 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
                     });
 
                     if (item.texto_determinacao) {
-                        // Pega o maior número de determinação + 1
-                        const numerosDet = determinacoesExistentes
+                        // Buscar TODAS as determinações do banco antes de numerar
+                        const todasDet = await base44.entities.Determinacao.filter(
+                            { unidade_fiscalizada_id: unidadeId },
+                            'created_date',
+                            500
+                        );
+                        const numerosDet = todasDet
                             .map(d => parseInt(d.numero_determinacao?.replace('D', '') || '0'))
                             .filter(n => !isNaN(n));
                         const detNum = numerosDet.length > 0 ? Math.max(...numerosDet) + 1 : 1;
@@ -314,8 +331,13 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
 
     const aplicarSugestaoIAMutation = useMutation({
             mutationFn: async ({ itemId, sugestao, constatacaoNum }) => {
-                // Pega o maior número de NC + 1
-                const numerosNC = ncsExistentes
+                // Buscar TODAS as NCs do banco antes de numerar
+                const todasNCs = await base44.entities.NaoConformidade.filter(
+                    { unidade_fiscalizada_id: unidadeId },
+                    'created_date',
+                    500
+                );
+                const numerosNC = todasNCs
                     .map(nc => parseInt(nc.numero_nc?.replace('NC', '') || '0'))
                     .filter(n => !isNaN(n));
                 const ncNum = numerosNC.length > 0 ? Math.max(...numerosNC) + 1 : 1;
@@ -332,8 +354,13 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
                     fotos: []
                 });
 
-                // Pega o maior número de determinação + 1
-                const numerosDet = determinacoesExistentes
+                // Buscar TODAS as determinações do banco antes de numerar
+                const todasDet = await base44.entities.Determinacao.filter(
+                    { unidade_fiscalizada_id: unidadeId },
+                    'created_date',
+                    500
+                );
+                const numerosDet = todasDet
                     .map(d => parseInt(d.numero_determinacao?.replace('D', '') || '0'))
                     .filter(n => !isNaN(n));
                 const detNum = numerosDet.length > 0 ? Math.max(...numerosDet) + 1 : 1;
@@ -393,8 +420,13 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
 
     const adicionarRecomendacaoMutation = useMutation({
         mutationFn: async (texto) => {
-            // Pega o maior número de recomendação + 1
-            const numerosRec = recomendacoesExistentes
+            // Buscar TODAS as recomendações do banco antes de numerar
+            const todasRec = await base44.entities.Recomendacao.filter(
+                { unidade_fiscalizada_id: unidadeId },
+                'created_date',
+                500
+            );
+            const numerosRec = todasRec
                 .map(r => parseInt(r.numero_recomendacao?.replace('R', '') || '0'))
                 .filter(n => !isNaN(n));
             const num = numerosRec.length > 0 ? Math.max(...numerosRec) + 1 : 1;
