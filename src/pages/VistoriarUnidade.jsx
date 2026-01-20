@@ -230,159 +230,162 @@ export default function VistoriarUnidade() {
         mutationFn: async ({ itemId, data }) => {
             const item = Array.isArray(itensChecklist) ? itensChecklist.find(i => i.id === itemId) : null;
             if (!item) return;
-            const existente = respostasExistentes.find(r => r.item_checklist_id === itemId);
 
-            // Buscar TODAS as unidades da fiscalização
+            // PASSO 1: Salvar/Atualizar a resposta do checklist
+            const respostaExistente = respostasExistentes.find(r => r.item_checklist_id === itemId);
+
+            // Buscar todas unidades da fiscalização para numeração
             const todasUnidades = await base44.entities.UnidadeFiscalizada.filter(
-                { fiscalizacao_id: unidade.fiscalizacao_id },
-                'created_date',
-                500
+                { fiscalizacao_id: unidade.fiscalizacao_id }
             );
             const idsUnidades = todasUnidades.map(u => u.id);
 
-            // Buscar TODAS as respostas de TODA a fiscalização
-            const todasRespostas = await base44.entities.RespostaChecklist.list('created_date', 1000);
-            const respostasDaFiscalizacao = todasRespostas.filter(r => idsUnidades.includes(r.unidade_fiscalizada_id));
-
-            // Determinar o número da constatação - TODAS as respostas (SIM e NAO) geram constatação
-            let constatacaoNum;
-            if (existente && existente.numero_constatacao && (data.resposta === 'SIM' || data.resposta === 'NAO')) {
-                // Se já tinha número e a resposta continua sendo SIM ou NAO, mantém o número
-                constatacaoNum = parseInt(existente.numero_constatacao?.replace('C', '') || '1');
-            } else if (data.resposta === 'SIM' || data.resposta === 'NAO') {
-                // Nova constatação: busca o maior número existente em TODA a fiscalização + 1
-                const numeros = respostasDaFiscalizacao
-                    .filter(r => (r.resposta === 'SIM' || r.resposta === 'NAO') && r.id !== existente?.id)
-                    .map(r => parseInt(r.numero_constatacao?.replace('C', '') || '0'))
-                    .filter(n => !isNaN(n));
-                constatacaoNum = numeros.length > 0 ? Math.max(...numeros) + 1 : 1;
-            } else {
-                constatacaoNum = null; // N/A não tem número
+            // Determinar número da constatação
+            let constatacaoNum = null;
+            if (data.resposta === 'SIM' || data.resposta === 'NAO') {
+                if (respostaExistente?.numero_constatacao) {
+                    // Mantém o número existente
+                    constatacaoNum = parseInt(respostaExistente.numero_constatacao.replace('C', ''));
+                } else {
+                    // Buscar maior número de constatação em toda fiscalização
+                    const todasRespostas = await base44.entities.RespostaChecklist.list('created_date', 1000);
+                    const respostasFisc = todasRespostas.filter(r => 
+                        idsUnidades.includes(r.unidade_fiscalizada_id) && 
+                        r.id !== respostaExistente?.id
+                    );
+                    const numeros = respostasFisc
+                        .filter(r => r.numero_constatacao)
+                        .map(r => parseInt(r.numero_constatacao.replace('C', '')))
+                        .filter(n => !isNaN(n));
+                    constatacaoNum = numeros.length > 0 ? Math.max(...numeros) + 1 : 1;
+                }
             }
-            
-            // Determinar o texto da constatação baseado na resposta
+
+            // Texto da constatação
             let textoConstatacao = '';
             if (data.resposta === 'SIM' && item.texto_constatacao_sim) {
                 textoConstatacao = item.texto_constatacao_sim;
             } else if (data.resposta === 'NAO' && item.texto_constatacao_nao) {
                 textoConstatacao = item.texto_constatacao_nao;
-            } else {
-                // Fallback: construir texto a partir da pergunta
-                textoConstatacao = data.resposta === 'NAO' 
-                    ? item.pergunta.replace('?', '').replace(/^([A-Z])/, (match) => match.toLowerCase()).trim()
-                    : item.pergunta.replace('?', '').trim();
+            } else if (data.resposta !== 'NA') {
+                textoConstatacao = item.pergunta.replace('?', '').trim();
             }
 
-            const payload = {
+            const payloadResposta = {
                 unidade_fiscalizada_id: unidadeId,
                 item_checklist_id: itemId,
                 pergunta: textoConstatacao,
-                gera_nc: item.gera_nc,
+                gera_nc: item.gera_nc || false,
                 numero_constatacao: constatacaoNum ? `C${constatacaoNum}` : null,
-                ...data
+                resposta: data.resposta,
+                observacao: data.observacao || null
             };
 
-            // If offline, queue the operation
+            // Offline support
             if (!navigator.onLine) {
-                if (existente) {
+                if (respostaExistente) {
                     await addPendingOperation({
                         operation: 'update',
                         entity: 'RespostaChecklist',
-                        id: existente.id,
-                        data: payload,
+                        id: respostaExistente.id,
+                        data: payloadResposta,
                         priority: 2
                     });
                 } else {
                     await addPendingOperation({
                         operation: 'create',
                         entity: 'RespostaChecklist',
-                        data: payload,
+                        data: payloadResposta,
                         priority: 2
                     });
                 }
                 return;
             }
 
-            // If online, execute immediately
+            // Salvar resposta
             let respostaId;
-            if (existente) {
-                await base44.entities.RespostaChecklist.update(existente.id, payload);
-                respostaId = existente.id;
+            if (respostaExistente) {
+                await base44.entities.RespostaChecklist.update(respostaExistente.id, payloadResposta);
+                respostaId = respostaExistente.id;
             } else {
-                const respostaCriada = await base44.entities.RespostaChecklist.create(payload);
-                respostaId = respostaCriada.id;
+                const nova = await base44.entities.RespostaChecklist.create(payloadResposta);
+                respostaId = nova.id;
             }
 
-            // Gerenciar NC baseado na resposta
-            // Buscar NC existente atualizada (não usar cache)
+            // PASSO 2: Gerenciar NC e Determinação
+            // Buscar NC vinculada a esta resposta específica
             const todasNCs = await base44.entities.NaoConformidade.filter({ 
                 unidade_fiscalizada_id: unidadeId 
             });
-            const ncExistente = todasNCs.find(nc => nc.resposta_checklist_id === respostaId);
+            const ncVinculada = todasNCs.find(nc => nc.resposta_checklist_id === respostaId);
 
-            if (data.resposta === 'NAO' && item.gera_nc) {
-                // Resposta NÃO + gera_nc = deve ter NC
-                if (!ncExistente) {
-                    // Criar nova NC
-                    const todasNcsFiscalizacao = await base44.entities.NaoConformidade.list('created_date', 1000);
-                    const ncsDaFiscalizacao = todasNcsFiscalizacao.filter(nc => idsUnidades.includes(nc.unidade_fiscalizada_id));
-                    const numerosNC = ncsDaFiscalizacao
-                        .map(nc => parseInt(nc.numero_nc?.replace('NC', '') || '0'))
+            // Lógica: NC só existe se resposta = "NAO" E item.gera_nc = true
+            const deveExistirNC = (data.resposta === 'NAO' && item.gera_nc === true);
+
+            if (deveExistirNC && !ncVinculada) {
+                // CRIAR NC e Determinação
+
+                // Numeração NC - buscar todas NCs da fiscalização
+                const todasNcsFisc = await base44.entities.NaoConformidade.list('created_date', 1000);
+                const ncsFisc = todasNcsFisc.filter(nc => idsUnidades.includes(nc.unidade_fiscalizada_id));
+                const numerosNC = ncsFisc
+                    .map(nc => parseInt(nc.numero_nc?.replace('NC', '') || '0'))
+                    .filter(n => !isNaN(n));
+                const proximoNumNC = numerosNC.length > 0 ? Math.max(...numerosNC) + 1 : 1;
+
+                const textoNC = item.texto_nc 
+                    ? `A Constatação C${constatacaoNum} não cumpre o disposto no ${item.artigo_portaria || 'regulamento aplicável'}. ${item.texto_nc}`
+                    : `A Constatação C${constatacaoNum} não cumpre o disposto no ${item.artigo_portaria || 'regulamento aplicável'}.`;
+
+                const ncCriada = await base44.entities.NaoConformidade.create({
+                    unidade_fiscalizada_id: unidadeId,
+                    resposta_checklist_id: respostaId,
+                    numero_nc: `NC${proximoNumNC}`,
+                    artigo_portaria: item.artigo_portaria || '',
+                    descricao: textoNC,
+                    fotos: []
+                });
+
+                // Criar Determinação se houver texto
+                if (item.texto_determinacao) {
+                    const todasDetsFisc = await base44.entities.Determinacao.list('created_date', 1000);
+                    const detsFisc = todasDetsFisc.filter(d => idsUnidades.includes(d.unidade_fiscalizada_id));
+                    const numerosDet = detsFisc
+                        .map(d => parseInt(d.numero_determinacao?.replace('D', '') || '0'))
                         .filter(n => !isNaN(n));
-                    const ncNum = numerosNC.length > 0 ? Math.max(...numerosNC) + 1 : 1;
+                    const proximoNumDet = numerosDet.length > 0 ? Math.max(...numerosDet) + 1 : 1;
 
-                    const textoNC = item.texto_nc 
-                        ? `A Constatação C${constatacaoNum} não cumpre o disposto no ${item.artigo_portaria || 'regulamento aplicável'}. ${item.texto_nc}`
-                        : `A Constatação C${constatacaoNum} não cumpre o disposto no ${item.artigo_portaria || 'regulamento aplicável'}.`;
+                    const textoDet = `Para sanar a NC${proximoNumNC}, ${item.texto_determinacao.charAt(0).toLowerCase()}${item.texto_determinacao.slice(1)}`;
 
-                    const nc = await base44.entities.NaoConformidade.create({
+                    await base44.entities.Determinacao.create({
                         unidade_fiscalizada_id: unidadeId,
-                        resposta_checklist_id: respostaId,
-                        numero_nc: `NC${ncNum}`,
-                        artigo_portaria: item.artigo_portaria,
-                        descricao: textoNC,
-                        fotos: []
+                        nao_conformidade_id: ncCriada.id,
+                        numero_determinacao: `D${proximoNumDet}`,
+                        descricao: textoDet,
+                        prazo_dias: 30,
+                        status: 'pendente'
                     });
-
-                    if (item.texto_determinacao) {
-                        const todasDetFiscalizacao = await base44.entities.Determinacao.list('created_date', 1000);
-                        const detsDaFiscalizacao = todasDetFiscalizacao.filter(d => idsUnidades.includes(d.unidade_fiscalizada_id));
-                        const numerosDet = detsDaFiscalizacao
-                            .map(d => parseInt(d.numero_determinacao?.replace('D', '') || '0'))
-                            .filter(n => !isNaN(n));
-                        const detNum = numerosDet.length > 0 ? Math.max(...numerosDet) + 1 : 1;
-
-                        const textoDeterminacao = `Para sanar a NC${ncNum}, ${item.texto_determinacao.charAt(0).toLowerCase()}${item.texto_determinacao.slice(1)}`;
-                        await base44.entities.Determinacao.create({
-                            unidade_fiscalizada_id: unidadeId,
-                            nao_conformidade_id: nc.id,
-                            numero_determinacao: `D${detNum}`,
-                            descricao: textoDeterminacao,
-                            prazo_dias: 30,
-                            status: 'pendente'
-                        });
-                    }
-
-                    queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
-                    queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
                 }
-                // Se já existe NC, não faz nada (mantém)
-            } else {
-                // Resposta SIM ou N/A = não deve ter NC
-                if (ncExistente) {
-                    // Remover NC existente e suas determinações
-                    const detsAssociadas = await base44.entities.Determinacao.filter({
-                        nao_conformidade_id: ncExistente.id
-                    });
-                    for (const det of detsAssociadas) {
-                        await base44.entities.Determinacao.delete(det.id);
-                    }
-                    await base44.entities.NaoConformidade.delete(ncExistente.id);
 
-                    queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
-                    queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
+                queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
+                queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
+
+            } else if (!deveExistirNC && ncVinculada) {
+                // REMOVER NC e Determinações associadas
+                const detsVinculadas = await base44.entities.Determinacao.filter({
+                    nao_conformidade_id: ncVinculada.id
+                });
+
+                for (const det of detsVinculadas) {
+                    await base44.entities.Determinacao.delete(det.id);
                 }
+
+                await base44.entities.NaoConformidade.delete(ncVinculada.id);
+
+                queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
+                queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
             }
+            // Se deveExistirNC && ncVinculada já existe = não faz nada (já está correto)
         }
     });
 
