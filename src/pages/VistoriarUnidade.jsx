@@ -93,7 +93,10 @@ export default function VistoriarUnidade() {
     // Load existing data
     useEffect(() => {
         if (unidade?.fotos_unidade) {
-            setFotos(unidade.fotos_unidade.map(url => ({ url })));
+            const fotosCarregadas = unidade.fotos_unidade.map(foto => 
+                typeof foto === 'string' ? { url: foto } : foto
+            );
+            setFotos(fotosCarregadas);
         }
         
         const respostasMap = {};
@@ -247,9 +250,9 @@ export default function VistoriarUnidade() {
 
 
     const salvarFotosMutation = useMutation({
-        mutationFn: async (fotosUrls) => {
+        mutationFn: async (fotosData) => {
             await base44.entities.UnidadeFiscalizada.update(unidadeId, {
-                fotos_unidade: fotosUrls
+                fotos_unidade: fotosData
             });
         },
         onSuccess: () => {
@@ -312,19 +315,20 @@ export default function VistoriarUnidade() {
     const handleAddFoto = (fotoData) => {
         const novasFotos = [...fotos, fotoData];
         setFotos(novasFotos);
-        salvarFotosMutation.mutate(novasFotos.map(f => f.url));
+        salvarFotosMutation.mutate(novasFotos);
     };
 
     const handleRemoveFoto = (index) => {
         const novasFotos = fotos.filter((_, i) => i !== index);
         setFotos(novasFotos);
-        salvarFotosMutation.mutate(novasFotos.map(f => f.url));
+        salvarFotosMutation.mutate(novasFotos);
     };
 
     const handleUpdateLegenda = (index, legenda) => {
         const novasFotos = [...fotos];
         novasFotos[index] = { ...novasFotos[index], legenda };
         setFotos(novasFotos);
+        salvarFotosMutation.mutate(novasFotos);
     };
 
     if (loadingUnidade) {
