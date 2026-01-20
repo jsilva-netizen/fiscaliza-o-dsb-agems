@@ -408,23 +408,23 @@ export default function VistoriarUnidade() {
         salvarRespostaMutation.mutate({ itemId, data });
     };
 
-    const handleAddFoto = (fotoData) => {
+    const handleAddFoto = async (fotoData) => {
         const novasFotos = [...fotos, fotoData];
         setFotos(novasFotos);
-        salvarFotosMutation.mutate(novasFotos);
+        await salvarFotosMutation.mutateAsync(novasFotos);
     };
 
-    const handleRemoveFoto = (index) => {
+    const handleRemoveFoto = async (index) => {
         const novasFotos = fotos.filter((_, i) => i !== index);
         setFotos(novasFotos);
-        salvarFotosMutation.mutate(novasFotos);
+        await salvarFotosMutation.mutateAsync(novasFotos);
     };
 
-    const handleUpdateLegenda = (index, legenda) => {
+    const handleUpdateLegenda = async (index, legenda) => {
         const novasFotos = [...fotos];
         novasFotos[index] = { ...novasFotos[index], legenda };
         setFotos(novasFotos);
-        salvarFotosMutation.mutate(novasFotos);
+        await salvarFotosMutation.mutateAsync(novasFotos);
     };
 
     if (loadingUnidade) {
