@@ -17,12 +17,9 @@ import {
 import ChecklistItem from '@/components/fiscalizacao/ChecklistItem';
 import PhotoGrid from '@/components/fiscalizacao/PhotoGrid';
 import RelatorioUnidade from '@/components/fiscalizacao/RelatorioUnidade';
-import OfflineIndicator from '@/components/OfflineIndicator';
-import SyncManager from '@/components/offline/SyncManager';
 import useOfflineCache from '@/components/offline/useOfflineCache';
-import { addPendingOperation } from '@/components/offline/offlineStorage';
 import { preloadImages } from '@/components/offline/preloadImages';
-import { executarRespostaAtomicamente } from '@/components/offline/respostaHandler';
+import { criarRespostaComNCDeterminacao } from '@/components/offline/respostaTransacao';
 
 // Wrapper para calcular offset das figuras
 function RelatorioUnidadeWrapper({ unidade, ...props }) {
