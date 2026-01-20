@@ -185,7 +185,8 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
     // Mutations with offline support
     const salvarRespostaMutation = useMutation({
         mutationFn: async ({ itemId, data, usarIA }) => {
-            const item = itensChecklist.find(i => i.id === itemId);
+            const item = Array.isArray(itensChecklist) ? itensChecklist.find(i => i.id === itemId) : null;
+            if (!item) return;
             const existente = respostasExistentes.find(r => r.item_checklist_id === itemId);
             
             // Determinar o número da constatação
@@ -400,7 +401,7 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
     }
 
     const totalRespondidas = Object.keys(respostas).length;
-    const totalItens = itensChecklist.length;
+    const totalItens = Array.isArray(itensChecklist) ? itensChecklist.length : 0;
     const progresso = totalItens > 0 ? Math.round((totalRespondidas / totalItens) * 100) : 0;
 
     return (
@@ -465,7 +466,7 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
 
                     {/* Checklist Tab */}
                     <TabsContent value="checklist" className="mt-4 space-y-3">
-                        {itensChecklist.length === 0 ? (
+                        {!Array.isArray(itensChecklist) || itensChecklist.length === 0 ? (
                             <Card>
                                 <CardContent className="p-6 text-center text-gray-500">
                                     <ClipboardCheck className="h-12 w-12 mx-auto mb-3 opacity-30" />
