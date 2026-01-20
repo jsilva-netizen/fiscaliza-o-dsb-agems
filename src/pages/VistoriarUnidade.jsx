@@ -230,30 +230,8 @@ export default function VistoriarUnidade() {
                  const item = Array.isArray(itensChecklist) ? itensChecklist.find(i => i.id === itemId) : null;
                  if (!item) return;
 
-                 if (!navigator.onLine) {
-                     // Offline: salvar em pending operations
-                     const respostaExistente = respostasExistentes.find(r => r.item_checklist_id === itemId);
-                     const operationType = respostaExistente ? 'update' : 'create';
-                     
-                     await addPendingOperation({
-                         operation: operationType,
-                         entity: 'RespostaChecklist',
-                         id: respostaExistente?.id,
-                         data: {
-                             unidade_fiscalizada_id: unidadeId,
-                             item_checklist_id: itemId,
-                             pergunta: data.observacao || item.pergunta,
-                             resposta: data.resposta,
-                             observacao: data.observacao || null,
-                             gera_nc: item.gera_nc || false
-                         },
-                         priority: 2
-                     });
-                     return;
-                 }
-
-                 // Online: executar atomicamente
-                 await executarRespostaAtomicamente({
+                 // Executar atomicamente (requer online)
+                 await criarRespostaComNCDeterminacao({
                      base44,
                      unidadeId,
                      itemId,
@@ -269,6 +247,9 @@ export default function VistoriarUnidade() {
                  queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
                  queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
                  queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
+             },
+             onError: (err) => {
+                 alert(err.message);
              }
          });
 
