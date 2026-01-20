@@ -153,9 +153,7 @@ export default function AdicionarUnidade() {
     };
 
     return (
-        <SyncManager>
-            <OfflineIndicator />
-            <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50">
                 {/* Header */}
             <div className="bg-blue-900 text-white">
                 <div className="max-w-lg mx-auto px-4 py-4">
