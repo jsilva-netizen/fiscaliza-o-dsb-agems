@@ -477,41 +477,7 @@ export default function VistoriarUnidade() {
                                             </div>
                                         ))}
 
-                                        {/* Fotos da NC */}
-                                        <div className="mt-3 pt-3 border-t">
-                                            <PhotoGrid
-                                                fotos={(nc.fotos || []).map((f, i) => 
-                                                    typeof f === 'string' ? { url: f } : f
-                                                )}
-                                                minFotos={0}
-                                                fiscalizacaoId={unidade?.fiscalizacao_id}
-                                                unidadeId={unidadeId}
-                                                onAddFoto={(fotoData) => {
-                                                    const fotosAtuais = (nc.fotos || []);
-                                                    const urlsApenas = [...fotosAtuais, fotoData.url];
-                                                    base44.entities.NaoConformidade.update(nc.id, {
-                                                        fotos: urlsApenas,
-                                                        latitude_foto: fotoData.latitude,
-                                                        longitude_foto: fotoData.longitude
-                                                    }).then(() => {
-                                                        queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
-                                                    });
-                                                }}
-                                                onRemoveFoto={(index) => {
-                                                    const fotosAtuais = (nc.fotos || []).map(f => typeof f === 'string' ? { url: f } : f);
-                                                    const novasFotos = fotosAtuais.filter((_, i) => i !== index);
-                                                    base44.entities.NaoConformidade.update(nc.id, {
-                                                        fotos: novasFotos
-                                                    }).then(() => {
-                                                        queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
-                                                    });
-                                                }}
-                                                onUpdateLegenda={(index, legenda) => {
-                                                    // Legendas são armazenadas localmente no PhotoGrid, não no banco
-                                                }}
-                                                titulo={`Fotos da ${nc.numero_nc}`}
-                                            />
-                                        </div>
+
                                     </CardContent>
                                 </Card>
                             ))
