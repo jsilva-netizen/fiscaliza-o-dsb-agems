@@ -399,30 +399,31 @@ export default function VistoriarUnidade() {
     });
 
     const finalizarUnidadeMutation = useMutation({
-        mutationFn: async () => {
-            // Validar fotos (estado local é fonte da verdade)
-            if (fotos.length < 2) {
-                throw new Error(`Mínimo de 2 fotos obrigatórias (você tem ${fotos.length}).`);
-            }
+         mutationFn: async () => {
+             // Validar fotos (estado local é fonte da verdade)
+             if (fotos.length < 2) {
+                 throw new Error(`Mínimo de 2 fotos obrigatórias (você tem ${fotos.length}).`);
+             }
 
-            // Recarregar dados do banco para contagens precisas
-            const respostasAtuais = await base44.entities.RespostaChecklist.filter({ 
-                unidade_fiscalizada_id: unidadeId 
-            });
-            const ncsAtuais = await base44.entities.NaoConformidade.filter({ 
-                unidade_fiscalizada_id: unidadeId 
-            });
+             // Recarregar dados do banco para contagens precisas
+             const respostasAtuais = await base44.entities.RespostaChecklist.filter({ 
+                 unidade_fiscalizada_id: unidadeId 
+             });
+             const ncsAtuais = await base44.entities.NaoConformidade.filter({ 
+                 unidade_fiscalizada_id: unidadeId 
+             });
 
-            const totalConstatacoes = respostasAtuais.filter(r => 
-                r.resposta === 'SIM' || r.resposta === 'NAO'
-            ).length;
+             const totalConstatacoes = respostasAtuais.filter(r => 
+                 r.resposta === 'SIM' || r.resposta === 'NAO'
+             ).length;
 
-            await base44.entities.UnidadeFiscalizada.update(unidadeId, {
-                status: 'finalizada',
-                total_constatacoes: totalConstatacoes,
-                total_ncs: ncsAtuais.length
-            });
-        },
+             await base44.entities.UnidadeFiscalizada.update(unidadeId, {
+                 status: 'finalizada',
+                 fotos_unidade: fotos,
+                 total_constatacoes: totalConstatacoes,
+                 total_ncs: ncsAtuais.length
+             });
+         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['unidades-fiscalizacao'] });
             navigate(createPageUrl('ExecutarFiscalizacao') + `?id=${unidade.fiscalizacao_id}`);
