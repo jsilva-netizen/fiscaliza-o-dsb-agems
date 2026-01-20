@@ -2,27 +2,77 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { 
     ArrowLeft, Search, MapPin, Calendar, CheckCircle2, 
-    Clock, AlertTriangle, ChevronRight, Plus, Filter
+    Clock, AlertTriangle, ChevronRight, Plus, Filter, Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import RelatorioFiscalizacao from '@/components/fiscalizacao/RelatorioFiscalizacao';
 
 export default function Fiscalizacoes() {
+    const queryClient = useQueryClient();
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('todos');
+    const [fiscalizacaoParaDeletar, setFiscalizacaoParaDeletar] = useState(null);
+
+    const { data: user } = useQuery({
+        queryKey: ['user'],
+        queryFn: () => base44.auth.me()
+    });
 
     const { data: fiscalizacoes = [], isLoading } = useQuery({
         queryKey: ['fiscalizacoes'],
         queryFn: () => base44.entities.Fiscalizacao.list('-created_date', 100)
+    });
+
+    const deletarFiscalizacaoMutation = useMutation({
+        mutationFn: async (fiscalizacaoId) => {
+            // Deletar todas as entidades relacionadas
+            const unidades = await base44.entities.UnidadeFiscalizada.filter({ fiscalizacao_id: fiscalizacaoId });
+            
+            for (const unidade of unidades) {
+                // Deletar respostas, NCs, determinações, recomendações e fotos de cada unidade
+                await base44.entities.RespostaChecklist.filter({ unidade_fiscalizada_id: unidade.id })
+                    .then(respostas => Promise.all(respostas.map(r => base44.entities.RespostaChecklist.delete(r.id))));
+                
+                await base44.entities.NaoConformidade.filter({ unidade_fiscalizada_id: unidade.id })
+                    .then(ncs => Promise.all(ncs.map(nc => base44.entities.NaoConformidade.delete(nc.id))));
+                
+                await base44.entities.Determinacao.filter({ unidade_fiscalizada_id: unidade.id })
+                    .then(dets => Promise.all(dets.map(d => base44.entities.Determinacao.delete(d.id))));
+                
+                await base44.entities.Recomendacao.filter({ unidade_fiscalizada_id: unidade.id })
+                    .then(recs => Promise.all(recs.map(r => base44.entities.Recomendacao.delete(r.id))));
+                
+                await base44.entities.FotoEvidencia.filter({ unidade_fiscalizada_id: unidade.id })
+                    .then(fotos => Promise.all(fotos.map(f => base44.entities.FotoEvidencia.delete(f.id))));
+                
+                // Deletar a unidade
+                await base44.entities.UnidadeFiscalizada.delete(unidade.id);
+            }
+            
+            // Deletar fotos da fiscalização
+            await base44.entities.FotoEvidencia.filter({ fiscalizacao_id: fiscalizacaoId })
+                .then(fotos => Promise.all(fotos.map(f => base44.entities.FotoEvidencia.delete(f.id))));
+            
+            // Deletar a fiscalização
+            await base44.entities.Fiscalizacao.delete(fiscalizacaoId);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['fiscalizacoes'] });
+            setFiscalizacaoParaDeletar(null);
+        },
+        onError: (error) => {
+            alert('Erro ao deletar fiscalização: ' + error.message);
+        }
     });
 
     const filtered = fiscalizacoes.filter(f => {
@@ -96,78 +146,97 @@ export default function Fiscalizacoes() {
                     <div className="text-center py-8 text-gray-500">Carregando...</div>
                 ) : (
                     <div className="space-y-3">
-                        {filtered.map((fisc) => (
-                            <Link 
-                                key={fisc.id} 
-                                to={createPageUrl('ExecutarFiscalizacao') + `?id=${fisc.id}`}
-                            >
-                                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                        {filtered.map((fisc) => {
+                            const podeDeleter = user?.email === fisc.created_by;
+                            
+                            return (
+                                <Card key={fisc.id} className="hover:shadow-md transition-shadow">
                                     <CardContent className="p-4">
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex items-start gap-3">
-                                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                                                    fisc.status === 'finalizada' ? 'bg-green-100' : 'bg-yellow-100'
-                                                }`}>
-                                                    {fisc.status === 'finalizada' ? (
-                                                        <CheckCircle2 className="h-6 w-6 text-green-600" />
-                                                    ) : (
-                                                        <Clock className="h-6 w-6 text-yellow-600" />
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-medium flex items-center gap-2">
-                                                        <MapPin className="h-4 w-4 text-gray-400" />
-                                                        {fisc.municipio_nome}
-                                                    </h3>
-                                                    <div className="flex flex-wrap gap-2 mt-1">
-                                                        <Badge variant="secondary" className="text-xs">
-                                                            {fisc.servico}
-                                                        </Badge>
-                                                        <Badge 
-                                                            variant={fisc.status === 'finalizada' ? 'default' : 'outline'}
-                                                            className={`text-xs ${fisc.status === 'finalizada' ? 'bg-green-500' : ''}`}
-                                                        >
-                                                            {fisc.status === 'finalizada' ? 'Finalizada' : 'Em andamento'}
-                                                        </Badge>
+                                        <Link 
+                                            to={createPageUrl('ExecutarFiscalizacao') + `?id=${fisc.id}`}
+                                            className="block"
+                                        >
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex items-start gap-3">
+                                                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                                                        fisc.status === 'finalizada' ? 'bg-green-100' : 'bg-yellow-100'
+                                                    }`}>
+                                                        {fisc.status === 'finalizada' ? (
+                                                            <CheckCircle2 className="h-6 w-6 text-green-600" />
+                                                        ) : (
+                                                            <Clock className="h-6 w-6 text-yellow-600" />
+                                                        )}
                                                     </div>
-                                                    <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                                                        <Calendar className="h-3 w-3" />
-                                                        {format(new Date(fisc.data_inicio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                                                    </p>
-                                                    {fisc.fiscal_nome && (
-                                                        <p className="text-xs text-gray-400 mt-1">
-                                                            Fiscal: {fisc.fiscal_nome}
+                                                    <div>
+                                                        <h3 className="font-medium flex items-center gap-2">
+                                                            <MapPin className="h-4 w-4 text-gray-400" />
+                                                            {fisc.municipio_nome}
+                                                        </h3>
+                                                        <div className="flex flex-wrap gap-2 mt-1">
+                                                            <Badge variant="secondary" className="text-xs">
+                                                                {fisc.servico}
+                                                            </Badge>
+                                                            <Badge 
+                                                                variant={fisc.status === 'finalizada' ? 'default' : 'outline'}
+                                                                className={`text-xs ${fisc.status === 'finalizada' ? 'bg-green-500' : ''}`}
+                                                            >
+                                                                {fisc.status === 'finalizada' ? 'Finalizada' : 'Em andamento'}
+                                                            </Badge>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                                            <Calendar className="h-3 w-3" />
+                                                            {format(new Date(fisc.data_inicio), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                                                         </p>
-                                                    )}
+                                                        {fisc.fiscal_nome && (
+                                                            <p className="text-xs text-gray-400 mt-1">
+                                                                Fiscal: {fisc.fiscal_nome}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
+                                                <ChevronRight className="h-5 w-5 text-gray-400" />
                                             </div>
-                                            <ChevronRight className="h-5 w-5 text-gray-400" />
+
+                                            {/* Stats */}
+                                            {(fisc.total_conformidades > 0 || fisc.total_nao_conformidades > 0) && (
+                                                <div className="flex gap-4 mt-3 pt-3 border-t text-xs">
+                                                    <span className="flex items-center gap-1 text-green-600">
+                                                        <CheckCircle2 className="h-3 w-3" />
+                                                        {fisc.total_conformidades || 0} Constatações
+                                                    </span>
+                                                    <span className="flex items-center gap-1 text-red-600">
+                                                        <AlertTriangle className="h-3 w-3" />
+                                                        {fisc.total_nao_conformidades || 0} NCs
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </Link>
+
+                                        {/* Botões de ação */}
+                                        <div className="mt-3 pt-3 border-t flex gap-2">
+                                            {fisc.status === 'finalizada' && (
+                                                <div className="flex-1">
+                                                    <RelatorioFiscalizacao fiscalizacao={fisc} />
+                                                </div>
+                                            )}
+                                            {podeDeleter && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        setFiscalizacaoParaDeletar(fisc);
+                                                    }}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            )}
                                         </div>
-
-                                        {/* Stats */}
-                                        {(fisc.total_conformidades > 0 || fisc.total_nao_conformidades > 0) && (
-                                            <div className="flex gap-4 mt-3 pt-3 border-t text-xs">
-                                                <span className="flex items-center gap-1 text-green-600">
-                                                    <CheckCircle2 className="h-3 w-3" />
-                                                    {fisc.total_conformidades || 0} Constatações
-                                                </span>
-                                                <span className="flex items-center gap-1 text-red-600">
-                                                    <AlertTriangle className="h-3 w-3" />
-                                                    {fisc.total_nao_conformidades || 0} NCs
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        {/* Botão Relatório para finalizadas */}
-                                        {fisc.status === 'finalizada' && (
-                                            <div className="mt-3 pt-3 border-t">
-                                                <RelatorioFiscalizacao fiscalizacao={fisc} />
-                                            </div>
-                                        )}
                                     </CardContent>
                                 </Card>
-                            </Link>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
 
@@ -184,6 +253,30 @@ export default function Fiscalizacoes() {
                     </div>
                 )}
             </div>
+
+            {/* Dialog de confirmação */}
+            <AlertDialog open={!!fiscalizacaoParaDeletar} onOpenChange={() => setFiscalizacaoParaDeletar(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Deletar Fiscalização?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Tem certeza que deseja deletar a fiscalização de <strong>{fiscalizacaoParaDeletar?.municipio_nome}</strong>?
+                            <br /><br />
+                            Esta ação é <strong>irreversível</strong> e irá deletar todas as unidades, respostas, não conformidades, determinações, recomendações e fotos associadas.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-red-600 hover:bg-red-700"
+                            onClick={() => deletarFiscalizacaoMutation.mutate(fiscalizacaoParaDeletar.id)}
+                            disabled={deletarFiscalizacaoMutation.isPending}
+                        >
+                            {deletarFiscalizacaoMutation.isPending ? 'Deletando...' : 'Deletar'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
