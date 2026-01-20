@@ -1,12 +1,13 @@
 // Sistema de armazenamento offline usando IndexedDB
 
 const DB_NAME = 'agems_fiscalizacao_offline';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 const STORES = {
     PENDING_OPERATIONS: 'pending_operations',
     CACHED_DATA: 'cached_data',
-    PHOTOS: 'photos'
+    PHOTOS: 'photos',
+    IMAGE_CACHE: 'image_cache'
 };
 
 let db = null;
@@ -54,6 +55,14 @@ const initDB = () => {
                     keyPath: 'id', 
                     autoIncrement: true 
                 });
+            }
+
+            // Store para cache de imagens (blob)
+            if (!database.objectStoreNames.contains(STORES.IMAGE_CACHE)) {
+                const imageStore = database.createObjectStore(STORES.IMAGE_CACHE, { 
+                    keyPath: 'url' 
+                });
+                imageStore.createIndex('timestamp', 'timestamp', { unique: false });
             }
         };
     });
@@ -195,4 +204,75 @@ export const clearOfflineData = async () => {
             request.onerror = () => reject(request.error);
         })
     ]);
+};
+
+// ===========================
+// Image Cache Management
+// ===========================
+
+export const cacheImage = async (url, blob) => {
+    try {
+        const database = await initDB();
+        return new Promise((resolve, reject) => {
+            const transaction = database.transaction([STORES.IMAGE_CACHE], 'readwrite');
+            const store = transaction.objectStore(STORES.IMAGE_CACHE);
+            
+            const request = store.put({
+                url,
+                blob,
+                timestamp: Date.now()
+            });
+
+            request.onsuccess = () => resolve(true);
+            request.onerror = () => reject(request.error);
+        });
+    } catch (error) {
+        console.error('Error caching image:', error);
+        return false;
+    }
+};
+
+export const getCachedImage = async (url) => {
+    try {
+        const database = await initDB();
+        return new Promise((resolve, reject) => {
+            const transaction = database.transaction([STORES.IMAGE_CACHE], 'readonly');
+            const store = transaction.objectStore(STORES.IMAGE_CACHE);
+            const request = store.get(url);
+
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    } catch (error) {
+        console.error('Error getting cached image:', error);
+        return null;
+    }
+};
+
+export const clearOldImageCache = async (maxAge = 7 * 24 * 60 * 60 * 1000) => {
+    try {
+        const database = await initDB();
+        const transaction = database.transaction([STORES.IMAGE_CACHE], 'readwrite');
+        const store = transaction.objectStore(STORES.IMAGE_CACHE);
+        const index = store.index('timestamp');
+        
+        const cutoffTime = Date.now() - maxAge;
+        const range = IDBKeyRange.upperBound(cutoffTime);
+        
+        return new Promise((resolve, reject) => {
+            const request = index.openCursor(range);
+            request.onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    cursor.delete();
+                    cursor.continue();
+                } else {
+                    resolve();
+                }
+            };
+            request.onerror = () => reject(request.error);
+        });
+    } catch (error) {
+        console.error('Error clearing old image cache:', error);
+    }
 };

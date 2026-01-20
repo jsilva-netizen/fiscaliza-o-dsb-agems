@@ -81,13 +81,17 @@ export default function VistoriarUnidade() {
     const { data: unidade, isLoading: loadingUnidade } = useQuery({
         queryKey: ['unidade', unidadeId],
         queryFn: () => base44.entities.UnidadeFiscalizada.filter({ id: unidadeId }).then(r => r[0]),
-        enabled: !!unidadeId
+        enabled: !!unidadeId,
+        staleTime: 30000,
+        gcTime: 300000
     });
 
     const { data: fiscalizacao } = useQuery({
         queryKey: ['fiscalizacao', unidade?.fiscalizacao_id],
         queryFn: () => base44.entities.Fiscalizacao.filter({ id: unidade?.fiscalizacao_id }).then(r => r[0]),
-        enabled: !!unidade?.fiscalizacao_id
+        enabled: !!unidade?.fiscalizacao_id,
+        staleTime: 60000,
+        gcTime: 300000
     });
 
     // Use offline cache for checklist items
