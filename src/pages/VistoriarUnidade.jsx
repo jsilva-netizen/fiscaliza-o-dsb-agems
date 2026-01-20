@@ -189,8 +189,21 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
             if (!item) return;
             const existente = respostasExistentes.find(r => r.item_checklist_id === itemId);
 
-            // Determinar o número da constatação (conta apenas respostas NAO)
-            const constatacaoNum = respostasExistentes.filter(r => r.resposta === 'NAO').length + 1;
+            // Determinar o número da constatação de forma única
+            let constatacaoNum;
+            if (existente && existente.resposta === 'NAO' && data.resposta === 'NAO') {
+                // Se já era NAO e continua NAO, mantém o número
+                constatacaoNum = parseInt(existente.numero_constatacao?.replace('C', '') || '1');
+            } else if (data.resposta === 'NAO') {
+                // Nova constatação: pega o maior número existente + 1
+                const numeros = respostasExistentes
+                    .filter(r => r.resposta === 'NAO' && r.item_checklist_id !== itemId)
+                    .map(r => parseInt(r.numero_constatacao?.replace('C', '') || '0'))
+                    .filter(n => !isNaN(n));
+                constatacaoNum = numeros.length > 0 ? Math.max(...numeros) + 1 : 1;
+            } else {
+                constatacaoNum = null; // Não é NAO, não tem número
+            }
             
             // Determinar o texto da constatação baseado na resposta
             let textoConstatacao = '';
@@ -210,7 +223,7 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
                 item_checklist_id: itemId,
                 pergunta: textoConstatacao,
                 gera_nc: item.gera_nc,
-                numero_constatacao: `C${constatacaoNum}`,
+                numero_constatacao: constatacaoNum ? `C${constatacaoNum}` : null,
                 ...data
             };
 
@@ -252,8 +265,11 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
                         return; // Aguarda aprovação do usuário
                     }
 
-                    // Criar NC normal
-                    const ncNum = ncsExistentes.length + 1;
+                    // Criar NC normal - pega o maior número existente + 1
+                    const numerosNC = ncsExistentes
+                        .map(nc => parseInt(nc.numero_nc?.replace('NC', '') || '0'))
+                        .filter(n => !isNaN(n));
+                    const ncNum = numerosNC.length > 0 ? Math.max(...numerosNC) + 1 : 1;
                     // Verifica se o texto_nc já menciona o artigo para evitar duplicação
                     const textoNC = item.texto_nc 
                         ? (item.texto_nc.toLowerCase().includes('constatação') || item.texto_nc.toLowerCase().includes('art.'))
@@ -271,11 +287,17 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
                     });
 
                     if (item.texto_determinacao) {
+                        // Pega o maior número de determinação + 1
+                        const numerosDet = determinacoesExistentes
+                            .map(d => parseInt(d.numero_determinacao?.replace('D', '') || '0'))
+                            .filter(n => !isNaN(n));
+                        const detNum = numerosDet.length > 0 ? Math.max(...numerosDet) + 1 : 1;
+
                         const textoDeterminacao = `Para sanar a NC${ncNum}, ${item.texto_determinacao.charAt(0).toLowerCase()}${item.texto_determinacao.slice(1)}`;
                         await base44.entities.Determinacao.create({
                             unidade_fiscalizada_id: unidadeId,
                             nao_conformidade_id: nc.id,
-                            numero_determinacao: `D${ncNum}`,
+                            numero_determinacao: `D${detNum}`,
                             descricao: textoDeterminacao,
                             prazo_dias: 30,
                             status: 'pendente'
@@ -292,7 +314,11 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
 
     const aplicarSugestaoIAMutation = useMutation({
             mutationFn: async ({ itemId, sugestao, constatacaoNum }) => {
-                    const ncNum = ncsExistentes.length + 1;
+                // Pega o maior número de NC + 1
+                const numerosNC = ncsExistentes
+                    .map(nc => parseInt(nc.numero_nc?.replace('NC', '') || '0'))
+                    .filter(n => !isNaN(n));
+                const ncNum = numerosNC.length > 0 ? Math.max(...numerosNC) + 1 : 1;
                     // Verifica se o texto da IA já menciona o artigo
                     const textoNC = sugestao.texto_nc.toLowerCase().includes('constatação') || sugestao.texto_nc.toLowerCase().includes('art.')
                         ? sugestao.texto_nc.replace(/C\d+/g, `C${constatacaoNum}`)
@@ -306,6 +332,12 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
                     fotos: []
                 });
 
+                // Pega o maior número de determinação + 1
+                const numerosDet = determinacoesExistentes
+                    .map(d => parseInt(d.numero_determinacao?.replace('D', '') || '0'))
+                    .filter(n => !isNaN(n));
+                const detNum = numerosDet.length > 0 ? Math.max(...numerosDet) + 1 : 1;
+
                 const textoDeterminacao = sugestao.texto_determinacao.startsWith('Para sanar') 
                     ? sugestao.texto_determinacao.replace(/Para sanar[^,]*,/, `Para sanar a NC${ncNum},`)
                     : `Para sanar a NC${ncNum}, ${sugestao.texto_determinacao.charAt(0).toLowerCase()}${sugestao.texto_determinacao.slice(1)}`;
@@ -313,7 +345,7 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
                 await base44.entities.Determinacao.create({
                     unidade_fiscalizada_id: unidadeId,
                     nao_conformidade_id: nc.id,
-                    numero_determinacao: `D${ncNum}`,
+                    numero_determinacao: `D${detNum}`,
                     descricao: textoDeterminacao,
                     prazo_dias: sugestao.prazo_dias || 30,
                     status: 'pendente'
@@ -321,8 +353,14 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
 
             // Adicionar recomendações se houver
             if (Array.isArray(sugestao.recomendacoes) && sugestao.recomendacoes.length > 0) {
-                for (const rec of sugestao.recomendacoes) {
-                    const recNum = recomendacoesExistentes.length + 1;
+                for (let i = 0; i < sugestao.recomendacoes.length; i++) {
+                    const rec = sugestao.recomendacoes[i];
+                    // Pega o maior número de recomendação + 1
+                    const numerosRec = await base44.entities.Recomendacao.filter({ unidade_fiscalizada_id: unidadeId });
+                    const nums = numerosRec
+                        .map(r => parseInt(r.numero_recomendacao?.replace('R', '') || '0'))
+                        .filter(n => !isNaN(n));
+                    const recNum = nums.length > 0 ? Math.max(...nums) + 1 : 1;
                     await base44.entities.Recomendacao.create({
                         unidade_fiscalizada_id: unidadeId,
                         numero_recomendacao: `R${recNum}`,
@@ -355,7 +393,11 @@ Seja técnico, específico e baseado na Portaria AGEMS 233/2022 e no padrão de 
 
     const adicionarRecomendacaoMutation = useMutation({
         mutationFn: async (texto) => {
-            const num = recomendacoesExistentes.length + 1;
+            // Pega o maior número de recomendação + 1
+            const numerosRec = recomendacoesExistentes
+                .map(r => parseInt(r.numero_recomendacao?.replace('R', '') || '0'))
+                .filter(n => !isNaN(n));
+            const num = numerosRec.length > 0 ? Math.max(...numerosRec) + 1 : 1;
             await base44.entities.Recomendacao.create({
                 unidade_fiscalizada_id: unidadeId,
                 numero_recomendacao: `R${num}`,
