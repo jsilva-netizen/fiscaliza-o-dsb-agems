@@ -44,7 +44,7 @@ export default function AdicionarUnidade() {
     }, []);
 
     const tiposFiltrados = tipos.filter(t => 
-        t.servicos_aplicaveis?.includes(fiscalizacao?.servico)
+        t.servicos_aplicaveis && fiscalizacao?.servico && t.servicos_aplicaveis.includes(fiscalizacao.servico)
     );
 
     const createMutation = useMutation({
