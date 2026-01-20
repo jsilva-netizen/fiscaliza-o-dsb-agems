@@ -167,7 +167,7 @@ export default function VistoriarUnidade() {
         enabled: !!unidadeId
     });
 
-    // Load existing data
+    // Load existing data - sincronizar apenas na inicialização
     useEffect(() => {
         if (unidade?.fotos_unidade) {
             const fotosCarregadas = unidade.fotos_unidade.map(foto => 
@@ -175,13 +175,18 @@ export default function VistoriarUnidade() {
             );
             setFotos(fotosCarregadas);
         }
-        
-        const respostasMap = {};
-        respostasExistentes.forEach(r => {
-            respostasMap[r.item_checklist_id] = r;
-        });
-        setRespostas(respostasMap);
-    }, [unidade, respostasExistentes]);
+    }, [unidade?.fotos_unidade]);
+
+    // Carregar respostas apenas uma vez
+    useEffect(() => {
+        if (respostasExistentes.length > 0) {
+            const respostasMap = {};
+            respostasExistentes.forEach(r => {
+                respostasMap[r.item_checklist_id] = r;
+            });
+            setRespostas(respostasMap);
+        }
+    }, [respostasExistentes.length]);
 
 
 
@@ -321,9 +326,11 @@ export default function VistoriarUnidade() {
                 }
             }
 
-            queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
+            // Invalidar queries em background sem refetch imediato
+            setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
+                queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
+            }, 100);
         }
     });
 
