@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Camera, Trash2, MapPin, Clock, X, Image } from 'lucide-react';
+import { Camera, Trash2, Clock, X, Image } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { base44 } from '@/api/base44Client';
@@ -19,39 +19,77 @@ export default function PhotoGrid({
 }) {
     const [selectedFoto, setSelectedFoto] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const fileInputRef = useRef(null);
     const cameraInputRef = useRef(null);
 
+    const compressImage = (file) => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const maxWidth = 1920;
+                    const maxHeight = 1080;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width = Math.round((width * maxHeight) / height);
+                            height = maxHeight;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob((blob) => {
+                        resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+                    }, 'image/jpeg', 0.75);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
     const handleFileSelect = async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
 
         setIsUploading(true);
-        try {
-            // Upload da foto
-            const { file_url } = await base44.integrations.Core.UploadFile({ file });
-            
-            // Obter GPS atual
-            let location = null;
-            if (navigator.geolocation) {
-                location = await new Promise((resolve) => {
-                    navigator.geolocation.getCurrentPosition(
-                        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                        () => resolve(null)
-                    );
-                });
-            }
+        setUploadProgress(0);
 
-            onAddFoto({
-                url: file_url,
-                latitude: location?.lat,
-                longitude: location?.lng,
-                data_hora: new Date().toISOString()
+        try {
+            const totalFiles = files.length;
+            const uploadPromises = Array.from(files).map(async (file, index) => {
+                const comprimida = await compressImage(file);
+                const { file_url } = await base44.integrations.Core.UploadFile({ file: comprimida });
+                
+                setUploadProgress((prev) => Math.round(((index + 1) / totalFiles) * 100));
+
+                return {
+                    url: file_url,
+                    data_hora: new Date().toISOString()
+                };
             });
+
+            const fotosUpload = await Promise.all(uploadPromises);
+            fotosUpload.forEach(foto => onAddFoto(foto));
         } catch (err) {
-            alert('Erro ao fazer upload da foto');
+            alert('Erro ao fazer upload das fotos');
         } finally {
             setIsUploading(false);
+            setUploadProgress(0);
             e.target.value = '';
         }
     };
@@ -74,6 +112,7 @@ export default function PhotoGrid({
                         ref={fileInputRef}
                         type="file"
                         accept="image/*"
+                        multiple
                         onChange={handleFileSelect}
                         className="hidden"
                     />
@@ -92,7 +131,7 @@ export default function PhotoGrid({
                         disabled={isUploading}
                     >
                         <Image className="h-4 w-4 mr-2" />
-                        {isUploading ? 'Enviando...' : 'Galeria'}
+                        {isUploading ? `${uploadProgress}%` : 'Galeria'}
                     </Button>
                     <Button 
                         onClick={() => cameraInputRef.current?.click()} 
@@ -100,7 +139,7 @@ export default function PhotoGrid({
                         disabled={isUploading}
                     >
                         <Camera className="h-4 w-4 mr-2" />
-                        {isUploading ? 'Enviando...' : 'Câmera'}
+                        {isUploading ? `${uploadProgress}%` : 'Câmera'}
                     </Button>
                 </div>
             </div>
@@ -136,11 +175,7 @@ export default function PhotoGrid({
                                     className="h-6 text-xs bg-transparent border-none text-white placeholder:text-gray-300"
                                 />
                             </div>
-                            {foto.latitude && (
-                                <div className="absolute top-1 left-1 bg-green-500 text-white text-xs px-1 rounded flex items-center">
-                                    <MapPin className="h-3 w-3" />
-                                </div>
-                            )}
+
                         </div>
                     ))}
                 </div>
@@ -170,20 +205,12 @@ export default function PhotoGrid({
                     </div>
                     <div className="p-4 text-white text-sm">
                         {selectedFoto.legenda && <p className="mb-2">{selectedFoto.legenda}</p>}
-                        <div className="flex gap-4 text-xs opacity-70">
-                            {selectedFoto.latitude && (
-                                <span className="flex items-center gap-1">
-                                    <MapPin className="h-3 w-3" />
-                                    {selectedFoto.latitude.toFixed(6)}, {selectedFoto.longitude.toFixed(6)}
-                                </span>
-                            )}
-                            {selectedFoto.data_hora && (
-                                <span className="flex items-center gap-1">
-                                    <Clock className="h-3 w-3" />
-                                    {format(new Date(selectedFoto.data_hora), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                                </span>
-                            )}
-                        </div>
+                        {selectedFoto.data_hora && (
+                            <span className="flex items-center gap-1 text-xs opacity-70">
+                                <Clock className="h-3 w-3" />
+                                {format(new Date(selectedFoto.data_hora), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                            </span>
+                        )}
                     </div>
                 </div>
             )}
