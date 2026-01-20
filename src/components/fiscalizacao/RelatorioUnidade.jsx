@@ -124,8 +124,8 @@ export default function RelatorioUnidade({
                 yPos += rowHeight;
 
                 ncsSorted.forEach((nc) => {
-                    // Buscar a constatação relacionada
-                    const respostaRelacionada = respostas.find(r => r.item_checklist_id === nc.resposta_checklist_id);
+                    // Buscar a constatação relacionada pelo ID correto da resposta
+                    const respostaRelacionada = respostas.find(r => r.id === nc.resposta_checklist_id);
                     const numeroConstatacao = respostaRelacionada?.numero_constatacao || '';
 
                     // Adicionar referência à constatação se não estiver no texto

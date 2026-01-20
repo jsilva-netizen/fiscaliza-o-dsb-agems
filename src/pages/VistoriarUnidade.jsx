@@ -77,11 +77,14 @@ export default function VistoriarUnidade() {
         const corrigirNCs = async () => {
             if (!ncsExistentes.length || !respostasExistentes.length) return;
             
+            let houveCorrecao = false;
+            
             for (const nc of ncsExistentes) {
                 // Se a NC não contém "Constatação" no texto, atualizar
                 if (!nc.descricao.includes('Constatação')) {
+                    // Buscar a resposta pelo ID correto
                     const respostaRelacionada = respostasExistentes.find(
-                        r => r.item_checklist_id === nc.resposta_checklist_id
+                        r => r.id === nc.resposta_checklist_id
                     );
                     
                     if (respostaRelacionada?.numero_constatacao) {
@@ -90,12 +93,15 @@ export default function VistoriarUnidade() {
                         await base44.entities.NaoConformidade.update(nc.id, {
                             descricao: textoCorrigido
                         });
+                        houveCorrecao = true;
                     }
                 }
             }
             
-            // Recarregar as NCs após correção
-            queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
+            // Recarregar as NCs apenas se houve correção
+            if (houveCorrecao) {
+                queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
+            }
         };
         
         corrigirNCs();
@@ -211,15 +217,19 @@ export default function VistoriarUnidade() {
             }
 
             // If online, execute immediately
+            let respostaId;
             if (existente) {
                 await base44.entities.RespostaChecklist.update(existente.id, payload);
+                respostaId = existente.id;
             } else {
-                await base44.entities.RespostaChecklist.create(payload);
+                const respostaCriada = await base44.entities.RespostaChecklist.create(payload);
+                respostaId = respostaCriada.id;
             }
 
             // Apenas cria NC se resposta for NÃO (SIM não gera constatação nem NC)
             if (data.resposta === 'NAO' && item.gera_nc) {
-                const ncExistente = ncsExistentes.find(nc => nc.resposta_checklist_id === itemId);
+                // Buscar NC pelo ID correto da resposta
+                const ncExistente = ncsExistentes.find(nc => nc.resposta_checklist_id === respostaId);
                 if (!ncExistente) {
                     // Buscar TODAS as NCs do banco antes de numerar
                     const todasNCs = await base44.entities.NaoConformidade.filter(
@@ -238,7 +248,7 @@ export default function VistoriarUnidade() {
 
                     const nc = await base44.entities.NaoConformidade.create({
                         unidade_fiscalizada_id: unidadeId,
-                        resposta_checklist_id: itemId,
+                        resposta_checklist_id: respostaId,
                         numero_nc: `NC${ncNum}`,
                         artigo_portaria: item.artigo_portaria,
                         descricao: textoNC,
