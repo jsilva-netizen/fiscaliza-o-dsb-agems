@@ -73,7 +73,10 @@ export default function PhotoGrid({
             const totalFiles = files.length;
             const uploadPromises = Array.from(files).map(async (file, index) => {
                 const comprimida = await compressImage(file);
-                const { file_url } = await base44.integrations.Core.UploadFile({ file: comprimida });
+                
+                // Converter File para ArrayBuffer para upload
+                const arrayBuffer = await comprimida.arrayBuffer();
+                const { file_url } = await base44.integrations.Core.UploadFile({ file: arrayBuffer });
                 
                 setUploadProgress((prev) => Math.round(((index + 1) / totalFiles) * 100));
 
@@ -86,7 +89,8 @@ export default function PhotoGrid({
             const fotosUpload = await Promise.all(uploadPromises);
             fotosUpload.forEach(foto => onAddFoto(foto));
         } catch (err) {
-            alert('Erro ao fazer upload das fotos');
+            console.error('Erro upload:', err);
+            alert('Erro ao fazer upload das fotos: ' + err.message);
         } finally {
             setIsUploading(false);
             setUploadProgress(0);
