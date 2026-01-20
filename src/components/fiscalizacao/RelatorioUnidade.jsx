@@ -86,11 +86,16 @@ export default function RelatorioUnidade({
             drawCell('Constatações', margin, yPos, tableWidth, rowHeight, true, true, [192, 192, 192]);
             yPos += rowHeight;
 
-            const constatacoes = respostas.filter(r => r.resposta === 'NAO');
+            const constatacoes = respostas.filter(r => r.resposta === 'NAO').sort((a, b) => {
+                const numA = parseInt(a.numero_constatacao?.replace('C', '') || '999');
+                const numB = parseInt(b.numero_constatacao?.replace('C', '') || '999');
+                return numA - numB;
+            });
+            
             constatacoes.forEach((resp, idx) => {
                 const numConst = resp.numero_constatacao || `C${idx + 1}`;
                 const textoConstatacao = resp.pergunta;
-                const texto = `${numConst}. ${textoConstatacao}${resp.observacao ? ` Observação: ${resp.observacao}` : ''}`;
+                const texto = `${textoConstatacao}${resp.observacao ? ` Observação: ${resp.observacao}` : ''}`;
                 const lines = pdf.splitTextToSize(texto, tableWidth - 4);
                 const cellHeight = Math.max(rowHeight, lines.length * 4 + 2);
 
@@ -98,8 +103,7 @@ export default function RelatorioUnidade({
                 pdf.setFont('helvetica', 'bold');
                 pdf.text(numConst + '.', margin + 2, yPos + 5);
                 pdf.setFont('helvetica', 'normal');
-                const restText = texto.substring(texto.indexOf('.') + 2);
-                const restLines = pdf.splitTextToSize(restText, tableWidth - 15);
+                const restLines = pdf.splitTextToSize(texto, tableWidth - 15);
                 pdf.text(restLines, margin + 12, yPos + 5);
 
                 yPos += cellHeight;
@@ -107,20 +111,24 @@ export default function RelatorioUnidade({
 
             // Não Conformidades
             if (ncs.length > 0) {
+                const ncsSorted = [...ncs].sort((a, b) => {
+                    const numA = parseInt(a.numero_nc?.replace('NC', '') || '999');
+                    const numB = parseInt(b.numero_nc?.replace('NC', '') || '999');
+                    return numA - numB;
+                });
+                
                 drawCell('Não Conformidade', margin, yPos, tableWidth, rowHeight, true, true, [192, 192, 192]);
                 yPos += rowHeight;
 
-                ncs.forEach((nc) => {
-                    const texto = `${nc.numero_nc}. ${nc.descricao}`;
-                    const lines = pdf.splitTextToSize(texto, tableWidth - 4);
+                ncsSorted.forEach((nc) => {
+                    const lines = pdf.splitTextToSize(nc.descricao, tableWidth - 4);
                     const cellHeight = Math.max(rowHeight, lines.length * 4 + 2);
 
                     pdf.rect(margin, yPos, tableWidth, cellHeight, 'S');
                     pdf.setFont('helvetica', 'bold');
                     pdf.text(nc.numero_nc + '.', margin + 2, yPos + 5);
                     pdf.setFont('helvetica', 'normal');
-                    const restText = texto.substring(texto.indexOf('.') + 2);
-                    const restLines = pdf.splitTextToSize(restText, tableWidth - 15);
+                    const restLines = pdf.splitTextToSize(nc.descricao, tableWidth - 15);
                     pdf.text(restLines, margin + 12, yPos + 5);
 
                     yPos += cellHeight;
@@ -129,20 +137,24 @@ export default function RelatorioUnidade({
 
             // Recomendações
             if (recomendacoes.length > 0) {
+                const recsSorted = [...recomendacoes].sort((a, b) => {
+                    const numA = parseInt(a.numero_recomendacao?.replace('R', '') || '999');
+                    const numB = parseInt(b.numero_recomendacao?.replace('R', '') || '999');
+                    return numA - numB;
+                });
+                
                 drawCell('Recomendações', margin, yPos, tableWidth, rowHeight, true, true, [192, 192, 192]);
                 yPos += rowHeight;
 
-                recomendacoes.forEach((rec) => {
-                    const texto = `${rec.numero_recomendacao}. ${rec.descricao}`;
-                    const lines = pdf.splitTextToSize(texto, tableWidth - 4);
+                recsSorted.forEach((rec) => {
+                    const lines = pdf.splitTextToSize(rec.descricao, tableWidth - 4);
                     const cellHeight = Math.max(rowHeight, lines.length * 4 + 2);
                     
                     pdf.rect(margin, yPos, tableWidth, cellHeight, 'S');
                     pdf.setFont('helvetica', 'bold');
                     pdf.text(rec.numero_recomendacao + '.', margin + 2, yPos + 5);
                     pdf.setFont('helvetica', 'normal');
-                    const restText = texto.substring(texto.indexOf('.') + 2);
-                    const restLines = pdf.splitTextToSize(restText, tableWidth - 15);
+                    const restLines = pdf.splitTextToSize(rec.descricao, tableWidth - 15);
                     pdf.text(restLines, margin + 12, yPos + 5);
                     
                     yPos += cellHeight;
@@ -151,11 +163,17 @@ export default function RelatorioUnidade({
 
             // Determinações
             if (determinacoes.length > 0) {
+                const detsSorted = [...determinacoes].sort((a, b) => {
+                    const numA = parseInt(a.numero_determinacao?.replace('D', '') || '999');
+                    const numB = parseInt(b.numero_determinacao?.replace('D', '') || '999');
+                    return numA - numB;
+                });
+                
                 drawCell('Determinações', margin, yPos, tableWidth, rowHeight, true, true, [192, 192, 192]);
                 yPos += rowHeight;
 
-                determinacoes.forEach((det) => {
-                    const texto = `${det.numero_determinacao}. ${det.descricao} Prazo: ${det.prazo_dias} dias.`;
+                detsSorted.forEach((det) => {
+                    const texto = `${det.descricao} Prazo: ${det.prazo_dias} dias.`;
                     const lines = pdf.splitTextToSize(texto, tableWidth - 4);
                     const cellHeight = Math.max(rowHeight, lines.length * 4 + 2);
 
@@ -163,8 +181,7 @@ export default function RelatorioUnidade({
                     pdf.setFont('helvetica', 'bold');
                     pdf.text(det.numero_determinacao + '.', margin + 2, yPos + 5);
                     pdf.setFont('helvetica', 'normal');
-                    const restText = `${det.descricao} Prazo: ${det.prazo_dias} dias.`;
-                    const restLines = pdf.splitTextToSize(restText, tableWidth - 15);
+                    const restLines = pdf.splitTextToSize(texto, tableWidth - 15);
                     pdf.text(restLines, margin + 12, yPos + 5);
 
                     yPos += cellHeight;
