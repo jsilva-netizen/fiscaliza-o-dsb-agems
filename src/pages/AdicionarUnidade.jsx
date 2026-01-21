@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Building2, Loader2, Navigation, Upload, X, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Building2, Loader2, Navigation } from 'lucide-react';
 
 export default function AdicionarUnidade() {
     const navigate = useNavigate();
@@ -24,8 +24,6 @@ export default function AdicionarUnidade() {
     });
     const [location, setLocation] = useState(null);
     const [loadingAddress, setLoadingAddress] = useState(false);
-    const [fotos, setFotos] = useState([]);
-    const [uploadingFotos, setUploadingFotos] = useState(false);
 
     const { data: fiscalizacao } = useQuery({
         queryKey: ['fiscalizacao', fiscalizacaoId],
@@ -124,65 +122,6 @@ export default function AdicionarUnidade() {
         });
     };
 
-    const handleFotosChange = async (e) => {
-        const files = Array.from(e.target.files || []);
-        
-        if (files.length === 0) return;
-        
-        const totalFotos = fotos.length + files.length;
-        if (totalFotos > 10) {
-            alert(`Você pode adicionar no máximo 10 fotos. Atualmente você tem ${fotos.length} foto(s).`);
-            return;
-        }
-
-        setUploadingFotos(true);
-
-        try {
-            const fotosProcessadas = [];
-
-            for (const file of files) {
-                // Criar preview local
-                const previewUrl = URL.createObjectURL(file);
-                
-                // Upload do arquivo
-                const { data } = await base44.integrations.Core.UploadFile({ file });
-                
-                fotosProcessadas.push({
-                    url: data.file_url,
-                    previewUrl,
-                    legenda: ''
-                });
-            }
-
-            setFotos(prev => [...prev, ...fotosProcessadas]);
-        } catch (error) {
-            alert(`Erro ao fazer upload: ${error.message}`);
-        } finally {
-            setUploadingFotos(false);
-            e.target.value = '';
-        }
-    };
-
-    const removerFoto = (index) => {
-        setFotos(prev => {
-            const nova = [...prev];
-            // Liberar URL do preview
-            if (nova[index].previewUrl) {
-                URL.revokeObjectURL(nova[index].previewUrl);
-            }
-            nova.splice(index, 1);
-            return nova;
-        });
-    };
-
-    const atualizarLegenda = (index, legenda) => {
-        setFotos(prev => {
-            const nova = [...prev];
-            nova[index] = { ...nova[index], legenda };
-            return nova;
-        });
-    };
-
     const createMutation = useMutation({
         mutationFn: async (data) => {
             const tipo = tipos.find(t => t.id === data.tipo_unidade_id);
@@ -193,8 +132,8 @@ export default function AdicionarUnidade() {
                 latitude: location?.lat,
                 longitude: location?.lng,
                 data_hora_vistoria: new Date().toISOString(),
-                status: fotos.length >= 2 ? 'checklist_completo' : 'em_andamento',
-                fotos_unidade: fotos.map(f => ({ url: f.url, legenda: f.legenda }))
+                status: 'em_andamento',
+                fotos_unidade: []
             };
 
             return base44.entities.UnidadeFiscalizada.create(unidadeData);
@@ -314,84 +253,6 @@ export default function AdicionarUnidade() {
                         />
                         {loadingAddress && (
                             <p className="text-xs text-gray-500">Obtendo endereço do GPS...</p>
-                        )}
-                    </div>
-
-                    {/* Fotos da Unidade */}
-                    <div className="space-y-3">
-                        <Label>Fotos da Unidade (Opcional - até 10)</Label>
-                        
-                        <input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={handleFotosChange}
-                            disabled={uploadingFotos || fotos.length >= 10}
-                            className="hidden"
-                            id="upload-fotos-unidade"
-                        />
-                        
-                        <label htmlFor="upload-fotos-unidade">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="w-full"
-                                disabled={uploadingFotos || fotos.length >= 10}
-                                asChild
-                            >
-                                <span className="cursor-pointer flex items-center justify-center gap-2">
-                                    {uploadingFotos ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            Enviando fotos...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Upload className="h-4 w-4" />
-                                            Adicionar Fotos ({fotos.length}/10)
-                                        </>
-                                    )}
-                                </span>
-                            </Button>
-                        </label>
-
-                        {fotos.length > 0 && (
-                            <div className="grid grid-cols-2 gap-3">
-                                {fotos.map((foto, index) => (
-                                    <Card key={index} className="overflow-hidden">
-                                        <CardContent className="p-2">
-                                            <div className="relative">
-                                                <img
-                                                    src={foto.previewUrl || foto.url}
-                                                    alt={`Foto ${index + 1}`}
-                                                    className="w-full h-32 object-cover rounded"
-                                                />
-                                                <Button
-                                                    type="button"
-                                                    size="icon"
-                                                    variant="destructive"
-                                                    className="absolute top-1 right-1 h-6 w-6"
-                                                    onClick={() => removerFoto(index)}
-                                                >
-                                                    <X className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                            <Input
-                                                value={foto.legenda}
-                                                onChange={(e) => atualizarLegenda(index, e.target.value)}
-                                                placeholder="Legenda..."
-                                                className="mt-2 text-xs"
-                                            />
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        )}
-
-                        {fotos.length > 0 && fotos.length < 2 && (
-                            <p className="text-xs text-yellow-600">
-                                ℹ️ Recomenda-se adicionar pelo menos 2 fotos da unidade
-                            </p>
                         )}
                     </div>
 
