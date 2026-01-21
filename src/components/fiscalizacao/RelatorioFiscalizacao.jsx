@@ -111,8 +111,10 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             yPos += 8;
 
             // Resumo Executivo
-            pdf.setFillColor(189, 214, 238);
+            pdf.setFillColor(255, 255, 255);
             pdf.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F');
+            pdf.setDrawColor(0);
+            pdf.rect(margin, yPos, pageWidth - 2 * margin, 8, 'S');
             pdf.setFontSize(12);
             pdf.setFont('helvetica', 'bold');
             pdf.text('RESUMO EXECUTIVO', margin + 2, yPos + 5.5);
