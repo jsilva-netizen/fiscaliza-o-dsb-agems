@@ -165,12 +165,15 @@ export default function VistoriarUnidade() {
                 }
 
                 if (item.gera_nc && data.resposta === 'NAO') {
-                    // Usar backend function para criar Resposta + NC + D/R atomicamente
+                    // Usar backend function para criar Resposta + NC + D/R atomicamente com números contínuos
                     await base44.functions.invoke('criarNcComDeterminacao', {
                         unidade_fiscalizada_id: unidadeId,
                         item_checklist_id: itemId,
                         pergunta: textoConstatacao,
                         numero_constatacao: numero,
+                        numero_nc: gerarNumeroNC(contadores),
+                        numero_determinacao: gerarNumeroDeterminacao(contadores),
+                        numero_recomendacao: gerarNumeroRecomendacao(contadores),
                         artigo_portaria: item.artigo_portaria,
                         texto_nc: item.texto_nc,
                         texto_determinacao: item.texto_determinacao,
