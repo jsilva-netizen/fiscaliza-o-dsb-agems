@@ -9,6 +9,9 @@ import Relatorios from './pages/Relatorios';
 import TiposUnidade from './pages/TiposUnidade';
 import VistoriarUnidade from './pages/VistoriarUnidade';
 import PrestadoresServico from './pages/PrestadoresServico';
+import AcompanhamentoDeterminacoes from './pages/AcompanhamentoDeterminacoes';
+import AnalisarResposta from './pages/AnalisarResposta';
+import AnaliseManifestacao from './pages/AnaliseManifestacao';
 import __Layout from './Layout.jsx';
 
 
@@ -24,6 +27,9 @@ export const PAGES = {
     "TiposUnidade": TiposUnidade,
     "VistoriarUnidade": VistoriarUnidade,
     "PrestadoresServico": PrestadoresServico,
+    "AcompanhamentoDeterminacoes": AcompanhamentoDeterminacoes,
+    "AnalisarResposta": AnalisarResposta,
+    "AnaliseManifestacao": AnaliseManifestacao,
 }
 
 export const pagesConfig = {
