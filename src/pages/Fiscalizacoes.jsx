@@ -85,10 +85,11 @@ export default function Fiscalizacoes() {
     });
 
     const filtered = fiscalizacoes.filter(f => {
+        const servicosStr = f.servicos?.join(' ').toLowerCase() || '';
         const matchSearch = f.municipio_nome?.toLowerCase().includes(search.toLowerCase()) ||
-            f.servico?.toLowerCase().includes(search.toLowerCase());
+            servicosStr.includes(search.toLowerCase());
         const matchStatus = statusFilter === 'todos' || f.status === statusFilter;
-        const matchServico = servicoFilter === 'todos' || f.servico === servicoFilter;
+        const matchServico = servicoFilter === 'todos' || (f.servicos && f.servicos.includes(servicoFilter));
         
         let matchData = true;
         if (dataInicio && dataFim) {
@@ -102,7 +103,7 @@ export default function Fiscalizacoes() {
         return matchSearch && matchStatus && matchServico && matchData;
     });
 
-    const servicos = [...new Set(fiscalizacoes.map(f => f.servico))].filter(Boolean);
+    const servicos = [...new Set(fiscalizacoes.flatMap(f => f.servicos || []))].filter(Boolean);
 
     const emAndamento = fiscalizacoes.filter(f => f.status === 'em_andamento').length;
     const finalizadas = fiscalizacoes.filter(f => f.status === 'finalizada').length;
