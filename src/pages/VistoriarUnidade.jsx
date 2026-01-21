@@ -221,21 +221,22 @@ export default function VistoriarUnidade() {
 
      const salvarFotosMutation = useMutation({
          mutationFn: async (fotosData) => {
-             // Salvar objetos completos com url e legenda
-             const fotosCompletas = fotosData.map(f => {
-                 if (typeof f === 'string') {
-                     return { url: f, legenda: '' };
-                 }
-                 return { url: f.url, legenda: f.legenda || '' };
-             });
-             await base44.entities.UnidadeFiscalizada.update(unidadeId, {
-                 fotos_unidade: fotosCompletas
-             });
-         },
-         onSuccess: () => {
-             queryClient.invalidateQueries({ queryKey: ['unidade', unidadeId] });
-         }
-     });
+              // Salvar objetos completos com url e legenda
+              const fotosCompletas = fotosData.map(f => {
+                  if (typeof f === 'string') {
+                      return { url: f, legenda: '' };
+                  }
+                  return { url: f.url, legenda: f.legenda || '' };
+              });
+              await base44.entities.UnidadeFiscalizada.update(unidadeId, {
+                  fotos_unidade: fotosCompletas
+              });
+          },
+          onSuccess: () => {
+              queryClient.invalidateQueries({ queryKey: ['unidade', unidadeId] });
+              setFotosParaSalvar([]);
+          }
+      });
 
     const adicionarRecomendacaoMutation = useMutation({
         mutationFn: async (texto) => {
