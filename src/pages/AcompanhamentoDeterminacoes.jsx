@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,9 +11,17 @@ import { createPageUrl } from '@/utils';
 import ChartEvolucaoStatus from '@/components/determinacoes/ChartEvolucaoStatus';
 import AnaliseTemposMedios from '@/components/determinacoes/AnaliseTemposMedios';
 import MapaDistribuicao from '@/components/determinacoes/MapaDistribuicao';
+import DeterminacoesFiltros from '@/components/determinacoes/DeterminacoesFiltros';
 
 export default function AcompanhamentoDeterminacoes() {
     const [selectedDeterminacao, setSelectedDeterminacao] = useState(null);
+    const [filtros, setFiltros] = useState({
+        municipio: '',
+        servico: '',
+        prestador: '',
+        dataInicio: '',
+        dataFim: ''
+    });
 
     const { data: determinacoes = [] } = useQuery({
         queryKey: ['determinacoes'],
@@ -35,34 +43,44 @@ export default function AcompanhamentoDeterminacoes() {
         queryFn: () => base44.entities.UnidadeFiscalizada.list()
     });
 
+    const { data: fiscalizacoes = [] } = useQuery({
+        queryKey: ['fiscalizacoes'],
+        queryFn: () => base44.entities.Fiscalizacao.list()
+    });
+
     const { data: municipios = [] } = useQuery({
         queryKey: ['municipios'],
         queryFn: () => base44.entities.Municipio.list()
     });
 
-    // Calcular KPIs
-    const determVencidas = determinacoes.filter(d => {
+    const { data: prestadores = [] } = useQuery({
+        queryKey: ['prestadores'],
+        queryFn: () => base44.entities.PrestadorServico.list()
+    });
+
+    // Calcular KPIs com filtros aplicados
+    const determVencidas = determFiltradas.filter(d => {
         const hoje = new Date();
         const limite = new Date(d.data_limite);
         return limite < hoje && d.status === 'pendente';
     }).length;
 
-    const determVencerEm7 = determinacoes.filter(d => {
+    const determVencerEm7 = determFiltradas.filter(d => {
         const hoje = new Date();
         const limite = new Date(d.data_limite);
         const diasAte = (limite - hoje) / (1000 * 60 * 60 * 24);
         return diasAte > 0 && diasAte <= 7 && d.status === 'pendente';
     }).length;
 
-    const determRespondidas = respostas.filter(r => r.status !== 'pendente').length;
+    const determRespondidas = respostas.filter(r => r.status !== 'pendente' && determFiltradas.find(d => d.id === r.determinacao_id)).length;
 
-    // Agrupar determinações por status
+    // Agrupar determinações por status (com filtros)
     const determPorStatus = {
-        pendente: determinacoes.filter(d => d.status === 'pendente'),
-        atendidas: respostas.filter(r => r.status === 'atendida'),
-        justificadas: respostas.filter(r => r.status === 'justificada'),
-        nao_atendidas: respostas.filter(r => r.status === 'nao_atendida'),
-        com_auto: autos.filter(a => a.status !== 'finalizado')
+        pendente: determFiltradas.filter(d => d.status === 'pendente'),
+        atendidas: respostas.filter(r => r.status === 'atendida' && determFiltradas.find(d => d.id === r.determinacao_id)),
+        justificadas: respostas.filter(r => r.status === 'justificada' && determFiltradas.find(d => d.id === r.determinacao_id)),
+        nao_atendidas: respostas.filter(r => r.status === 'nao_atendida' && determFiltradas.find(d => d.id === r.determinacao_id)),
+        com_auto: autos.filter(a => a.status !== 'finalizado' && determFiltradas.find(d => d.id === a.determinacao_id))
     };
 
     const getUnidadeNome = (id) => {
@@ -91,6 +109,50 @@ export default function AcompanhamentoDeterminacoes() {
         return Math.ceil((limite - hoje) / (1000 * 60 * 60 * 24));
     };
 
+    // Aplicar filtros
+    const determFiltradas = useMemo(() => {
+        return determinacoes.filter(det => {
+            const unidade = unidades.find(u => u.id === det.unidade_fiscalizada_id);
+            const fisc = fiscalizacoes.find(f => f.id === unidade?.fiscalizacao_id);
+            
+            // Filtro município
+            if (filtros.municipio && fisc?.municipio_id !== filtros.municipio) return false;
+            
+            // Filtro serviço
+            if (filtros.servico && fisc?.servico !== filtros.servico) return false;
+            
+            // Filtro prestador
+            if (filtros.prestador && fisc?.prestador_servico_id !== filtros.prestador) return false;
+            
+            // Filtro data
+            if (filtros.dataInicio) {
+                const dataInicio = new Date(filtros.dataInicio);
+                if (new Date(det.created_date) < dataInicio) return false;
+            }
+            if (filtros.dataFim) {
+                const dataFim = new Date(filtros.dataFim);
+                dataFim.setHours(23, 59, 59);
+                if (new Date(det.created_date) > dataFim) return false;
+            }
+            
+            return true;
+        });
+    }, [determinacoes, filtros, unidades, fiscalizacoes]);
+
+    const handleFiltroChange = (campo, valor) => {
+        setFiltros(prev => ({ ...prev, [campo]: valor }));
+    };
+
+    const handleLimparFiltros = () => {
+        setFiltros({
+            municipio: '',
+            servico: '',
+            prestador: '',
+            dataInicio: '',
+            dataFim: ''
+        });
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 p-6">
             <div className="max-w-7xl mx-auto">
@@ -105,6 +167,15 @@ export default function AcompanhamentoDeterminacoes() {
                         <h1 className="text-3xl font-bold">Acompanhamento de Determinações</h1>
                     </div>
                 </div>
+
+                {/* Filtros */}
+                <DeterminacoesFiltros 
+                    filtros={filtros}
+                    onFiltroChange={handleFiltroChange}
+                    onLimpar={handleLimparFiltros}
+                    municipios={municipios}
+                    prestadores={prestadores}
+                />
 
                 {/* KPIs */}
                 <div className="grid grid-cols-4 gap-4 mb-8">
@@ -152,13 +223,13 @@ export default function AcompanhamentoDeterminacoes() {
                 {/* Análises */}
                 <div className="mb-8">
                     <h2 className="text-xl font-semibold mb-4">Análises</h2>
-                    <AnaliseTemposMedios determinacoes={determinacoes} respostas={respostas} />
+                    <AnaliseTemposMedios determinacoes={determFiltradas} respostas={respostas} />
                 </div>
 
                 {/* Gráficos */}
                 <div className="grid grid-cols-2 gap-6 mb-8">
-                    <ChartEvolucaoStatus determinacoes={determinacoes} respostas={respostas} />
-                    <MapaDistribuicao determinacoes={determinacoes} autos={autos} municipios={municipios} />
+                    <ChartEvolucaoStatus determinacoes={determFiltradas} respostas={respostas} />
+                    <MapaDistribuicao determinacoes={determFiltradas} autos={autos} municipios={municipios} />
                 </div>
 
                 {/* Tabs */}
