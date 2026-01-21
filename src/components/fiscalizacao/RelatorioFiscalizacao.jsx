@@ -89,15 +89,15 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             pdf.setTextColor(255, 255, 255);
             pdf.setFontSize(20);
             pdf.setFont('helvetica', 'bold');
-            pdf.text('RELATÓRIO DE FISCALIZAÇÃO', pageWidth / 2, 25, { align: 'center' });
+            pdf.text('RELATÓRIO DE FISCALIZAÇÃO', pageWidth / 2, topMargin + 15, { align: 'center' });
             
             pdf.setFontSize(14);
             pdf.setFont('helvetica', 'normal');
-            pdf.text(fiscalizacao.municipio_nome.toUpperCase(), pageWidth / 2, 35, { align: 'center' });
-            pdf.text(fiscalizacao.servico, pageWidth / 2, 45, { align: 'center' });
+            pdf.text(fiscalizacao.municipio_nome.toUpperCase(), pageWidth / 2, topMargin + 25, { align: 'center' });
+            pdf.text(fiscalizacao.servico, pageWidth / 2, topMargin + 35, { align: 'center' });
 
             pdf.setTextColor(0, 0, 0);
-            yPos = 75;
+            yPos = topMargin + 45;
 
             // Informações da Fiscalização
             pdf.setFontSize(12);
