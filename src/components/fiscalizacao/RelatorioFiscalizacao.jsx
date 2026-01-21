@@ -119,7 +119,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             pdf.setFont('helvetica', 'normal');
             pdf.text(`Município: ${fiscalizacao.municipio_nome}`, margin + 2, yPos);
             yPos += 6;
-            pdf.text(`Serviço: ${fiscalizacao.servico}`, margin + 2, yPos);
+            pdf.text(`Serviços: ${fiscalizacao.servicos.join(', ')}`, margin + 2, yPos);
             yPos += 6;
             pdf.text(`Data Início: ${format(new Date(fiscalizacao.data_inicio), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`, margin + 2, yPos);
             yPos += 6;
