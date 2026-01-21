@@ -305,26 +305,29 @@ export default function Fiscalizacoes() {
                                         </Link>
 
                                         {/* Botões de ação */}
-                                        <div className="mt-3 pt-3 border-t flex gap-2">
-                                            {fisc.status === 'finalizada' && (
-                                                <div className="flex-1">
-                                                    <RelatorioFiscalizacao fiscalizacao={fisc} />
-                                                </div>
-                                            )}
-                                            {podeDeleter && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        setFiscalizacaoParaDeletar(fisc);
-                                                    }}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            )}
-                                        </div>
+                                         <div className="mt-3 pt-3 border-t flex gap-2">
+                                             {fisc.status === 'finalizada' && (
+                                                 <>
+                                                     <div className="flex-1">
+                                                         <RelatorioFiscalizacao fiscalizacao={fisc} />
+                                                     </div>
+                                                     <ResumoFiscalizacao fiscalizacao_id={fisc.id} prestadorNome={fisc.prestador_servico_nome} />
+                                                 </>
+                                             )}
+                                             {podeDeleter && (
+                                                 <Button
+                                                     variant="outline"
+                                                     size="sm"
+                                                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                     onClick={(e) => {
+                                                         e.preventDefault();
+                                                         setFiscalizacaoParaDeletar(fisc);
+                                                     }}
+                                                 >
+                                                     <Trash2 className="h-4 w-4" />
+                                                 </Button>
+                                             )}
+                                         </div>
                                     </CardContent>
                                 </Card>
                             );
