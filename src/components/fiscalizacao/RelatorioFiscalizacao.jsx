@@ -361,11 +361,16 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     ncsSorted.forEach((nc) => {
                         // Encontrar resposta relacionada para pegar número da constatação
                         const respostaRelacionada = respostas.find(r => r.id === nc.resposta_checklist_id);
-                        const numConstatacao = respostaRelacionada?.numero_constatacao || '';
+                        const numContatacaoAnterior = respostaRelacionada?.numero_constatacao || '';
+                        const numConstatacaoNovo = respostaRelacionada ? `C${mapeamento.constatacoes[respostaRelacionada.id]}` : '';
+                        
+                        // Usar número sequencial global
+                        const novoNumNC = `NC${mapeamento.ncs[nc.id]}`;
+                        const numConstaCorrigido = numConstatacaoNovo || numContatacaoAnterior;
                         
                         // Adicionar número da constatação na descrição
-                        const descricaoCompleta = numConstatacao 
-                            ? `A Constatação ${numConstatacao} não cumpre o disposto no ${nc.artigo_portaria || 'artigo'};`
+                        const descricaoCompleta = numConstaCorrigido 
+                            ? `A Constatação ${numConstaCorrigido} não cumpre o disposto no ${nc.artigo_portaria || 'artigo'};`
                             : nc.descricao;
                         
                         const restLines = pdf.splitTextToSize(descricaoCompleta, tableWidth - 15);
@@ -379,7 +384,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
                         pdf.rect(margin, yPos, tableWidth, cellHeight, 'S');
                         pdf.setFont('helvetica', 'bold');
-                        pdf.text(nc.numero_nc + '.', margin + 2, yPos + 5);
+                        pdf.text(novoNumNC + '.', margin + 2, yPos + 5);
                         pdf.setFont('helvetica', 'normal');
                         pdf.text(restLines, margin + 12, yPos + 5);
 
