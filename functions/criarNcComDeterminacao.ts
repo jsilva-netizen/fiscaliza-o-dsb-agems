@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
             data_limite.setDate(data_limite.getDate() + prazo_dias);
             const data_limite_str = data_limite.toISOString().split('T')[0];
 
-            const descricaoDeterminacao = `Para sanar a ${numeroNC} ${texto_determinacao}. Prazo: ${prazo_dias} dias.`;
+            const descricaoDeterminacao = `Para sanar a ${numeroNC} ${texto_determinacao}`;
 
             const det = await base44.entities.Determinacao.create({
                 unidade_fiscalizada_id,
