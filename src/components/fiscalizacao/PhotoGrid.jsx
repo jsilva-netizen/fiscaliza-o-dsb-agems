@@ -87,16 +87,34 @@ export default function PhotoGrid({
                         variant="outline"
                         disabled={isUploading}
                     >
-                        <Image className="h-4 w-4 mr-2" />
-                        {isUploading ? 'Enviando...' : 'Galeria'}
+                        {isUploading ? (
+                            <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                {uploadProgress}/{totalUploads}
+                            </>
+                        ) : (
+                            <>
+                                <Image className="h-4 w-4 mr-2" />
+                                Galeria
+                            </>
+                        )}
                     </Button>
                     <Button 
                         onClick={() => cameraInputRef.current?.click()} 
                         size="sm"
                         disabled={isUploading}
                     >
-                        <Camera className="h-4 w-4 mr-2" />
-                        {isUploading ? 'Enviando...' : 'Câmera'}
+                        {isUploading ? (
+                            <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Enviando...
+                            </>
+                        ) : (
+                            <>
+                                <Camera className="h-4 w-4 mr-2" />
+                                Câmera
+                            </>
+                        )}
                     </Button>
                 </div>
             </div>
