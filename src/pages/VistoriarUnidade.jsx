@@ -179,9 +179,15 @@ export default function VistoriarUnidade() {
 
      const salvarFotosMutation = useMutation({
          mutationFn: async (fotosData) => {
-             const urlsApenas = fotosData.map(f => typeof f === 'string' ? f : f.url);
+             // Salvar objetos completos com url e legenda
+             const fotosCompletas = fotosData.map(f => {
+                 if (typeof f === 'string') {
+                     return { url: f, legenda: '' };
+                 }
+                 return { url: f.url, legenda: f.legenda || '' };
+             });
              await base44.entities.UnidadeFiscalizada.update(unidadeId, {
-                 fotos_unidade: urlsApenas
+                 fotos_unidade: fotosCompletas
              });
          },
          onSuccess: () => {
@@ -236,32 +242,38 @@ export default function VistoriarUnidade() {
     });
 
     const finalizarUnidadeMutation = useMutation({
-        mutationFn: async () => {
-             // Validar fotos (estado local é fonte da verdade)
-             if (fotos.length < 2) {
-                 throw new Error(`Mínimo de 2 fotos obrigatórias (você tem ${fotos.length}).`);
+    mutationFn: async () => {
+         // Validar fotos (estado local é fonte da verdade)
+         if (fotos.length < 2) {
+             throw new Error(`Mínimo de 2 fotos obrigatórias (você tem ${fotos.length}).`);
+         }
+
+         // Recarregar dados do banco para contagens precisas
+         const respostasAtuais = await base44.entities.RespostaChecklist.filter({ 
+             unidade_fiscalizada_id: unidadeId 
+         });
+         const ncsAtuais = await base44.entities.NaoConformidade.filter({ 
+             unidade_fiscalizada_id: unidadeId 
+         });
+
+         const totalConstatacoes = respostasAtuais.filter(r => 
+             r.resposta === 'SIM' || r.resposta === 'NAO'
+         ).length;
+
+         // Salvar objetos completos com url e legenda
+         const fotosCompletas = fotos.map(f => {
+             if (typeof f === 'string') {
+                 return { url: f, legenda: '' };
              }
-
-             // Recarregar dados do banco para contagens precisas
-             const respostasAtuais = await base44.entities.RespostaChecklist.filter({ 
-                 unidade_fiscalizada_id: unidadeId 
-             });
-             const ncsAtuais = await base44.entities.NaoConformidade.filter({ 
-                 unidade_fiscalizada_id: unidadeId 
-             });
-
-             const totalConstatacoes = respostasAtuais.filter(r => 
-                 r.resposta === 'SIM' || r.resposta === 'NAO'
-             ).length;
-
-             const urlsApenas = fotos.map(f => typeof f === 'string' ? f : f.url);
-             await base44.entities.UnidadeFiscalizada.update(unidadeId, {
-                 status: 'finalizada',
-                 fotos_unidade: urlsApenas,
-                 total_constatacoes: totalConstatacoes,
-                 total_ncs: ncsAtuais.length
-             });
-             },
+             return { url: f.url, legenda: f.legenda || '' };
+         });
+         await base44.entities.UnidadeFiscalizada.update(unidadeId, {
+             status: 'finalizada',
+             fotos_unidade: fotosCompletas,
+             total_constatacoes: totalConstatacoes,
+             total_ncs: ncsAtuais.length
+         });
+         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['unidades-fiscalizacao'] });
             navigate(createPageUrl('ExecutarFiscalizacao') + `?id=${unidade.fiscalizacao_id}`);
