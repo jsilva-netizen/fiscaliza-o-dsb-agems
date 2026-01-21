@@ -41,7 +41,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
     const gerarRelatorio = async () => {
         setIsGenerating(true);
         try {
-            // Buscar dados completos
             const unidades = await base44.entities.UnidadeFiscalizada.filter(
                 { fiscalizacao_id: fiscalizacao.id }, 
                 'created_date', 
@@ -72,7 +71,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                 )
             );
 
-            // Fotos já estão no campo fotos_unidade
             const todasFotos = unidades.map(u => u.fotos_unidade || []);
 
             const pdf = new jsPDF('p', 'mm', 'a4');
@@ -83,7 +81,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             const bottomMargin = 25;
             let yPos = topMargin;
 
-            // Carregar timbrado uma vez
             let timbradoBase64 = null;
             try {
                 const timbradoUrl = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69331445067a2821c02acff8/4fe7a4846_timbrado.pdf';
@@ -92,8 +89,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                 console.error('Erro ao carregar timbrado:', err);
             }
 
-            // Cabeçalho azul com título
-            pdf.setFillColor(25, 75, 145); // Azul
+            pdf.setFillColor(25, 75, 145);
             pdf.rect(0, 0, pageWidth, 40, 'F');
             
             pdf.setTextColor(255, 255, 255);
@@ -109,7 +105,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             pdf.setTextColor(0, 0, 0);
             yPos = 45;
 
-            // Informações da Fiscalização
             pdf.setFontSize(12);
             pdf.setFont('helvetica', 'bold');
             pdf.text('INFORMAÇÕES DA FISCALIZAÇÃO', margin, yPos);
@@ -136,9 +131,8 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             }
             yPos += 8;
 
-            // Resumo Executivo
             yPos += 6;
-            pdf.setFillColor(25, 75, 145); // Azul
+            pdf.setFillColor(25, 75, 145);
             pdf.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F');
             pdf.setDrawColor(0);
             pdf.rect(margin, yPos, pageWidth - 2 * margin, 8, 'S');
@@ -149,7 +143,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             pdf.setTextColor(0, 0, 0);
             yPos += 10;
 
-            // Calcular totais reais
             const totalConstatacoes = todasRespostas.flat().filter(r => r.resposta === 'SIM' || r.resposta === 'NAO').length;
             const totalNCs = todasNcs.flat().length;
             const totalDeterminacoes = todasDeterminacoes.flat().length;
@@ -171,7 +164,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             const tableWidth = pageWidth - 2 * margin;
             const rowHeight = 7;
             
-            // Desenhar célula
             const drawCell = (text, x, y, width, height, bold = false, center = false, fillColor = null) => {
                 if (fillColor) {
                     pdf.setFillColor(fillColor[0], fillColor[1], fillColor[2]);
@@ -194,23 +186,17 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                 constatacoes: 0,
                 ncs: 0,
                 determinacoes: 0,
-                recomendacoes: 0,
-                figuras: 0
+                recomendacoes: 0
             };
 
-            // Mapear numero antigo -> numero novo para cada tipo
             const mapeamentosNumeracao = [];
 
-            // Para cada unidade
             for (let idx = 0; idx < unidades.length; idx++) {
-                const unidade = unidades[idx];
                 const respostas = todasRespostas[idx] || [];
                 const ncs = todasNcs[idx] || [];
                 const determinacoes = todasDeterminacoes[idx] || [];
                 const recomendacoes = todasRecomendacoes[idx] || [];
-                const fotos = todasFotos[idx] || [];
 
-                // Criar mapeamento de numeração para esta unidade
                 const mapeamentoUnidade = {
                     constatacoes: {},
                     ncs: {},
@@ -218,7 +204,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     recomendacoes: {}
                 };
 
-                // Contar e mapear constatações
                 const constaOrd = respostas.filter(r => r.resposta === 'SIM' || r.resposta === 'NAO').sort((a, b) => {
                     const numA = parseInt(a.numero_constatacao?.replace('C', '') || '999');
                     const numB = parseInt(b.numero_constatacao?.replace('C', '') || '999');
@@ -229,7 +214,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     mapeamentoUnidade.constatacoes[c.id] = contadores.constatacoes;
                 });
 
-                // Contar e mapear NCs
                 const ncsOrd = [...ncs].sort((a, b) => {
                     const numA = parseInt(a.numero_nc?.replace('NC', '') || '999');
                     const numB = parseInt(b.numero_nc?.replace('NC', '') || '999');
@@ -240,7 +224,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     mapeamentoUnidade.ncs[nc.id] = contadores.ncs;
                 });
 
-                // Contar e mapear Determinações
                 const detsOrd = [...determinacoes].sort((a, b) => {
                     const numA = parseInt(a.numero_determinacao?.replace('D', '') || '999');
                     const numB = parseInt(b.numero_determinacao?.replace('D', '') || '999');
@@ -251,7 +234,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     mapeamentoUnidade.determinacoes[det.id] = contadores.determinacoes;
                 });
 
-                // Contar e mapear Recomendações
                 const recsOrd = [...recomendacoes].sort((a, b) => {
                     const numA = parseInt(a.numero_recomendacao?.replace('R', '') || '999');
                     const numB = parseInt(b.numero_recomendacao?.replace('R', '') || '999');
@@ -265,10 +247,8 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                 mapeamentosNumeracao.push(mapeamentoUnidade);
             }
 
-            // Reset do contador de figuras
             let offsetGlobalFiguras = 0;
 
-            // Para cada unidade (segundo loop para renderização)
             for (let idx = 0; idx < unidades.length; idx++) {
                 const unidade = unidades[idx];
                 const respostas = todasRespostas[idx] || [];
@@ -278,14 +258,12 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                 const fotos = todasFotos[idx] || [];
                 const mapeamento = mapeamentosNumeracao[idx];
 
-                // Nova página para cada unidade
                 pdf.addPage();
                 addTimbradoToPage(pdf, timbradoBase64);
                 yPos = topMargin;
 
                 pdf.setFontSize(9);
 
-                // Cabeçalho - TIPO DE UNIDADE
                 pdf.setFillColor(189, 214, 238);
                 pdf.rect(margin, yPos, tableWidth, rowHeight, 'F');
                 pdf.setDrawColor(0);
@@ -295,20 +273,16 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                 pdf.text(unidade.tipo_unidade_nome.toUpperCase(), pageWidth / 2, yPos + 4.5, { align: 'center' });
                 yPos += rowHeight;
 
-                // ID Unidade
                 pdf.setFontSize(9);
                 drawCell(`ID Unidade: ${unidade.codigo_unidade || unidade.nome_unidade || '-'}`, margin, yPos, tableWidth, rowHeight, true);
                 yPos += rowHeight;
 
-                // Localidade
                 drawCell(`Localidade: ${fiscalizacao.municipio_nome}`, margin, yPos, tableWidth, rowHeight, true);
                 yPos += rowHeight;
 
-                // Endereço
                 drawCell(`Endereço: ${unidade.endereco || '-'}`, margin, yPos, tableWidth, rowHeight, true);
                 yPos += rowHeight;
 
-                // Constatações - Header
                 drawCell('Constatações', margin, yPos, tableWidth, rowHeight, true, true, [189, 214, 238]);
                 yPos += rowHeight;
 
@@ -326,7 +300,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     const restLines = pdf.splitTextToSize(texto, tableWidth - 15);
                     const cellHeight = Math.max(rowHeight, restLines.length * 5 + 4);
 
-                    // Check page break
                     if (yPos + cellHeight > pageHeight - bottomMargin) {
                         pdf.addPage();
                         addTimbradoToPage(pdf, timbradoBase64);
@@ -342,7 +315,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     yPos += cellHeight;
                 });
 
-                // Não Conformidades
                 if (yPos + rowHeight > pageHeight - bottomMargin) {
                     pdf.addPage();
                     addTimbradoToPage(pdf, timbradoBase64);
@@ -359,16 +331,11 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     });
 
                     ncsSorted.forEach((nc) => {
-                        // Encontrar resposta relacionada para pegar número da constatação
                         const respostaRelacionada = respostas.find(r => r.id === nc.resposta_checklist_id);
-                        const numContatacaoAnterior = respostaRelacionada?.numero_constatacao || '';
                         const numConstatacaoNovo = respostaRelacionada ? `C${mapeamento.constatacoes[respostaRelacionada.id]}` : '';
-                        
-                        // Usar número sequencial global
                         const novoNumNC = `NC${mapeamento.ncs[nc.id]}`;
-                        const numConstaCorrigido = numConstatacaoNovo || numContatacaoAnterior;
+                        const numConstaCorrigido = numConstatacaoNovo || (respostaRelacionada?.numero_constatacao || '');
                         
-                        // Adicionar número da constatação na descrição
                         const descricaoCompleta = numConstaCorrigido 
                             ? `A Constatação ${numConstaCorrigido} não cumpre o disposto no ${nc.artigo_portaria || 'artigo'};`
                             : nc.descricao;
@@ -398,7 +365,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     yPos += cellHeight;
                 }
 
-                // Recomendações
                 if (recomendacoes.length > 0) {
                     const recsSorted = [...recomendacoes].sort((a, b) => {
                         const numA = parseInt(a.numero_recomendacao?.replace('R', '') || '999');
@@ -415,28 +381,27 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     yPos += rowHeight;
 
                     recsSorted.forEach((rec) => {
-                         const novoNumRec = `R${mapeamento.recomendacoes[rec.id]}`;
-                         const descricaoComPonto = rec.descricao.endsWith('.') ? rec.descricao : rec.descricao + '.';
-                         const restLines = pdf.splitTextToSize(descricaoComPonto, tableWidth - 15);
-                         const cellHeight = Math.max(rowHeight, restLines.length * 5 + 4);
+                        const novoNumRec = `R${mapeamento.recomendacoes[rec.id]}`;
+                        const descricaoComPonto = rec.descricao.endsWith('.') ? rec.descricao : rec.descricao + '.';
+                        const restLines = pdf.splitTextToSize(descricaoComPonto, tableWidth - 15);
+                        const cellHeight = Math.max(rowHeight, restLines.length * 5 + 4);
 
-                         if (yPos + cellHeight > pageHeight - bottomMargin) {
-                             pdf.addPage();
-                             addTimbradoToPage(pdf, timbradoBase64);
-                             yPos = topMargin;
-                         }
+                        if (yPos + cellHeight > pageHeight - bottomMargin) {
+                            pdf.addPage();
+                            addTimbradoToPage(pdf, timbradoBase64);
+                            yPos = topMargin;
+                        }
 
-                         pdf.rect(margin, yPos, tableWidth, cellHeight, 'S');
-                         pdf.setFont('helvetica', 'bold');
-                         pdf.text(novoNumRec + '.', margin + 2, yPos + 5);
-                         pdf.setFont('helvetica', 'normal');
-                         pdf.text(restLines, margin + 12, yPos + 5);
+                        pdf.rect(margin, yPos, tableWidth, cellHeight, 'S');
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.text(novoNumRec + '.', margin + 2, yPos + 5);
+                        pdf.setFont('helvetica', 'normal');
+                        pdf.text(restLines, margin + 12, yPos + 5);
 
-                         yPos += cellHeight;
-                     });
+                        yPos += cellHeight;
+                    });
                 }
 
-                // Determinações
                 if (yPos + rowHeight > pageHeight - bottomMargin) {
                     pdf.addPage();
                     addTimbradoToPage(pdf, timbradoBase64);
@@ -480,7 +445,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     yPos += cellHeight;
                 }
 
-                // Registros Fotográficos
                 if (fotos.length > 0) {
                     if (yPos + rowHeight > pageHeight - bottomMargin) {
                         pdf.addPage();
@@ -490,7 +454,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     drawCell('Registros Fotográficos', margin, yPos, tableWidth, rowHeight, true, true, [189, 214, 238]);
                     yPos += rowHeight;
 
-                    // Converter todas as imagens para base64 primeiro
                     const fotosBase64 = [];
                     for (const foto of fotos) {
                         try {
@@ -506,7 +469,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                         }
                     }
 
-                    // Adicionar fotos em grid 2x2 dentro da tabela
                     const cellPadding = 2;
                     const imgCellWidth = (tableWidth - cellPadding) / 2;
                     const imgWidth = imgCellWidth - 4;
@@ -515,18 +477,15 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     const totalCellHeight = imgHeight + captionHeight;
 
                     for (let i = 0; i < fotosBase64.length; i += 2) {
-                        // Verificar se precisa de nova página
                         if (yPos + totalCellHeight + 10 > pageHeight - bottomMargin) {
                             pdf.addPage();
                             addTimbradoToPage(pdf, timbradoBase64);
                             yPos = topMargin;
                         }
 
-                        // Desenhar células do grid 2x2
                         const leftX = margin;
                         const rightX = margin + imgCellWidth;
 
-                        // Célula esquerda
                         pdf.rect(leftX, yPos, imgCellWidth, totalCellHeight, 'S');
                         if (fotosBase64[i]?.base64) {
                             try {
@@ -542,7 +501,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                             }
                         }
 
-                        // Célula direita
                         pdf.rect(rightX, yPos, imgCellWidth, totalCellHeight, 'S');
                         if (fotosBase64[i + 1]?.base64) {
                             try {
@@ -561,12 +519,10 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                         yPos += totalCellHeight;
                     }
 
-                    // Atualizar offset para próxima unidade
                     offsetGlobalFiguras += fotosBase64.length;
                 }
             }
 
-            // Salvar
             const nomeArquivo = `Relatorio_Fiscalizacao_${fiscalizacao.municipio_nome}_${format(new Date(), 'yyyyMMdd-HHmmss')}.pdf`;
             pdf.save(nomeArquivo);
 
