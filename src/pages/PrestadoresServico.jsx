@@ -66,8 +66,7 @@ export default function PrestadoresServico() {
             email_contato: '',
             cnpj: '',
             responsavel: '',
-            cargo: '',
-            tipo: 'prestador_servico'
+            cargo: ''
         });
         setEditingId(null);
     };
