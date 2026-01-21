@@ -8,6 +8,7 @@ import NovaFiscalizacao from './pages/NovaFiscalizacao';
 import Relatorios from './pages/Relatorios';
 import TiposUnidade from './pages/TiposUnidade';
 import VistoriarUnidade from './pages/VistoriarUnidade';
+import PrestadoresServico from './pages/PrestadoresServico';
 import __Layout from './Layout.jsx';
 
 
@@ -22,6 +23,7 @@ export const PAGES = {
     "Relatorios": Relatorios,
     "TiposUnidade": TiposUnidade,
     "VistoriarUnidade": VistoriarUnidade,
+    "PrestadoresServico": PrestadoresServico,
 }
 
 export const pagesConfig = {
