@@ -16,11 +16,17 @@ Deno.serve(async (req) => {
         }
 
         const csvText = csv_content;
+        
+        // Detectar delimitador (ponto-e-vírgula ou vírgula)
         const lines = csvText.split('\n').filter(line => line.trim());
 
         if (lines.length < 2) {
             return Response.json({ error: 'Arquivo vazio ou sem dados' }, { status: 400 });
         }
+
+        // Detectar delimitador da primeira linha
+        const primeiraLinha = lines[0];
+        const delimitador = primeiraLinha.includes(';') ? ';' : ',';
 
         // Ignorar cabeçalho
         const dataLines = lines.slice(1);
@@ -32,10 +38,12 @@ Deno.serve(async (req) => {
         for (let i = 0; i < dataLines.length; i++) {
             try {
                 const linha = dataLines[i];
-                const colunas = linha.split(';').map(c => c.trim());
+                
+                // Parse CSV considerando possíveis aspas
+                const colunas = linha.split(delimitador).map(c => c.trim().replace(/^"(.*)"$/, '$1'));
 
                 if (colunas.length < 11) {
-                    erros.push(`Linha ${i + 2}: Número insuficiente de colunas (${colunas.length}/11)`);
+                    erros.push(`Linha ${i + 2}: Número insuficiente de colunas (${colunas.length}/11). Esperado: serviço;tipo_unidade_codigo;tipo_unidade_nome;ordem;pergunta;texto_constatacao_sim;texto_constatacao_nao;artigo_portaria;texto_nc;texto_determinacao;prazo_dias`);
                     continue;
                 }
 
@@ -91,13 +99,13 @@ Deno.serve(async (req) => {
                 const item = await base44.asServiceRole.entities.ItemChecklist.create({
                     tipo_unidade_id: tipoId,
                     ordem: parseInt(ordem) || 0,
-                    pergunta,
-                    texto_constatacao_sim,
-                    texto_constatacao_nao,
+                    pergunta: pergunta || '',
+                    texto_constatacao_sim: texto_constatacao_sim || '',
+                    texto_constatacao_nao: texto_constatacao_nao || '',
                     gera_nc: true, // Sempre gera NC quando resposta é NÃO
-                    artigo_portaria,
-                    texto_nc, // Mantém na entidade mas não será usado
-                    texto_determinacao,
+                    artigo_portaria: artigo_portaria || '',
+                    texto_nc: texto_nc || '', // Mantém na entidade mas não será usado
+                    texto_determinacao: texto_determinacao || '',
                     prazo_dias: parseInt(prazo_dias) || 30,
                     ativo: true
                 });
