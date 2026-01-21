@@ -58,11 +58,13 @@ Deno.serve(async (req) => {
         const data_limite_str = data_limite.toISOString().split('T')[0];
 
         // 5. Criar Determinação vinculada à NC
+        const descricaoDeterminacao = `Para sanar a ${numeroNC} ${texto_determinacao}. Prazo: ${prazo_dias} dias.`;
+        
         const det = await base44.entities.Determinacao.create({
             unidade_fiscalizada_id,
             nao_conformidade_id: nc.id,
             numero_determinacao: numeroD,
-            descricao: texto_determinacao,
+            descricao: descricaoDeterminacao,
             prazo_dias,
             data_limite: data_limite_str,
             status: 'pendente'
