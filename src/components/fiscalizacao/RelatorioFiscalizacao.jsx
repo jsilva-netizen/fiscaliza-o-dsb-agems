@@ -393,9 +393,10 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
                     for (let i = 0; i < fotosBase64.length; i += 2) {
                         // Verificar se precisa de nova página
-                        if (yPos + totalCellHeight + 10 > pageHeight - margin) {
+                        if (yPos + totalCellHeight + 10 > pageHeight - bottomMargin) {
                             pdf.addPage();
-                            yPos = margin;
+                            await addTimbradoToPage(pdf);
+                            yPos = topMargin;
                         }
 
                         // Desenhar células do grid 2x2
