@@ -320,6 +320,87 @@ export default function PrestadoresServico() {
                             </div>
                         )}
                     </TabsContent>
+
+                    <TabsContent value="titulares" className="space-y-4">
+                        <div className="flex justify-end">
+                            <Button onClick={() => { resetForm(); setFormData({...formData, tipo: 'titular'}); setShowForm(true); }} className="bg-blue-600 hover:bg-blue-700">
+                                <Plus className="h-4 w-4 mr-2" />
+                                Novo Titular
+                            </Button>
+                        </div>
+
+                        {isLoading ? (
+                            <div className="flex justify-center py-12">
+                                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                            </div>
+                        ) : titulares.length === 0 ? (
+                            <Card>
+                                <CardContent className="p-6 text-center text-gray-500">
+                                    <p>Nenhum titular cadastrado.</p>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <div className="grid gap-4">
+                                {titulares.map(prestador => (
+                                    <Card key={prestador.id}>
+                                        <CardHeader className="pb-3">
+                                            <CardTitle className="text-lg">{prestador.nome}</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="space-y-2">
+                                            {prestador.razao_social && (
+                                                <p className="text-sm text-gray-600">
+                                                    <span className="font-medium">Razão Social:</span> {prestador.razao_social}
+                                                </p>
+                                            )}
+                                            {prestador.cnpj && (
+                                                <p className="text-sm text-gray-600">
+                                                    <span className="font-medium">CNPJ/MF:</span> {prestador.cnpj}
+                                                </p>
+                                            )}
+                                            {prestador.cidade && (
+                                                <p className="text-sm text-gray-600">
+                                                    <span className="font-medium">Cidade:</span> {prestador.cidade}
+                                                </p>
+                                            )}
+                                            {prestador.email_contato && (
+                                                <p className="text-sm text-gray-600">
+                                                    <span className="font-medium">Email:</span> {prestador.email_contato}
+                                                </p>
+                                            )}
+                                            <div className="flex gap-2 mt-4">
+                                                <Link to={createPageUrl(`DetalhePrestador?id=${prestador.id}`)}>
+                                                    <Button size="sm" variant="outline">
+                                                        <Eye className="h-4 w-4 mr-1" />
+                                                        Detalhes
+                                                    </Button>
+                                                </Link>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => handleEdit(prestador)}
+                                                >
+                                                    <Edit2 className="h-4 w-4 mr-1" />
+                                                    Editar
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="destructive"
+                                                    onClick={() => {
+                                                        if (confirm('Tem certeza?')) {
+                                                            deletarMutation.mutate(prestador.id);
+                                                        }
+                                                    }}
+                                                >
+                                                    <Trash2 className="h-4 w-4 mr-1" />
+                                                    Deletar
+                                                </Button>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+                    </TabsContent>
                 </Tabs>
             </div>
 
