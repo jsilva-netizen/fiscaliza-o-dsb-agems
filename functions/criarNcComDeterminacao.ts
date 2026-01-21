@@ -67,20 +67,17 @@ Deno.serve(async (req) => {
 
         // 4. Se tem texto_determinacao, criar Determinação
         if (texto_determinacao) {
-            const determinacoesAtuais = await base44.entities.Determinacao.filter({ unidade_fiscalizada_id }, null, 1000);
-            const numeroD = `D${determinacoesAtuais.length + 1}`;
-
             const hoje = new Date();
             const data_limite = new Date(hoje);
             data_limite.setDate(data_limite.getDate() + prazo_dias);
             const data_limite_str = data_limite.toISOString().split('T')[0];
 
-            const descricaoDeterminacao = `Para sanar a ${numeroNC} ${texto_determinacao}`;
+            const descricaoDeterminacao = `Para sanar a ${numero_nc} ${texto_determinacao}`;
 
             const det = await base44.entities.Determinacao.create({
                 unidade_fiscalizada_id,
                 nao_conformidade_id: nc.id,
-                numero_determinacao: numeroD,
+                numero_determinacao,
                 descricao: descricaoDeterminacao,
                 prazo_dias,
                 data_limite: data_limite_str,
@@ -89,7 +86,7 @@ Deno.serve(async (req) => {
 
             resultado.determinacao = {
                 id: det.id,
-                numero_determinacao: numeroD,
+                numero_determinacao,
                 data_limite: data_limite_str
             };
         }
