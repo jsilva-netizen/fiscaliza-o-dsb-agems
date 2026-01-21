@@ -53,14 +53,7 @@ export default function PhotoGrid({
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
-                <div>
-                    <h4 className="font-medium">{titulo}</h4>
-                    <p className="text-xs text-gray-500">
-                        {fotos.length}/{minFotos} fotos {faltam > 0 && (
-                            <span className="text-red-500">(faltam {faltam})</span>
-                        )}
-                    </p>
-                </div>
+                <h4 className="font-medium">{titulo}</h4>
                 <div className="flex gap-2">
                     <input
                         ref={fileInputRef}
