@@ -529,7 +529,7 @@ export default function VistoriarUnidade() {
                     <div className="max-w-4xl mx-auto">
                         <Button 
                             className="w-full h-12 bg-green-600 hover:bg-green-700"
-                            onClick={() => finalizarUnidadeMutation.mutate()}
+                            onClick={handleFinalizarClick}
                             disabled={finalizarUnidadeMutation.isPending}
                         >
                             {finalizarUnidadeMutation.isPending ? (
