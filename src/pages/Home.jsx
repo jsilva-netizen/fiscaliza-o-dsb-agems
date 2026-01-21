@@ -11,7 +11,9 @@ import {
     Plus,
     History,
     Building2,
-    Users
+    Users,
+    FileText,
+    AlertTriangle
 } from 'lucide-react';
 
 export default function Home() {
@@ -104,6 +106,46 @@ export default function Home() {
                                 <BarChart3 className="h-8 w-8 text-blue-300 mx-auto mb-2" />
                                 <h3 className="text-white font-medium text-sm">Relatórios</h3>
                                 <p className="text-blue-300 text-xs">Indicadores e BI</p>
+                            </CardContent>
+                        </Card>
+                    </Link>
+
+                    <Link to={createPageUrl('AcompanhamentoDeterminacoes')}>
+                        <Card className="bg-white/10 hover:bg-white/20 transition-all cursor-pointer border-white/20 h-full">
+                            <CardContent className="p-4 text-center">
+                                <FileText className="h-8 w-8 text-blue-300 mx-auto mb-2" />
+                                <h3 className="text-white font-medium text-sm">Determinações</h3>
+                                <p className="text-blue-300 text-xs">Acompanhamento</p>
+                            </CardContent>
+                        </Card>
+                    </Link>
+
+                    <Link to={createPageUrl('GerenciarTermos')}>
+                        <Card className="bg-white/10 hover:bg-white/20 transition-all cursor-pointer border-white/20 h-full">
+                            <CardContent className="p-4 text-center">
+                                <FileText className="h-8 w-8 text-blue-300 mx-auto mb-2" />
+                                <h3 className="text-white font-medium text-sm">Termos</h3>
+                                <p className="text-blue-300 text-xs">Notificação</p>
+                            </CardContent>
+                        </Card>
+                    </Link>
+
+                    <Link to={createPageUrl('GestaoAutos')}>
+                        <Card className="bg-white/10 hover:bg-white/20 transition-all cursor-pointer border-white/20 h-full">
+                            <CardContent className="p-4 text-center">
+                                <AlertTriangle className="h-8 w-8 text-red-300 mx-auto mb-2" />
+                                <h3 className="text-white font-medium text-sm">Autos</h3>
+                                <p className="text-blue-300 text-xs">Infrações</p>
+                            </CardContent>
+                        </Card>
+                    </Link>
+
+                    <Link to={createPageUrl('CamaraJulgamento')}>
+                        <Card className="bg-white/10 hover:bg-white/20 transition-all cursor-pointer border-white/20 h-full">
+                            <CardContent className="p-4 text-center">
+                                <Users className="h-8 w-8 text-blue-300 mx-auto mb-2" />
+                                <h3 className="text-white font-medium text-sm">Julgamento</h3>
+                                <p className="text-blue-300 text-xs">Câmara</p>
                             </CardContent>
                         </Card>
                     </Link>
