@@ -415,6 +415,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     yPos += rowHeight;
 
                     recsSorted.forEach((rec) => {
+                         const novoNumRec = `R${mapeamento.recomendacoes[rec.id]}`;
                          const descricaoComPonto = rec.descricao.endsWith('.') ? rec.descricao : rec.descricao + '.';
                          const restLines = pdf.splitTextToSize(descricaoComPonto, tableWidth - 15);
                          const cellHeight = Math.max(rowHeight, restLines.length * 5 + 4);
@@ -427,7 +428,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
                          pdf.rect(margin, yPos, tableWidth, cellHeight, 'S');
                          pdf.setFont('helvetica', 'bold');
-                         pdf.text(rec.numero_recomendacao + '.', margin + 2, yPos + 5);
+                         pdf.text(novoNumRec + '.', margin + 2, yPos + 5);
                          pdf.setFont('helvetica', 'normal');
                          pdf.text(restLines, margin + 12, yPos + 5);
 
