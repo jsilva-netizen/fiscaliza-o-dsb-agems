@@ -41,17 +41,14 @@ Deno.serve(async (req) => {
             observacao: ''
         });
 
-        // 2. Contar NCs para gerar número único
-        const ncsAtuais = await base44.entities.NaoConformidade.filter({ unidade_fiscalizada_id }, null, 1000);
-        const numeroNC = `NC${ncsAtuais.length + 1}`;
-
+        // 2. Usar número de NC fornecido (numeração contínua)
         // 3. Criar NC
         const descricaoNC = `A Constatação ${numero_constatacao} não cumpre o disposto no ${artigo_portaria};`;
 
         const nc = await base44.entities.NaoConformidade.create({
             unidade_fiscalizada_id,
             resposta_checklist_id: resposta.id,
-            numero_nc: numeroNC,
+            numero_nc,
             artigo_portaria,
             descricao: descricaoNC
         });
