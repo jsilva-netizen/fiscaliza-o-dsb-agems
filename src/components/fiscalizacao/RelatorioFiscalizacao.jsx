@@ -103,7 +103,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             pdf.setFontSize(11);
             pdf.setFont('helvetica', 'normal');
             pdf.text(`Município: ${fiscalizacao.municipio_nome}`, pageWidth / 2, topMargin + 15, { align: 'center' });
-            pdf.text(`Serviço: ${fiscalizacao.servico}`, pageWidth / 2, topMargin + 21, { align: 'center' });
+            pdf.text(`Serviços: ${fiscalizacao.servicos.join(', ')}`, pageWidth / 2, topMargin + 21, { align: 'center' });
             pdf.text(`Prestador: ${fiscalizacao.prestador_servico_nome}`, pageWidth / 2, topMargin + 27, { align: 'center' });
 
             pdf.setTextColor(0, 0, 0);
