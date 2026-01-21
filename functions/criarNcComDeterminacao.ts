@@ -18,6 +18,9 @@ Deno.serve(async (req) => {
             texto_determinacao,
             texto_recomendacao,
             numero_constatacao,
+            numero_nc,
+            numero_determinacao,
+            numero_recomendacao,
             prazo_dias = 30
         } = await req.json();
 
