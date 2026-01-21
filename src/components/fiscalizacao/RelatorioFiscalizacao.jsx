@@ -138,13 +138,15 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
             // Resumo Executivo
             yPos += 6;
-            pdf.setFillColor(255, 255, 255);
+            pdf.setFillColor(25, 75, 145); // Azul
             pdf.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F');
             pdf.setDrawColor(0);
             pdf.rect(margin, yPos, pageWidth - 2 * margin, 8, 'S');
             pdf.setFontSize(12);
             pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(255, 255, 255);
             pdf.text('RESUMO EXECUTIVO', margin + 2, yPos + 5.5);
+            pdf.setTextColor(0, 0, 0);
             yPos += 10;
 
             // Calcular totais reais
