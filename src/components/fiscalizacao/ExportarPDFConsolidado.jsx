@@ -44,7 +44,7 @@ export default function ExportarPDFConsolidado({ fiscalizacoes }) {
                 }
 
                 // Header da Fiscalização
-                pdf.setFillColor(220, 220, 220);
+                pdf.setFillColor(189, 214, 238);
                 pdf.rect(margin, yPos, pageWidth - 2 * margin, 10, 'F');
                 pdf.setFontSize(12);
                 pdf.setFont('helvetica', 'bold');
