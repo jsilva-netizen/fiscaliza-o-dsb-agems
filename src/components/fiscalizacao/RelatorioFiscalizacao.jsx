@@ -166,6 +166,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             pdf.text(`• Total de Recomendações: ${totalRecomendacoes}`, margin + 2, yPos);
             yPos += 6;
             pdf.text(`• Total de Determinações: ${totalDeterminacoes}`, margin + 2, yPos);
+            yPos += 12;
 
             const tableWidth = pageWidth - 2 * margin;
             const rowHeight = 7;
