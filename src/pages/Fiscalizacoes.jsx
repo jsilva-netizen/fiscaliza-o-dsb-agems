@@ -266,9 +266,11 @@ export default function Fiscalizacoes() {
                                                             {fisc.municipio_nome}
                                                         </h3>
                                                         <div className="flex flex-wrap gap-2 mt-1">
-                                                            <Badge variant="secondary" className="text-xs">
-                                                                {fisc.servico}
-                                                            </Badge>
+                                                                             {fisc.servicos?.map(s => (
+                                                                                 <Badge key={s} variant="secondary" className="text-xs">
+                                                                                     {s}
+                                                                                 </Badge>
+                                                                             ))}
                                                             <Badge 
                                                                 variant={fisc.status === 'finalizada' ? 'default' : 'outline'}
                                                                 className={`text-xs ${fisc.status === 'finalizada' ? 'bg-green-500' : ''}`}
