@@ -26,13 +26,13 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
         });
     };
 
-    const addTimbradoToPage = async (pdf) => {
+    const addTimbradoToPage = (pdf, timbradoBase64) => {
         try {
-            const timbradoUrl = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69331445067a2821c02acff8/4fe7a4846_timbrado.pdf';
-            const timbradoBase64 = await loadImageAsBase64(timbradoUrl);
-            const pageWidth = pdf.internal.pageSize.getWidth();
-            const pageHeight = pdf.internal.pageSize.getHeight();
-            pdf.addImage(timbradoBase64, 'JPEG', 0, 0, pageWidth, pageHeight);
+            if (timbradoBase64) {
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                pdf.addImage(timbradoBase64, 'JPEG', 0, 0, pageWidth, pageHeight);
+            }
         } catch (err) {
             console.error('Erro ao adicionar timbrado:', err);
         }
