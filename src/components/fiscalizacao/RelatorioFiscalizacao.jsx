@@ -189,8 +189,17 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                 }
             };
 
-            // Calcular offset global de figuras
-            let offsetGlobalFiguras = 0;
+            // Calcular numeração sequencial GLOBAL
+            let contadores = {
+                constatacoes: 0,
+                ncs: 0,
+                determinacoes: 0,
+                recomendacoes: 0,
+                figuras: 0
+            };
+
+            // Mapear numero antigo -> numero novo para cada tipo
+            const mapeamentosNumeracao = [];
 
             // Para cada unidade
             for (let idx = 0; idx < unidades.length; idx++) {
@@ -200,6 +209,64 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                 const determinacoes = todasDeterminacoes[idx] || [];
                 const recomendacoes = todasRecomendacoes[idx] || [];
                 const fotos = todasFotos[idx] || [];
+
+                // Criar mapeamento de numeração para esta unidade
+                const mapeamentoUnidade = {
+                    constatacoes: {},
+                    ncs: {},
+                    determinacoes: {},
+                    recomendacoes: {}
+                };
+
+                // Contar e mapear constatações
+                const constaOrd = respostas.filter(r => r.resposta === 'SIM' || r.resposta === 'NAO').sort((a, b) => {
+                    const numA = parseInt(a.numero_constatacao?.replace('C', '') || '999');
+                    const numB = parseInt(b.numero_constatacao?.replace('C', '') || '999');
+                    return numA - numB;
+                });
+                constaOrd.forEach(c => {
+                    contadores.constatacoes++;
+                    mapeamentoUnidade.constatacoes[c.id] = contadores.constatacoes;
+                });
+
+                // Contar e mapear NCs
+                const ncsOrd = [...ncs].sort((a, b) => {
+                    const numA = parseInt(a.numero_nc?.replace('NC', '') || '999');
+                    const numB = parseInt(b.numero_nc?.replace('NC', '') || '999');
+                    return numA - numB;
+                });
+                ncsOrd.forEach(nc => {
+                    contadores.ncs++;
+                    mapeamentoUnidade.ncs[nc.id] = contadores.ncs;
+                });
+
+                // Contar e mapear Determinações
+                const detsOrd = [...determinacoes].sort((a, b) => {
+                    const numA = parseInt(a.numero_determinacao?.replace('D', '') || '999');
+                    const numB = parseInt(b.numero_determinacao?.replace('D', '') || '999');
+                    return numA - numB;
+                });
+                detsOrd.forEach(det => {
+                    contadores.determinacoes++;
+                    mapeamentoUnidade.determinacoes[det.id] = contadores.determinacoes;
+                });
+
+                // Contar e mapear Recomendações
+                const recsOrd = [...recomendacoes].sort((a, b) => {
+                    const numA = parseInt(a.numero_recomendacao?.replace('R', '') || '999');
+                    const numB = parseInt(b.numero_recomendacao?.replace('R', '') || '999');
+                    return numA - numB;
+                });
+                recsOrd.forEach(rec => {
+                    contadores.recomendacoes++;
+                    mapeamentoUnidade.recomendacoes[rec.id] = contadores.recomendacoes;
+                });
+
+                mapeamentosNumeracao.push(mapeamentoUnidade);
+            }
+
+            // Reset do contador de figuras
+            let offsetGlobalFiguras = 0;
 
                 // Nova página para cada unidade
                 pdf.addPage();
