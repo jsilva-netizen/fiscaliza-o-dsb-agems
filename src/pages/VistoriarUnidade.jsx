@@ -27,6 +27,7 @@ export default function VistoriarUnidade() {
     const [activeTab, setActiveTab] = useState('checklist');
     const [respostas, setRespostas] = useState({});
     const [fotos, setFotos] = useState([]);
+    const [fotosParaSalvar, setFotosParaSalvar] = useState([]);
     const [showAddRecomendacao, setShowAddRecomendacao] = useState(false);
     const [novaRecomendacao, setNovaRecomendacao] = useState('');
     const [recomendacoesCache, setRecomendacoesCache] = useState(null);
