@@ -196,22 +196,24 @@ export default function NovaFiscalizacao() {
                         </Select>
                     </div>
 
-                    {/* Serviço */}
-                    <div className="space-y-2">
-                        <Label>Serviço *</Label>
-                        <Select 
-                            value={formData.servico} 
-                            onValueChange={(v) => setFormData({...formData, servico: v})}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Selecione o serviço..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {SERVICOS.map(s => (
-                                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    {/* Serviços */}
+                    <div className="space-y-3">
+                        <Label>Serviços *</Label>
+                        <div className="border rounded-lg p-4 space-y-2">
+                            {SERVICOS.map(s => (
+                                <div key={s} className="flex items-center space-x-2">
+                                    <Checkbox 
+                                        id={s}
+                                        checked={formData.servicos.includes(s)}
+                                        onCheckedChange={() => toggleServico(s)}
+                                    />
+                                    <Label htmlFor={s} className="font-normal cursor-pointer">{s}</Label>
+                                </div>
+                            ))}
+                        </div>
+                        {formData.servicos.length === 0 && (
+                            <p className="text-xs text-red-600">Selecione ao menos um serviço</p>
+                        )}
                     </div>
 
                     {/* Prestador de Serviço */}
