@@ -325,6 +325,17 @@ export default function VistoriarUnidade() {
         await salvarFotosMutation.mutateAsync(novasFotos);
     };
 
+    // Debounce para salvar fotos após 2 segundos sem adicionar mais
+    React.useEffect(() => {
+        if (fotosParaSalvar.length === 0) return;
+
+        const timer = setTimeout(() => {
+            salvarFotosMutation.mutate(fotos);
+        }, 2000);
+
+        return () => clearTimeout(timer);
+    }, [fotosParaSalvar]);
+
     if (loadingUnidade) {
         return (
             <div className="min-h-screen flex items-center justify-center">
