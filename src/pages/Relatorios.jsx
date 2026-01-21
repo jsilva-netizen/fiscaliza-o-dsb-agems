@@ -35,6 +35,26 @@ export default function Relatorios() {
         queryFn: () => base44.entities.NaoConformidade.list('-created_date', 1000)
     });
 
+    const { data: unidades = [] } = useQuery({
+        queryKey: ['todas-unidades'],
+        queryFn: () => base44.entities.UnidadeFiscalizada.list('-created_date', 2000)
+    });
+
+    const { data: respostas = [] } = useQuery({
+        queryKey: ['todas-respostas'],
+        queryFn: () => base44.entities.RespostaChecklist.list('-created_date', 5000)
+    });
+
+    const { data: determinacoes = [] } = useQuery({
+        queryKey: ['todas-determinacoes'],
+        queryFn: () => base44.entities.Determinacao.list('-created_date', 2000)
+    });
+
+    const { data: recomendacoes = [] } = useQuery({
+        queryKey: ['todas-recomendacoes'],
+        queryFn: () => base44.entities.Recomendacao.list('-created_date', 2000)
+    });
+
     // Filtrar por ano
     const fiscalizacoesAno = fiscalizacoes.filter(f => 
         new Date(f.created_date).getFullYear().toString() === anoFiltro
@@ -43,7 +63,31 @@ export default function Relatorios() {
     // Estatísticas gerais
     const totalFiscalizacoes = fiscalizacoesAno.length;
     const finalizadas = fiscalizacoesAno.filter(f => f.status === 'finalizada').length;
-    const totalNCs = fiscalizacoesAno.reduce((acc, f) => acc + (f.total_nao_conformidades || 0), 0);
+    
+    // Contar NCs corretas filtrando por unidades das fiscalizações do ano
+    const unidadesFiscalizacoesAno = unidades.filter(u => 
+        fiscalizacoesAno.some(f => f.id === u.fiscalizacao_id)
+    );
+    const totalNCs = ncs.filter(nc => 
+        unidadesFiscalizacoesAno.some(u => u.id === nc.unidade_fiscalizada_id)
+    ).length;
+
+    // Constatações (respostas com SIM ou NAO)
+    const totalConstatacoes = respostas.filter(r => 
+        unidadesFiscalizacoesAno.some(u => u.id === r.unidade_fiscalizada_id) &&
+        (r.resposta === 'SIM' || r.resposta === 'NAO')
+    ).length;
+
+    // Determinações
+    const totalDeterminacoes = determinacoes.filter(d => 
+        unidadesFiscalizacoesAno.some(u => u.id === d.unidade_fiscalizada_id)
+    ).length;
+
+    // Recomendações
+    const totalRecomendacoes = recomendacoes.filter(r => 
+        unidadesFiscalizacoesAno.some(u => u.id === r.unidade_fiscalizada_id)
+    ).length;
+
     const totalConformidades = fiscalizacoesAno.reduce((acc, f) => acc + (f.total_conformidades || 0), 0);
 
     // Dados por serviço
@@ -57,17 +101,22 @@ export default function Relatorios() {
     });
     const dadosServico = Object.values(porServico);
 
-    // Dados por município (top 10)
-    const porMunicipio = {};
-    fiscalizacoesAno.forEach(f => {
-        if (!porMunicipio[f.municipio_nome]) {
-            porMunicipio[f.municipio_nome] = { municipio: f.municipio_nome, fiscalizacoes: 0, ncs: 0 };
+    // Ranking de determinações por município
+    const porMunicipioDeterm = {};
+    determinacoes.filter(d => 
+        unidadesFiscalizacoesAno.some(u => u.id === d.unidade_fiscalizada_id)
+    ).forEach(d => {
+        const unidade = unidadesFiscalizacoesAno.find(u => u.id === d.unidade_fiscalizada_id);
+        const fisc = fiscalizacoesAno.find(f => f.id === unidade?.fiscalizacao_id);
+        if (fisc) {
+            if (!porMunicipioDeterm[fisc.municipio_nome]) {
+                porMunicipioDeterm[fisc.municipio_nome] = { municipio: fisc.municipio_nome, determinacoes: 0 };
+            }
+            porMunicipioDeterm[fisc.municipio_nome].determinacoes++;
         }
-        porMunicipio[f.municipio_nome].fiscalizacoes++;
-        porMunicipio[f.municipio_nome].ncs += f.total_nao_conformidades || 0;
     });
-    const topMunicipios = Object.values(porMunicipio)
-        .sort((a, b) => b.fiscalizacoes - a.fiscalizacoes)
+    const rankingDeterminacoes = Object.values(porMunicipioDeterm)
+        .sort((a, b) => b.determinacoes - a.determinacoes)
         .slice(0, 10);
 
     // Dados para gráfico de pizza
@@ -204,6 +253,20 @@ export default function Relatorios() {
                     <Card>
                         <CardContent className="p-4">
                             <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                                    <CheckCircle2 className="h-5 w-5 text-orange-600" />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-bold">{totalConstatacoes}</p>
+                                    <p className="text-xs text-gray-500">Constatações</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardContent className="p-4">
+                            <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
                                     <AlertTriangle className="h-5 w-5 text-red-600" />
                                 </div>
@@ -218,12 +281,26 @@ export default function Relatorios() {
                     <Card>
                         <CardContent className="p-4">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                                    <MapPin className="h-5 w-5 text-purple-600" />
+                                <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                    <FileText className="h-5 w-5 text-yellow-600" />
                                 </div>
                                 <div>
-                                    <p className="text-2xl font-bold">{municipiosFiscalizados.size}</p>
-                                    <p className="text-xs text-gray-500">Municípios</p>
+                                    <p className="text-2xl font-bold">{totalDeterminacoes}</p>
+                                    <p className="text-xs text-gray-500">Determinações</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardContent className="p-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <TrendingUp className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-bold">{totalRecomendacoes}</p>
+                                    <p className="text-xs text-gray-500">Recomendações</p>
                                 </div>
                             </div>
                         </CardContent>
@@ -288,33 +365,30 @@ export default function Relatorios() {
                     </Card>
                 </div>
 
-                {/* Top Municípios */}
+                {/* Ranking de Determinações */}
                 <Card className="mb-6">
                     <CardHeader>
-                        <CardTitle className="text-lg">Top 10 Municípios Fiscalizados</CardTitle>
+                        <CardTitle className="text-lg">Top 10 Municípios por Determinações</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {topMunicipios.length > 0 ? (
+                        {rankingDeterminacoes.length > 0 ? (
                             <div className="space-y-3">
-                                {topMunicipios.map((m, index) => (
+                                {rankingDeterminacoes.map((m, index) => (
                                     <div key={m.municipio} className="flex items-center gap-3">
-                                        <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600">
+                                        <span className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center text-xs font-medium text-yellow-600">
                                             {index + 1}
                                         </span>
                                         <div className="flex-1">
                                             <div className="flex justify-between items-center">
                                                 <span className="font-medium">{m.municipio}</span>
-                                                <div className="flex gap-2">
-                                                    <Badge variant="secondary">{m.fiscalizacoes} fisc.</Badge>
-                                                    {m.ncs > 0 && (
-                                                        <Badge variant="destructive">{m.ncs} NCs</Badge>
-                                                    )}
-                                                </div>
+                                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                                                    {m.determinacoes} determinações
+                                                </Badge>
                                             </div>
                                             <div className="h-2 bg-gray-100 rounded-full mt-1">
                                                 <div 
-                                                    className="h-full bg-blue-500 rounded-full"
-                                                    style={{ width: `${(m.fiscalizacoes / topMunicipios[0].fiscalizacoes) * 100}%` }}
+                                                    className="h-full bg-yellow-500 rounded-full"
+                                                    style={{ width: `${(m.determinacoes / rankingDeterminacoes[0].determinacoes) * 100}%` }}
                                                 />
                                             </div>
                                         </div>
