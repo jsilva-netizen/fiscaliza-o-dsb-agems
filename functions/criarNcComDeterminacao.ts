@@ -41,12 +41,14 @@ Deno.serve(async (req) => {
         const numeroD = `D${determinacoesAtuais.length + 1}`;
 
         // 3. Criar NC e calcular data_limite em paralelo
+        const descricaoNC = `A Constatação ${numero_constatacao} não cumpre o disposto no ${artigo_portaria};`;
+        
         const nc = await base44.entities.NaoConformidade.create({
             unidade_fiscalizada_id,
             resposta_checklist_id: resposta.id,
             numero_nc: numeroNC,
             artigo_portaria,
-            descricao: texto_nc
+            descricao: descricaoNC
         });
 
         // 4. Calcular data_limite
