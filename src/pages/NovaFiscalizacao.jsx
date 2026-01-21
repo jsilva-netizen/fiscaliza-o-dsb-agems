@@ -257,7 +257,7 @@ export default function NovaFiscalizacao() {
                     <Button 
                         type="submit" 
                         className="w-full h-14 text-lg bg-green-600 hover:bg-green-700"
-                        disabled={createMutation.isPending || !formData.municipio_id || !formData.servico || !formData.prestador_servico_id}
+                        disabled={createMutation.isPending || !formData.municipio_id || formData.servicos.length === 0 || !formData.prestador_servico_id}
                     >
                         {createMutation.isPending ? (
                             <>
