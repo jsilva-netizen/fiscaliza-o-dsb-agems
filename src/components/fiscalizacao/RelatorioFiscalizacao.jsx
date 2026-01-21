@@ -190,6 +190,10 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                 drawCell(`ID Unidade: ${unidade.codigo_unidade || unidade.nome_unidade || '-'}`, margin, yPos, tableWidth, rowHeight, true);
                 yPos += rowHeight;
 
+                // Localidade
+                drawCell(`Localidade: ${fiscalizacao.municipio_nome}`, margin, yPos, tableWidth, rowHeight, true);
+                yPos += rowHeight;
+
                 // Localização
                 drawCell(`Localização: ${unidade.endereco || '-'}`, margin, yPos, tableWidth, rowHeight, true);
                 yPos += rowHeight;
@@ -242,7 +246,16 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     yPos += rowHeight;
 
                     ncsSorted.forEach((nc) => {
-                        const restLines = pdf.splitTextToSize(nc.descricao, tableWidth - 15);
+                        // Encontrar resposta relacionada para pegar número da constatação
+                        const respostaRelacionada = respostas.find(r => r.id === nc.resposta_checklist_id);
+                        const numConstatacao = respostaRelacionada?.numero_constatacao || '';
+                        
+                        // Adicionar número da constatação na descrição
+                        const descricaoCompleta = numConstatacao 
+                            ? `A Constatação ${numConstatacao} não cumpre o disposto no ${nc.artigo_portaria || 'artigo'};`
+                            : nc.descricao;
+                        
+                        const restLines = pdf.splitTextToSize(descricaoCompleta, tableWidth - 15);
                         const cellHeight = Math.max(rowHeight, restLines.length * 5 + 4);
 
                         if (yPos + cellHeight > pageHeight - margin) {
