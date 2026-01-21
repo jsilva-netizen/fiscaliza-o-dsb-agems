@@ -266,7 +266,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
                     if (yPos + rowHeight > pageHeight - bottomMargin) {
                         pdf.addPage();
-                        await addTimbradoToPage(pdf);
+                        addTimbradoToPage(pdf, timbradoBase64);
                         yPos = topMargin;
                     }
                     drawCell('Não Conformidades', margin, yPos, tableWidth, rowHeight, true, true, [189, 214, 238]);
