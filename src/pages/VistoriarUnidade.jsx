@@ -149,11 +149,8 @@ export default function VistoriarUnidade() {
                     observacao: data.observacao
                 });
             } else {
-                // Contar respostas atuais para gerar número único
-                const respostasAtuais = await base44.entities.RespostaChecklist.filter({ 
-                    unidade_fiscalizada_id: unidadeId 
-                });
-                const numero = `C${respostasAtuais.length + 1}`;
+                // Usar contadores para numeração contínua
+                const numero = gerarNumeroConstatacao(contadores);
 
                 // Definir texto da constatação baseado na resposta
                 let textoConstatacao = data.resposta === 'SIM' 
