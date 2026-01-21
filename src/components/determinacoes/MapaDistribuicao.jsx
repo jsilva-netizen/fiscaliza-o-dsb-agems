@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup, ResponsiveContainer } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import 'leaflet/dist/leaflet.css';
 
