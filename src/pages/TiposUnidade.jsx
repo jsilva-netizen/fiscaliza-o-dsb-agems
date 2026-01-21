@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Plus, Building2, Edit, Trash2, ClipboardCheck } from 'lucide-react';
 
-const SERVICOS = ['Água', 'Esgoto', 'Resíduos', 'Limpeza Urbana', 'Drenagem'];
+const SERVICOS = ['Abastecimento de Água', 'Esgotamento Sanitário', 'Manejo de Resíduos Sólidos', 'Limpeza Urbana', 'Drenagem'];
 
 export default function TiposUnidade() {
     const queryClient = useQueryClient();
