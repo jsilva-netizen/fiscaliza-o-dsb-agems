@@ -134,6 +134,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             yPos += 8;
 
             // Resumo Executivo
+            yPos += 6;
             pdf.setFillColor(255, 255, 255);
             pdf.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F');
             pdf.setDrawColor(0);
