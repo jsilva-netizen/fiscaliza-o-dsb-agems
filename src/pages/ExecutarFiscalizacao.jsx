@@ -216,7 +216,7 @@ export default function ExecutarFiscalizacao() {
                                                 </span>
                                                 <span className="flex items-center gap-1">
                                                     <Camera className="h-3 w-3" />
-                                                    {unidade.fotos_unidade?.length || 0}/2 fotos
+                                                    {unidade.fotos_unidade?.length || 0} fotos
                                                 </span>
                                             </div>
                                         </div>
