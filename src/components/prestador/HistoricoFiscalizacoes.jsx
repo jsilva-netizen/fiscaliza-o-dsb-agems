@@ -31,6 +31,19 @@ export default function HistoricoFiscalizacoes({ fiscalizacoes, municipios }) {
         enabled: unidades.length > 0
     });
 
+    const { data: ncs = [] } = useQuery({
+        queryKey: ['ncs-historico', unidades.map(u => u.id).join(',')],
+        queryFn: () => base44.entities.NaoConformidade.list('id', 500).then(ns =>
+            ns.filter(n => unidades.some(u => u.id === n.unidade_fiscalizada_id))
+        ),
+        enabled: unidades.length > 0
+    });
+
+    const getNcsForFiscalizacao = (fiscId) => {
+        const unidadesDoFisc = unidades.filter(u => u.fiscalizacao_id === fiscId);
+        return ncs.filter(n => unidadesDoFisc.some(u => u.id === n.unidade_fiscalizada_id)).length;
+    };
+
     const getDeterminacoesForFiscalizacao = (fiscId) => {
         const unidadesDoFisc = unidades.filter(u => u.fiscalizacao_id === fiscId);
         return determinacoes.filter(d => unidadesDoFisc.some(u => u.id === d.unidade_fiscalizada_id)).length;
