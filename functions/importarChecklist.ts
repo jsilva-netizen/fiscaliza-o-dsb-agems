@@ -35,8 +35,11 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Arquivo vazio ou sem dados' }, { status: 400 });
         }
 
-        // Ignorar cabeçalho
-        const dataLines = data.slice(1);
+        // Ignorar cabeçalho e filtrar linhas vazias
+        const dataLines = data.slice(1).filter(linha => {
+            // Verificar se a linha tem algum conteúdo válido
+            return Array.isArray(linha) && linha.some(celula => celula && String(celula).trim() !== '');
+        });
 
         const tiposCache = new Map();
         const itensImportados = [];
@@ -48,7 +51,7 @@ Deno.serve(async (req) => {
                 
                 // Linha é um array de células
                 if (!Array.isArray(linha) || linha.length < 11) {
-                    erros.push(`Linha ${i + 2}: Número insuficiente de colunas (${linha?.length || 0}/11). Esperado: serviço | tipo_unidade_codigo | tipo_unidade_nome | ordem | pergunta | texto_constatacao_sim | texto_constatacao_nao | artigo_portaria | texto_determinacao | texto_recomendacao | prazo_dias`);
+                    erros.push(`Linha com dados insuficientes (${linha?.length || 0} colunas). Esperado: 11 colunas`);
                     continue;
                 }
 
