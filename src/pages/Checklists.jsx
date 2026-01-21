@@ -77,10 +77,9 @@ export default function Checklists() {
 
         setImporting(true);
         try {
-            const formData = new FormData();
-            formData.append('file', file);
+            const csv_content = await file.text();
 
-            const response = await base44.functions.invoke('importarChecklist', formData);
+            const response = await base44.functions.invoke('importarChecklist', { csv_content });
             
             if (response.data.sucesso) {
                 alert(`✅ Importação concluída!\n${response.data.itens_importados} itens importados\n${response.data.tipos_criados} tipos processados`);

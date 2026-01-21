@@ -9,14 +9,13 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Acesso negado. Apenas administradores podem importar checklists.' }, { status: 403 });
         }
 
-        const formData = await req.formData();
-        const file = formData.get('file');
+        const { csv_content } = await req.json();
 
-        if (!file) {
-            return Response.json({ error: 'Arquivo não fornecido' }, { status: 400 });
+        if (!csv_content) {
+            return Response.json({ error: 'Conteúdo CSV não fornecido' }, { status: 400 });
         }
 
-        const csvText = await file.text();
+        const csvText = csv_content;
         const lines = csvText.split('\n').filter(line => line.trim());
 
         if (lines.length < 2) {
