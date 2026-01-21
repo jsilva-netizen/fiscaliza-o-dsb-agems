@@ -47,8 +47,8 @@ Deno.serve(async (req) => {
                 const linha = dataLines[i];
                 
                 // Linha é um array de células
-                if (!Array.isArray(linha) || linha.length < 11) {
-                    erros.push(`Linha ${i + 2}: Número insuficiente de colunas (${linha?.length || 0}/11). Esperado: serviço | tipo_unidade_codigo | tipo_unidade_nome | ordem | pergunta | texto_constatacao_sim | texto_constatacao_nao | artigo_portaria | texto_nc | texto_determinacao | prazo_dias`);
+                if (!Array.isArray(linha) || linha.length < 12) {
+                    erros.push(`Linha ${i + 2}: Número insuficiente de colunas (${linha?.length || 0}/12). Esperado: serviço | tipo_unidade_codigo | tipo_unidade_nome | ordem | pergunta | texto_constatacao_sim | texto_constatacao_nao | artigo_portaria | texto_nc | texto_determinacao | prazo_dias | texto_recomendacao`);
                     continue;
                 }
 
@@ -63,7 +63,8 @@ Deno.serve(async (req) => {
                     artigo_portaria,
                     texto_nc,
                     texto_determinacao,
-                    prazo_dias
+                    prazo_dias,
+                    texto_recomendacao
                 ] = linha.map(c => c ? String(c).trim() : '');
 
                 // Validações básicas
@@ -111,6 +112,7 @@ Deno.serve(async (req) => {
                     artigo_portaria: artigo_portaria || '',
                     texto_nc: texto_nc || '', // Mantém na entidade mas não será usado
                     texto_determinacao: texto_determinacao || '',
+                    texto_recomendacao: texto_recomendacao || '',
                     prazo_dias: parseInt(prazo_dias) || 30,
                     ativo: true
                 });

@@ -149,7 +149,7 @@ export default function VistoriarUnidade() {
                         : item.pergunta;
 
                 if (item.gera_nc && data.resposta === 'NAO') {
-                    // Usar backend function para criar Resposta + NC + D atomicamente
+                    // Usar backend function para criar Resposta + NC + D/R atomicamente
                     await base44.functions.invoke('criarNcComDeterminacao', {
                         unidade_fiscalizada_id: unidadeId,
                         item_checklist_id: itemId,
@@ -158,7 +158,8 @@ export default function VistoriarUnidade() {
                         artigo_portaria: item.artigo_portaria,
                         texto_nc: item.texto_nc,
                         texto_determinacao: item.texto_determinacao,
-                        prazo_dias: 30
+                        texto_recomendacao: item.texto_recomendacao,
+                        prazo_dias: item.prazo_dias || 30
                     });
                 } else {
                     // Criar apenas a resposta se não gerar NC
