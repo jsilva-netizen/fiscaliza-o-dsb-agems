@@ -18,6 +18,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import RelatorioFiscalizacao from '@/components/fiscalizacao/RelatorioFiscalizacao';
 import ExportarPDFConsolidado from '@/components/fiscalizacao/ExportarPDFConsolidado';
+import ResumoFiscalizacao from '@/components/fiscalizacao/ResumoFiscalizacao';
 
 export default function Fiscalizacoes() {
     const queryClient = useQueryClient();
