@@ -151,12 +151,7 @@ export default function PhotoGrid({
                 </div>
             )}
 
-            {/* Aviso se faltam fotos */}
-            {faltam > 0 && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm text-yellow-800">
-                    ⚠️ Mínimo de {minFotos} foto(s) obrigatória(s). Faltam {faltam}.
-                </div>
-            )}
+
 
             {/* Visualização ampliada */}
             {selectedFoto && (
