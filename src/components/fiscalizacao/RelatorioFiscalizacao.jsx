@@ -453,6 +453,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     });
 
                     detsSorted.forEach((det) => {
+                        const novoNumDet = `D${mapeamento.determinacoes[det.id]}`;
                         const texto = `${det.descricao} Prazo: ${det.prazo_dias} dias.`;
                         const restLines = pdf.splitTextToSize(texto, tableWidth - 15);
                         const cellHeight = Math.max(rowHeight, restLines.length * 5 + 4);
@@ -465,7 +466,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
                         pdf.rect(margin, yPos, tableWidth, cellHeight, 'S');
                         pdf.setFont('helvetica', 'bold');
-                        pdf.text(det.numero_determinacao + '.', margin + 2, yPos + 5);
+                        pdf.text(novoNumDet + '.', margin + 2, yPos + 5);
                         pdf.setFont('helvetica', 'normal');
                         pdf.text(restLines, margin + 12, yPos + 5);
 
