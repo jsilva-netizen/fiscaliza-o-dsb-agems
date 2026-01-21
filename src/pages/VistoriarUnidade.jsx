@@ -399,16 +399,23 @@ export default function VistoriarUnidade() {
                                 </CardContent>
                             </Card>
                         ) : (
-                            itensChecklist.map((item, index) => (
-                                <ChecklistItem
-                                    key={item.id}
-                                    item={item}
-                                    resposta={respostas[item.id]}
-                                    onResponder={(data) => handleResponder(item.id, data)}
-                                    numero={index + 1}
-                                    desabilitado={unidade?.status === 'finalizada'}
-                                />
-                            ))
+                            itensChecklist.map((item, index) => {
+                                // Verificar se é o primeiro item OU se o item anterior já foi respondido
+                                const itemAnterior = index > 0 ? itensChecklist[index - 1] : null;
+                                const itemAnteriorRespondido = !itemAnterior || respostas[itemAnterior.id]?.resposta;
+                                const liberado = itemAnteriorRespondido;
+                                
+                                return (
+                                    <ChecklistItem
+                                        key={item.id}
+                                        item={item}
+                                        resposta={respostas[item.id]}
+                                        onResponder={(data) => handleResponder(item.id, data)}
+                                        numero={index + 1}
+                                        desabilitado={unidade?.status === 'finalizada' || !liberado}
+                                    />
+                                );
+                            })
                         )}
                     </TabsContent>
 
