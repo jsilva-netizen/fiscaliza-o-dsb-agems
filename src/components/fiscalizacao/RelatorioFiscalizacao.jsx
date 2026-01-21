@@ -113,7 +113,7 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             pdf.setFontSize(12);
             pdf.setFont('helvetica', 'bold');
             pdf.text('INFORMAÇÕES DA FISCALIZAÇÃO', margin, yPos);
-            yPos += 8;
+            yPos += 7;
 
             pdf.setFontSize(10);
             pdf.setFont('helvetica', 'normal');
