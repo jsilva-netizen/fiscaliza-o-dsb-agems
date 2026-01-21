@@ -19,6 +19,8 @@ export default function PhotoGrid({
 }) {
     const [selectedFoto, setSelectedFoto] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [totalUploads, setTotalUploads] = useState(0);
     const [editingLegenda, setEditingLegenda] = useState({});
     const [tempLegendas, setTempLegendas] = useState({});
     const fileInputRef = useRef(null);
@@ -29,8 +31,11 @@ export default function PhotoGrid({
         if (!files || files.length === 0) return;
 
         setIsUploading(true);
+        setTotalUploads(files.length);
+        setUploadProgress(0);
 
         try {
+            let processados = 0;
             for (const file of Array.from(files)) {
                 const { file_url } = await base44.integrations.Core.UploadFile({ file: file });
                 
@@ -38,12 +43,17 @@ export default function PhotoGrid({
                     url: file_url,
                     data_hora: new Date().toISOString()
                 });
+
+                processados++;
+                setUploadProgress(processados);
             }
         } catch (err) {
             console.error('Erro upload:', err);
             alert('Erro ao fazer upload: ' + err.message);
         } finally {
             setIsUploading(false);
+            setUploadProgress(0);
+            setTotalUploads(0);
             e.target.value = '';
         }
     };
