@@ -221,7 +221,8 @@ export default function PrestadoresServico() {
                                         {(() => {
                                             const stats = getStatsForPrestador(prestador.id);
                                             return (
-                                                <div className="flex gap-4">
+                                                <div className="flex gap-4 flex-wrap">
+                                                    <span>Fiscalizações Finalizadas: {stats.fiscalizacoesFinalizado}</span>
                                                     <span>NCs: {stats.ncs}</span>
                                                     <span>Recomendações: {stats.recomendacoes}</span>
                                                     <span>Determinações: {stats.determinacoes}</span>
