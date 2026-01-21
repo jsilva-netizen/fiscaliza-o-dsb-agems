@@ -21,11 +21,17 @@ Deno.serve(async (req) => {
             prazo_dias = 30
         } = await req.json();
 
+        // Adicionar ';' ao final da pergunta se não existir
+        let perguntaFormatada = pergunta;
+        if (perguntaFormatada && !perguntaFormatada.trim().endsWith(';')) {
+            perguntaFormatada = perguntaFormatada.trim() + ';';
+        }
+
         // 1. Criar RespostaChecklist (fonte da verdade para cada pergunta)
         const resposta = await base44.entities.RespostaChecklist.create({
             unidade_fiscalizada_id,
             item_checklist_id,
-            pergunta,
+            pergunta: perguntaFormatada,
             resposta: 'NAO',
             gera_nc: true,
             numero_constatacao,
