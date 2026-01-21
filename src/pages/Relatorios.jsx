@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 const COLORS = ['#22c55e', '#ef4444', '#3b82f6', '#f59e0b'];
 
@@ -339,25 +339,42 @@ export default function Relatorios() {
                         </CardHeader>
                         <CardContent>
                             {(totalConformidades > 0 || totalNCs > 0) ? (
-                                <ResponsiveContainer width="100%" height={250}>
-                                    <PieChart>
-                                        <Pie
-                                            data={dadosPizza}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={80}
-                                            paddingAngle={5}
-                                            dataKey="value"
-                                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                        >
-                                            {dadosPizza.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip />
-                                    </PieChart>
-                                </ResponsiveContainer>
+                                <div>
+                                    <ResponsiveContainer width="100%" height={220}>
+                                        <PieChart>
+                                            <Pie
+                                                data={dadosPizza}
+                                                cx="50%"
+                                                cy="45%"
+                                                innerRadius={50}
+                                                outerRadius={75}
+                                                paddingAngle={3}
+                                                dataKey="value"
+                                                label={false}
+                                            >
+                                                {dadosPizza.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip 
+                                                formatter={(value, name, props) => {
+                                                    const total = dadosPizza.reduce((acc, item) => acc + item.value, 0);
+                                                    const percent = total > 0 ? ((value / total) * 100).toFixed(0) : 0;
+                                                    return `${value} (${percent}%)`;
+                                                }}
+                                            />
+                                            <Legend 
+                                                verticalAlign="bottom" 
+                                                height={20}
+                                                formatter={(value, entry) => {
+                                                    const total = dadosPizza.reduce((acc, item) => acc + item.value, 0);
+                                                    const percent = total > 0 ? ((entry.payload.value / total) * 100).toFixed(0) : 0;
+                                                    return `${value}: ${entry.payload.value} (${percent}%)`;
+                                                }}
+                                            />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
                             ) : (
                                 <p className="text-center text-gray-500 py-8">Sem dados para exibir</p>
                             )}
