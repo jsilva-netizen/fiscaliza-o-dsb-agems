@@ -96,9 +96,18 @@ export default function NovaFiscalizacao() {
         }
     });
 
+    const toggleServico = (servico) => {
+        setFormData(prev => ({
+            ...prev,
+            servicos: prev.servicos.includes(servico)
+                ? prev.servicos.filter(s => s !== servico)
+                : [...prev.servicos, servico]
+        }));
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!formData.municipio_id || !formData.servico || !formData.prestador_servico_id) {
+        if (!formData.municipio_id || formData.servicos.length === 0 || !formData.prestador_servico_id) {
             alert('Preencha todos os campos obrigatórios');
             return;
         }
