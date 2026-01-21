@@ -17,10 +17,12 @@ export default function PrestadoresServico() {
     const [formData, setFormData] = useState({
         nome: '',
         razao_social: '',
-        cnpj: '',
         endereco: '',
-        email: '',
-        responsavel_legal: ''
+        cidade: '',
+        telefone: '',
+        cnpj: '',
+        responsavel: '',
+        cargo: ''
     });
 
     const { data: prestadores = [], isLoading } = useQuery({
@@ -57,10 +59,12 @@ export default function PrestadoresServico() {
         setFormData({
             nome: '',
             razao_social: '',
-            cnpj: '',
             endereco: '',
-            email: '',
-            responsavel_legal: ''
+            cidade: '',
+            telefone: '',
+            cnpj: '',
+            responsavel: '',
+            cargo: ''
         });
         setEditingId(null);
     };
@@ -130,24 +134,34 @@ export default function PrestadoresServico() {
                                             <span className="font-medium">Razão Social:</span> {prestador.razao_social}
                                         </p>
                                     )}
-                                    {prestador.cnpj && (
-                                        <p className="text-sm text-gray-600">
-                                            <span className="font-medium">CNPJ:</span> {prestador.cnpj}
-                                        </p>
-                                    )}
-                                    {prestador.email && (
-                                        <p className="text-sm text-gray-600">
-                                            <span className="font-medium">E-mail:</span> {prestador.email}
-                                        </p>
-                                    )}
                                     {prestador.endereco && (
                                         <p className="text-sm text-gray-600">
                                             <span className="font-medium">Endereço:</span> {prestador.endereco}
                                         </p>
                                     )}
-                                    {prestador.responsavel_legal && (
+                                    {prestador.cidade && (
                                         <p className="text-sm text-gray-600">
-                                            <span className="font-medium">Responsável Legal:</span> {prestador.responsavel_legal}
+                                            <span className="font-medium">Cidade:</span> {prestador.cidade}
+                                        </p>
+                                    )}
+                                    {prestador.telefone && (
+                                        <p className="text-sm text-gray-600">
+                                            <span className="font-medium">Telefone:</span> {prestador.telefone}
+                                        </p>
+                                    )}
+                                    {prestador.cnpj && (
+                                        <p className="text-sm text-gray-600">
+                                            <span className="font-medium">CNPJ/MF:</span> {prestador.cnpj}
+                                        </p>
+                                    )}
+                                    {prestador.responsavel && (
+                                        <p className="text-sm text-gray-600">
+                                            <span className="font-medium">Responsável:</span> {prestador.responsavel}
+                                        </p>
+                                    )}
+                                    {prestador.cargo && (
+                                        <p className="text-sm text-gray-600">
+                                            <span className="font-medium">Cargo:</span> {prestador.cargo}
                                         </p>
                                     )}
                                     <div className="flex gap-2 mt-4">
@@ -189,8 +203,7 @@ export default function PrestadoresServico() {
                     </DialogHeader>
                     <div className="space-y-4">
                         <Input
-                            label="Nome *"
-                            placeholder="Nome do prestador"
+                            placeholder="Nome *"
                             value={formData.nome}
                             onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                         />
@@ -199,17 +212,6 @@ export default function PrestadoresServico() {
                             value={formData.razao_social}
                             onChange={(e) => setFormData({ ...formData, razao_social: e.target.value })}
                         />
-                        <Input
-                            placeholder="CNPJ *"
-                            value={formData.cnpj}
-                            onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
-                        />
-                        <Input
-                            placeholder="E-mail"
-                            type="email"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        />
                         <Textarea
                             placeholder="Endereço"
                             value={formData.endereco}
@@ -217,9 +219,29 @@ export default function PrestadoresServico() {
                             rows={2}
                         />
                         <Input
-                            placeholder="Responsável Legal"
-                            value={formData.responsavel_legal}
-                            onChange={(e) => setFormData({ ...formData, responsavel_legal: e.target.value })}
+                            placeholder="Cidade"
+                            value={formData.cidade}
+                            onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                        />
+                        <Input
+                            placeholder="Telefone"
+                            value={formData.telefone}
+                            onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                        />
+                        <Input
+                            placeholder="CNPJ/MF *"
+                            value={formData.cnpj}
+                            onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                        />
+                        <Input
+                            placeholder="Responsável"
+                            value={formData.responsavel}
+                            onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
+                        />
+                        <Input
+                            placeholder="Cargo"
+                            value={formData.cargo}
+                            onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
                         />
                         <div className="flex gap-2">
                             <Button
