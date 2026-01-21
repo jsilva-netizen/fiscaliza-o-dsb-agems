@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Camera, Trash2, Clock, X, Image } from 'lucide-react';
+import { Camera, Trash2, Clock, X, Image, Save, Edit2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { base44 } from '@/api/base44Client';
@@ -19,6 +19,8 @@ export default function PhotoGrid({
 }) {
     const [selectedFoto, setSelectedFoto] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [editingLegenda, setEditingLegenda] = useState({});
+    const [tempLegendas, setTempLegendas] = useState({});
     const fileInputRef = useRef(null);
     const cameraInputRef = useRef(null);
 
@@ -119,13 +121,31 @@ export default function PhotoGrid({
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
                             </div>
-                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1">
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 flex gap-1">
                                 <Input
                                     placeholder="Legenda..."
-                                    value={foto.legenda || ''}
-                                    onChange={(e) => onUpdateLegenda(index, e.target.value)}
+                                    value={editingLegenda[index] ? (tempLegendas[index] ?? foto.legenda ?? '') : (foto.legenda || '')}
+                                    onChange={(e) => setTempLegendas(prev => ({ ...prev, [index]: e.target.value }))}
+                                    readOnly={!editingLegenda[index]}
                                     className="h-6 text-xs bg-transparent border-none text-white placeholder:text-gray-300"
                                 />
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 w-6 p-0 text-white hover:bg-white/20"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (editingLegenda[index]) {
+                                            onUpdateLegenda(index, tempLegendas[index] ?? foto.legenda ?? '');
+                                            setEditingLegenda(prev => ({ ...prev, [index]: false }));
+                                        } else {
+                                            setEditingLegenda(prev => ({ ...prev, [index]: true }));
+                                            setTempLegendas(prev => ({ ...prev, [index]: foto.legenda || '' }));
+                                        }
+                                    }}
+                                >
+                                    {editingLegenda[index] ? <Save className="h-3 w-3" /> : <Edit2 className="h-3 w-3" />}
+                                </Button>
                             </div>
 
                         </div>
