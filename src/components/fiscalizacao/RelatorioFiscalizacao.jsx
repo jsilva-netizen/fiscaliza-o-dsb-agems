@@ -276,9 +276,10 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                         const restLines = pdf.splitTextToSize(descricaoCompleta, tableWidth - 15);
                         const cellHeight = Math.max(rowHeight, restLines.length * 5 + 4);
 
-                        if (yPos + cellHeight > pageHeight - margin) {
+                        if (yPos + cellHeight > pageHeight - bottomMargin) {
                             pdf.addPage();
-                            yPos = margin;
+                            await addTimbradoToPage(pdf);
+                            yPos = topMargin;
                         }
 
                         pdf.rect(margin, yPos, tableWidth, cellHeight, 'S');
