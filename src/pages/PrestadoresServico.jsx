@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Edit2, Trash2, Loader2, ArrowLeft, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -15,7 +14,6 @@ export default function PrestadoresServico() {
     const queryClient = useQueryClient();
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    const [activeTab, setActiveTab] = useState('prestadores');
     const [formData, setFormData] = useState({
         nome: '',
         razao_social: '',
@@ -25,17 +23,13 @@ export default function PrestadoresServico() {
         email_contato: '',
         cnpj: '',
         responsavel: '',
-        cargo: '',
-        tipo: 'prestador_servico'
+        cargo: ''
     });
 
     const { data: prestadores = [], isLoading } = useQuery({
         queryKey: ['prestadores'],
         queryFn: () => base44.entities.PrestadorServico.list('nome', 200)
     });
-
-    const prestadoresServico = prestadores.filter(p => p.tipo === 'prestador_servico');
-    const titulares = prestadores.filter(p => p.tipo === 'titular');
 
     const criarMutation = useMutation({
         mutationFn: (data) => base44.entities.PrestadorServico.create(data),

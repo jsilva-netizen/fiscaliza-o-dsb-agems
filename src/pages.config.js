@@ -11,11 +11,11 @@ import GestaoAutos from './pages/GestaoAutos';
 import Home from './pages/Home';
 import Municipios from './pages/Municipios';
 import NovaFiscalizacao from './pages/NovaFiscalizacao';
-import PrestadoresServico from './pages/PrestadoresServico';
 import Relatorios from './pages/Relatorios';
 import TiposUnidade from './pages/TiposUnidade';
 import VistoriarUnidade from './pages/VistoriarUnidade';
 import DetalhePrestador from './pages/DetalhePrestador';
+import PrestadoresServico from './pages/PrestadoresServico';
 import __Layout from './Layout.jsx';
 
 
@@ -33,11 +33,11 @@ export const PAGES = {
     "Home": Home,
     "Municipios": Municipios,
     "NovaFiscalizacao": NovaFiscalizacao,
-    "PrestadoresServico": PrestadoresServico,
     "Relatorios": Relatorios,
     "TiposUnidade": TiposUnidade,
     "VistoriarUnidade": VistoriarUnidade,
     "DetalhePrestador": DetalhePrestador,
+    "PrestadoresServico": PrestadoresServico,
 }
 
 export const pagesConfig = {
