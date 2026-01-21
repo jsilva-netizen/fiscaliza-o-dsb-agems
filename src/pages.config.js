@@ -8,6 +8,7 @@ import DetalhePrestador from './pages/DetalhePrestador';
 import ExecutarFiscalizacao from './pages/ExecutarFiscalizacao';
 import Fiscalizacoes from './pages/Fiscalizacoes';
 import GerenciarTermos from './pages/GerenciarTermos';
+import GerenciarUsuarios from './pages/GerenciarUsuarios';
 import GestaoAutos from './pages/GestaoAutos';
 import Home from './pages/Home';
 import Municipios from './pages/Municipios';
@@ -16,7 +17,6 @@ import PrestadoresServico from './pages/PrestadoresServico';
 import Relatorios from './pages/Relatorios';
 import TiposUnidade from './pages/TiposUnidade';
 import VistoriarUnidade from './pages/VistoriarUnidade';
-import GerenciarUsuarios from './pages/GerenciarUsuarios';
 import __Layout from './Layout.jsx';
 
 
@@ -31,6 +31,7 @@ export const PAGES = {
     "ExecutarFiscalizacao": ExecutarFiscalizacao,
     "Fiscalizacoes": Fiscalizacoes,
     "GerenciarTermos": GerenciarTermos,
+    "GerenciarUsuarios": GerenciarUsuarios,
     "GestaoAutos": GestaoAutos,
     "Home": Home,
     "Municipios": Municipios,
@@ -39,7 +40,6 @@ export const PAGES = {
     "Relatorios": Relatorios,
     "TiposUnidade": TiposUnidade,
     "VistoriarUnidade": VistoriarUnidade,
-    "GerenciarUsuarios": GerenciarUsuarios,
 }
 
 export const pagesConfig = {

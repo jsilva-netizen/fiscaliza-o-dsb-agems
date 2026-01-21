@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import ChecklistItem from '@/components/fiscalizacao/ChecklistItem';
 import PhotoGrid from '@/components/fiscalizacao/PhotoGrid';
+import { calcularProximaNumeracao, gerarNumeroConstatacao, gerarNumeroNC, gerarNumeroDeterminacao, gerarNumeroRecomendacao } from '@/components/utils/numerationHelper';
 
 export default function VistoriarUnidade() {
     const queryClient = useQueryClient();
