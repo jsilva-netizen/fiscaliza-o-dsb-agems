@@ -30,8 +30,7 @@ export default function PhotoGrid({
 
         try {
             for (const file of Array.from(files)) {
-                const arrayBuffer = await file.arrayBuffer();
-                const { file_url } = await base44.integrations.Core.UploadFile({ file: arrayBuffer });
+                const { file_url } = await base44.integrations.Core.UploadFile({ file: file });
                 
                 await onAddFoto({
                     url: file_url,
