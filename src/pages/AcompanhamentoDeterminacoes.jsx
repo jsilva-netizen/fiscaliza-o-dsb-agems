@@ -139,36 +139,6 @@ export default function AcompanhamentoDeterminacoes() {
         return Math.ceil((limite - hoje) / (1000 * 60 * 60 * 24));
     };
 
-    // Aplicar filtros
-    const determFiltradas = useMemo(() => {
-        return determinacoes.filter(det => {
-            const unidade = unidades.find(u => u.id === det.unidade_fiscalizada_id);
-            const fisc = fiscalizacoes.find(f => f.id === unidade?.fiscalizacao_id);
-            
-            // Filtro município
-            if (filtros.municipio && fisc?.municipio_id !== filtros.municipio) return false;
-            
-            // Filtro serviço
-            if (filtros.servico && fisc?.servico !== filtros.servico) return false;
-            
-            // Filtro prestador
-            if (filtros.prestador && fisc?.prestador_servico_id !== filtros.prestador) return false;
-            
-            // Filtro data
-            if (filtros.dataInicio) {
-                const dataInicio = new Date(filtros.dataInicio);
-                if (new Date(det.created_date) < dataInicio) return false;
-            }
-            if (filtros.dataFim) {
-                const dataFim = new Date(filtros.dataFim);
-                dataFim.setHours(23, 59, 59);
-                if (new Date(det.created_date) > dataFim) return false;
-            }
-            
-            return true;
-        });
-    }, [determinacoes, filtros, unidades, fiscalizacoes]);
-
     const handleFiltroChange = (campo, valor) => {
         setFiltros(prev => ({ ...prev, [campo]: valor }));
     };
