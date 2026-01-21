@@ -215,7 +215,7 @@ export default function AdicionarUnidade() {
                         </Select>
                         {tiposFiltrados.length === 0 && (
                             <p className="text-xs text-yellow-600">
-                                Nenhum tipo de unidade cadastrado para o serviço "{fiscalizacao?.servico}".
+                                Nenhum tipo de unidade cadastrado para os serviços "{fiscalizacao?.servicos?.join(', ')}".
                                 <Link to={createPageUrl('TiposUnidade')} className="text-blue-600 ml-1">
                                     Cadastrar tipos
                                 </Link>
