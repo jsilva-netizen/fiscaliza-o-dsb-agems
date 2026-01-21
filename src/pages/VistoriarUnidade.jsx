@@ -273,7 +273,7 @@ export default function VistoriarUnidade() {
 
     const adicionarRecomendacaoMutation = useMutation({
         mutationFn: async (texto) => {
-            // Usar contadores para numeração contínua
+            // Usar contadores para numeração contínua (já carregados na primeira resposta)
             const numeroRecomendacao = gerarNumeroRecomendacao(contadores);
             
             await base44.entities.Recomendacao.create({
@@ -283,7 +283,7 @@ export default function VistoriarUnidade() {
                 origem: 'manual'
             });
             
-            // Incrementar contador de recomendações
+            // Incrementar contador de recomendações (apenas localmente)
             setContadores(prev => ({
                 ...prev,
                 R: prev.R + 1
