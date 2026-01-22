@@ -6,6 +6,17 @@ export default function TermosKPI({ termos }) {
   const pendenteTNAssinado = termos.filter(t => !t.arquivo_url).length;
   const pendenteProtocolo = termos.filter(t => t.arquivo_url && (!t.data_protocolo || !t.arquivo_protocolo_url)).length;
   const ativos = termos.filter(t => t.arquivo_url && t.data_protocolo && t.arquivo_protocolo_url && !t.data_recebimento_resposta).length;
+
+  const verificaPrazoVencido = (termo) => {
+      if (!termo.data_maxima_resposta) return false;
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      const dataMax = new Date(termo.data_maxima_resposta);
+      dataMax.setHours(0, 0, 0, 0);
+      return hoje > dataMax;
+  };
+
+  const prazoVencido = termos.filter(t => t.arquivo_url && t.data_protocolo && t.arquivo_protocolo_url && !t.data_recebimento_resposta && verificaPrazoVencido(t)).length;
   const respondidos = termos.filter(t => t.data_recebimento_resposta).length;
   const total = termos.length;
 
