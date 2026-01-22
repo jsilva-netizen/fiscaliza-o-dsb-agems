@@ -44,36 +44,10 @@ export default function Fiscalizacoes() {
 
     const deletarFiscalizacaoMutation = useMutation({
         mutationFn: async (fiscalizacaoId) => {
-            // Deletar todas as entidades relacionadas
-            const unidades = await base44.entities.UnidadeFiscalizada.filter({ fiscalizacao_id: fiscalizacaoId });
-            
-            for (const unidade of unidades) {
-                // Deletar respostas, NCs, determinações, recomendações e fotos de cada unidade
-                await base44.entities.RespostaChecklist.filter({ unidade_fiscalizada_id: unidade.id })
-                    .then(respostas => Promise.all(respostas.map(r => base44.entities.RespostaChecklist.delete(r.id))));
-                
-                await base44.entities.NaoConformidade.filter({ unidade_fiscalizada_id: unidade.id })
-                    .then(ncs => Promise.all(ncs.map(nc => base44.entities.NaoConformidade.delete(nc.id))));
-                
-                await base44.entities.Determinacao.filter({ unidade_fiscalizada_id: unidade.id })
-                    .then(dets => Promise.all(dets.map(d => base44.entities.Determinacao.delete(d.id))));
-                
-                await base44.entities.Recomendacao.filter({ unidade_fiscalizada_id: unidade.id })
-                    .then(recs => Promise.all(recs.map(r => base44.entities.Recomendacao.delete(r.id))));
-                
-                await base44.entities.FotoEvidencia.filter({ unidade_fiscalizada_id: unidade.id })
-                    .then(fotos => Promise.all(fotos.map(f => base44.entities.FotoEvidencia.delete(f.id))));
-                
-                // Deletar a unidade
-                await base44.entities.UnidadeFiscalizada.delete(unidade.id);
-            }
-            
-            // Deletar fotos da fiscalização
-            await base44.entities.FotoEvidencia.filter({ fiscalizacao_id: fiscalizacaoId })
-                .then(fotos => Promise.all(fotos.map(f => base44.entities.FotoEvidencia.delete(f.id))));
-            
-            // Deletar a fiscalização
-            await base44.entities.Fiscalizacao.delete(fiscalizacaoId);
+            const { data } = await base44.functions.invoke('deletarFiscalizacao', {
+                fiscalizacao_id: fiscalizacaoId
+            });
+            return data;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['fiscalizacoes'] });
