@@ -1039,6 +1039,7 @@ export default function GerenciarTermos() {
                                                               </DialogContent>
                                                               </Dialog>
                                                               )}
+                                            <div className="flex gap-2 flex-wrap">
                                             {termo.arquivo_url && (
                                                 <Button
                                                     size="sm"
@@ -1061,7 +1062,7 @@ export default function GerenciarTermos() {
                                             )}
 
                                             {termo.arquivos_resposta && termo.arquivos_resposta.length > 0 && (
-                                            <div className="flex gap-2 flex-wrap">
+                                                <>
                                                 {termo.arquivos_resposta.map((arquivo, idx) => (
                                                     <Button
                                                         key={idx}
@@ -1073,8 +1074,9 @@ export default function GerenciarTermos() {
                                                         Baixar Resposta
                                                     </Button>
                                                 ))}
-                                            </div>
+                                                </>
                                             )}
+                                            </div>
                                         </div>
                                     </div>
                                     </CardContent>
