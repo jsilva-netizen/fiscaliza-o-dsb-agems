@@ -1039,44 +1039,48 @@ export default function GerenciarTermos() {
                                                               </DialogContent>
                                                               </Dialog>
                                                               )}
-                                                              {termo.arquivo_url && (
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => window.open(termo.arquivo_url)}
-                                                >
-                                                    <Download className="h-4 w-4 mr-1" />
-                                                    Baixar TN Assinado
-                                                </Button>
-                                            )}
-                                            {termo.arquivo_protocolo_url && (
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => window.open(termo.arquivo_protocolo_url)}
-                                                >
-                                                    <Download className="h-4 w-4 mr-1" />
-                                                    Baixar Arquivo de Protocolo
-                                                </Button>
-                                            )}
+                                                              </div>
 
-                                            {termo.arquivos_resposta && termo.arquivos_resposta.length > 0 && (
-                                                <>
-                                                {termo.arquivos_resposta.map((arquivo, idx) => (
-                                                    <Button
-                                                        key={idx}
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => window.open(arquivo.url)}
-                                                    >
-                                                        <Download className="h-4 w-4 mr-1" />
-                                                        Baixar Resposta
-                                                    </Button>
-                                                ))}
-                                                </>
-                                                )}
-                                                </div>
-                                                </div>
+                                                              {/* Download Buttons - Side by Side */}
+                                                              <div className="flex gap-2 flex-wrap pt-3 border-t">
+                                                              {termo.arquivo_url && (
+                                                              <Button
+                                                              size="sm"
+                                                              variant="outline"
+                                                              onClick={() => window.open(termo.arquivo_url)}
+                                                              >
+                                                              <Download className="h-4 w-4 mr-1" />
+                                                              Baixar TN Assinado
+                                                              </Button>
+                                                              )}
+                                                              {termo.arquivo_protocolo_url && (
+                                                              <Button
+                                                              size="sm"
+                                                              variant="outline"
+                                                              onClick={() => window.open(termo.arquivo_protocolo_url)}
+                                                              >
+                                                              <Download className="h-4 w-4 mr-1" />
+                                                              Baixar Arquivo de Protocolo
+                                                              </Button>
+                                                              )}
+
+                                                              {termo.arquivos_resposta && termo.arquivos_resposta.length > 0 && (
+                                                              <>
+                                                              {termo.arquivos_resposta.map((arquivo, idx) => (
+                                                              <Button
+                                                              key={idx}
+                                                              size="sm"
+                                                              variant="outline"
+                                                              onClick={() => window.open(arquivo.url)}
+                                                              >
+                                                              <Download className="h-4 w-4 mr-1" />
+                                                              Baixar Resposta
+                                                              </Button>
+                                                              ))}
+                                                              </>
+                                                              )}
+                                                              </div>
+                                                              </div>
                                                 </div>
                                                 </CardContent>
                                                 </Card>
