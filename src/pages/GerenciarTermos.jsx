@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileText, Download, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, FileText, Download, Plus, Trash2, AlertTriangle, Upload } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -675,10 +675,128 @@ export default function GerenciarTermos() {
                                                     Editar
                                                 </Button>
                                             </div>
-                                        </div>
+                                            </div>
 
-                                        <div className="flex gap-2 pt-3 border-t flex-wrap">
-                                            {termo.data_protocolo && termo.arquivo_protocolo_url && !termo.data_recebimento_resposta && (
+                                            <div className="flex gap-2 pt-3 border-t flex-wrap">
+                                              {/* Fluxo de Botões - Ordem Específica */}
+                                              {!termo.arquivo_url && (
+                                                  <Dialog>
+                                                      <DialogTrigger asChild>
+                                                          <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700">
+                                                              <Upload className="h-4 w-4 mr-1" />
+                                                              Enviar TN Assinado
+                                                          </Button>
+                                                      </DialogTrigger>
+                                                      <DialogContent>
+                                                          <DialogHeader>
+                                                              <DialogTitle>Termo de Notificação Assinado</DialogTitle>
+                                                          </DialogHeader>
+                                                          <div className="space-y-3">
+                                                              <Input
+                                                                  type="file"
+                                                                  accept=".pdf"
+                                                                  id={`file-tn-${termo.id}`}
+                                                              />
+                                                              <Button
+                                                                  onClick={async () => {
+                                                                      const fileInput = document.getElementById(`file-tn-${termo.id}`);
+                                                                      const file = fileInput?.files?.[0];
+                                                                      if (!file) {
+                                                                          alert('Selecione um arquivo');
+                                                                          return;
+                                                                      }
+                                                                      try {
+                                                                          setUploadingFile(true);
+                                                                          const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                                                                          await base44.entities.TermoNotificacao.update(termo.id, {
+                                                                              arquivo_url: file_url
+                                                                          });
+                                                                          queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                                          alert('TN Assinado salvo com sucesso!');
+                                                                      } catch (error) {
+                                                                          alert('Erro ao salvar');
+                                                                      } finally {
+                                                                          setUploadingFile(false);
+                                                                      }
+                                                                  }}
+                                                                  className="w-full"
+                                                                  disabled={uploadingFile}
+                                                              >
+                                                                  {uploadingFile ? 'Salvando...' : 'Salvar'}
+                                                              </Button>
+                                                          </div>
+                                                      </DialogContent>
+                                                  </Dialog>
+                                              )}
+
+                                              {termo.arquivo_url && !termo.data_protocolo && (
+                                                  <Dialog>
+                                                      <DialogTrigger asChild>
+                                                          <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700">
+                                                              <FileText className="h-4 w-4 mr-1" />
+                                                              Adicionar Protocolo
+                                                          </Button>
+                                                      </DialogTrigger>
+                                                      <DialogContent>
+                                                          <DialogHeader>
+                                                              <DialogTitle>Dados de Protocolo / AR</DialogTitle>
+                                                          </DialogHeader>
+                                                          <div className="space-y-3">
+                                                              <div>
+                                                                  <Label>Data de Protocolo / AR *</Label>
+                                                                  <Input
+                                                                      type="date"
+                                                                      id={`data-protocolo-${termo.id}`}
+                                                                      defaultValue={termo.data_protocolo || ''}
+                                                                  />
+                                                              </div>
+                                                              <div>
+                                                                  <Label>Arquivo de Protocolo / AR (PDF)</Label>
+                                                                  <Input
+                                                                      type="file"
+                                                                      accept=".pdf"
+                                                                      id={`file-protocolo-${termo.id}`}
+                                                                  />
+                                                              </div>
+                                                              <Button
+                                                                  onClick={async () => {
+                                                                      const data = document.getElementById(`data-protocolo-${termo.id}`).value;
+                                                                      const fileInput = document.getElementById(`file-protocolo-${termo.id}`);
+                                                                      const file = fileInput?.files?.[0];
+
+                                                                      if (!data) {
+                                                                          alert('Informe a data de protocolo');
+                                                                          return;
+                                                                      }
+                                                                      if (!file) {
+                                                                          alert('Selecione um arquivo');
+                                                                          return;
+                                                                      }
+                                                                      try {
+                                                                          setUploadingProtocolo(true);
+                                                                          const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                                                                          await atualizarProtocoloMutation.mutateAsync({
+                                                                              id: termo.id,
+                                                                              data_protocolo: data,
+                                                                              arquivo_protocolo_url: file_url
+                                                                          });
+                                                                      } catch (error) {
+                                                                          alert('Erro ao salvar');
+                                                                      } finally {
+                                                                          setUploadingProtocolo(false);
+                                                                      }
+                                                                  }}
+                                                                  className="w-full"
+                                                                  disabled={uploadingProtocolo}
+                                                              >
+                                                                  {uploadingProtocolo ? 'Salvando...' : 'Salvar'}
+                                                              </Button>
+                                                          </div>
+                                                      </DialogContent>
+                                                  </Dialog>
+                                              )}
+
+                                              {termo.data_protocolo && termo.arquivo_protocolo_url && !termo.data_recebimento_resposta && (
                                                 <Dialog>
                                                     <DialogTrigger asChild>
                                                         <Button size="sm" variant="outline">
