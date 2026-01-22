@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Upload, Download, AlertCircle, CheckCircle, XCircle, Sparkles } from 'lucide-react';
+import { ArrowLeft, Download, AlertCircle, CheckCircle, XCircle, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
@@ -23,8 +23,6 @@ export default function AnalisarResposta() {
         resultado: 'atendida', // atendida, justificada, nao_atendida
         observacoes: ''
     });
-    const [resposta, setResposta] = useState(null);
-    const [uploadingFile, setUploadingFile] = useState(false);
     const [gerandoParecer, setGerandoParecer] = useState(false);
 
     const { data: determinacao } = useQuery({
@@ -49,6 +47,29 @@ export default function AnalisarResposta() {
             );
         },
         enabled: !!determinacao
+    });
+
+    const { data: fiscalizacao } = useQuery({
+        queryKey: ['fiscalizacao', determinacao?.unidade_fiscalizada_id],
+        queryFn: async () => {
+            if (!determinacao?.unidade_fiscalizada_id) return null;
+            const unidades = await base44.entities.UnidadeFiscalizada.list();
+            const unid = unidades.find(u => u.id === determinacao.unidade_fiscalizada_id);
+            if (!unid) return null;
+            const fiscalizacoes = await base44.entities.Fiscalizacao.list();
+            return fiscalizacoes.find(f => f.id === unid.fiscalizacao_id);
+        },
+        enabled: !!determinacao
+    });
+
+    const { data: termoNotificacao } = useQuery({
+        queryKey: ['termo-notificacao', fiscalizacao?.id],
+        queryFn: async () => {
+            if (!fiscalizacao?.id) return null;
+            const termos = await base44.entities.TermoNotificacao.list();
+            return termos.find(t => t.fiscalizacao_id === fiscalizacao.id);
+        },
+        enabled: !!fiscalizacao
     });
 
     const salvarRespostaMutation = useMutation({
@@ -136,24 +157,7 @@ Por favor, forneça um parecer técnico completo mas conciso sobre esta resposta
         });
     };
 
-    const handleUploadEvidencia = async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
 
-        setUploadingFile(true);
-        try {
-            const { file_url } = await base44.integrations.Core.UploadFile({ file });
-            setResposta(prev => ({
-                ...prev,
-                arquivos_evidencia: [...(prev?.arquivos_evidencia || []), { url: file_url, nome: file.name }]
-            }));
-        } catch (error) {
-            console.error('Erro ao fazer upload:', error);
-            alert('Erro ao fazer upload do arquivo');
-        } finally {
-            setUploadingFile(false);
-        }
-    };
 
     if (!determinacao) return <div className="p-6">Carregando...</div>;
 
@@ -222,39 +226,23 @@ Por favor, forneça um parecer técnico completo mas conciso sobre esta resposta
                             />
                         </div>
 
-                        {/* Upload de Evidências */}
-                        <div>
-                            <Label className="mb-2">Evidências da Resposta</Label>
-                            <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                                <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                                <input
-                                    type="file"
-                                    id="upload-evidencia"
-                                    className="hidden"
-                                    onChange={handleUploadEvidencia}
-                                    disabled={uploadingFile}
-                                />
-                                <label htmlFor="upload-evidencia" className="cursor-pointer">
-                                    <span className="text-sm text-gray-600">
-                                        {uploadingFile ? 'Enviando...' : 'Clique para anexar arquivos'}
-                                    </span>
-                                </label>
-                            </div>
-                            {resposta?.arquivos_evidencia?.length > 0 && (
-                                <div className="mt-2 space-y-1">
-                                    {resposta.arquivos_evidencia.map((arquivo, idx) => (
-                                        <div key={idx} className="flex items-center gap-2 text-sm">
-                                            <Download className="h-4 w-4" />
-                                            <a href={arquivo.url} target="_blank" rel="noopener noreferrer" className="text-blue-600">
-                                                {arquivo.nome}
-                                            </a>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        {/* Visualizador de Resposta do TN */}
+                         {termoNotificacao?.arquivo_resposta_url && (
+                             <div>
+                                 <Label className="mb-2">Resposta do Termo de Notificação</Label>
+                                 <Button
+                                     type="button"
+                                     variant="outline"
+                                     onClick={() => window.open(termoNotificacao.arquivo_resposta_url)}
+                                     className="w-full gap-2"
+                                 >
+                                     <Download className="h-4 w-4" />
+                                     Ver PDF da Resposta do TN
+                                 </Button>
+                             </div>
+                         )}
 
-                        {/* Parecer Técnico com IA */}
+                         {/* Parecer Técnico com IA */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
                                 <Label>Parecer Técnico</Label>
