@@ -678,8 +678,8 @@ export default function GerenciarTermos() {
                                             </div>
                                             <div className="text-right space-y-2">
                                                 <div>
-                                                    <Badge className={getStatusBadge(termo.status, termo).color}>
-                                                        {getStatusBadge(termo.status, termo).label}
+                                                    <Badge className={getStatusBadge(getStatusFluxo(termo)).color}>
+                                                        {getStatusBadge(getStatusFluxo(termo)).label}
                                                     </Badge>
                                                 </div>
                                                 <Button
