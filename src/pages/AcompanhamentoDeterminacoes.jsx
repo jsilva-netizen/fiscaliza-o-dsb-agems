@@ -59,6 +59,11 @@ export default function AcompanhamentoDeterminacoes() {
         queryFn: () => base44.entities.PrestadorServico.list()
     });
 
+    const { data: termos = [] } = useQuery({
+        queryKey: ['termos-notificacao'],
+        queryFn: () => base44.entities.TermoNotificacao.list()
+    });
+
     // Aplicar filtros
     const determFiltradas = useMemo(() => {
         return determinacoes.filter(det => {
@@ -92,13 +97,16 @@ export default function AcompanhamentoDeterminacoes() {
     // Calcular KPIs com filtros aplicados
     const determVencidas = determFiltradas.filter(d => {
         const hoje = new Date();
-        const limite = new Date(d.data_limite);
-        return limite < hoje && d.status === 'pendente';
+        const unidade = unidades.find(u => u.id === d.unidade_fiscalizada_id);
+        const limite = getDataLimiteComTermo(d, unidade?.fiscalizacao_id);
+        return limite && limite < hoje && d.status === 'pendente';
     }).length;
 
     const determVencerEm7 = determFiltradas.filter(d => {
         const hoje = new Date();
-        const limite = new Date(d.data_limite);
+        const unidade = unidades.find(u => u.id === d.unidade_fiscalizada_id);
+        const limite = getDataLimiteComTermo(d, unidade?.fiscalizacao_id);
+        if (!limite) return false;
         const diasAte = (limite - hoje) / (1000 * 60 * 60 * 24);
         return diasAte > 0 && diasAte <= 7 && d.status === 'pendente';
     }).length;
@@ -162,6 +170,21 @@ export default function AcompanhamentoDeterminacoes() {
             nao_atendida: { label: 'Não Atendida', variant: 'destructive', color: 'text-red-600' }
         };
         return statusMap[status] || statusMap.pendente;
+    };
+
+    const getDataLimiteComTermo = (determinacao, fiscalizacaoId) => {
+        // Buscar o termo de notificação da fiscalização
+        const termo = termos.find(t => t.fiscalizacao_id === fiscalizacaoId);
+        
+        if (termo?.data_protocolo && determinacao.prazo_dias) {
+            // Calcular prazo a partir da data de protocolo do TN
+            const dataProtocolo = new Date(termo.data_protocolo);
+            const dataLimite = new Date(dataProtocolo.getTime() + determinacao.prazo_dias * 24 * 60 * 60 * 1000);
+            return dataLimite;
+        }
+        
+        // Fallback para data_limite original
+        return determinacao.data_limite ? new Date(determinacao.data_limite) : null;
     };
 
     const diasAteVencimento = (dataLimite) => {
@@ -306,9 +329,12 @@ export default function AcompanhamentoDeterminacoes() {
                                         {isExpanded && (
                                             <div className="border-t bg-gray-50 p-4 space-y-3">
                                                 {detsPendentes.map(det => {
-                                                    const dias = diasAteVencimento(det.data_limite);
+                                                    const dataLimite = getDataLimiteComTermo(det, fiscalizacao.id);
+                                                    const dias = dataLimite ? diasAteVencimento(dataLimite) : null;
+                                                    const termo = termos.find(t => t.fiscalizacao_id === fiscalizacao.id);
+                                                    
                                                     return (
-                                                        <Card key={det.id} className={dias < 7 ? 'border-orange-300 bg-orange-50' : 'bg-white'}>
+                                                        <Card key={det.id} className={dias && dias < 7 ? 'border-orange-300 bg-orange-50' : 'bg-white'}>
                                                             <CardContent className="p-4">
                                                                 <div className="flex justify-between items-start">
                                                                     <div className="flex-1">
@@ -318,13 +344,24 @@ export default function AcompanhamentoDeterminacoes() {
                                                                             <p>Unidade: {det.unidade.nome_unidade || 'N/A'}</p>
                                                                             <p>Município: {getMunicipio(fiscalizacao.municipio_id)}</p>
                                                                             <p>Termo: {fiscalizacao.numero_termo}</p>
-                                                                            <p>Prazo: {new Date(det.data_limite).toLocaleDateString('pt-BR')}</p>
+                                                                            <p>
+                                                                                Prazo: {dataLimite ? dataLimite.toLocaleDateString('pt-BR') : 'N/A'}
+                                                                                {termo?.data_protocolo && det.prazo_dias && (
+                                                                                    <span className="ml-1 text-blue-600">
+                                                                                        ({det.prazo_dias} dias após protocolo TN)
+                                                                                    </span>
+                                                                                )}
+                                                                            </p>
                                                                         </div>
                                                                     </div>
                                                                     <div className="text-right ml-4">
-                                                                        <Badge className={dias < 0 ? 'bg-red-600' : dias < 7 ? 'bg-orange-500' : 'bg-green-600'}>
-                                                                            {dias < 0 ? `${Math.abs(dias)} dias vencido` : `${dias} dias`}
-                                                                        </Badge>
+                                                                        {dias !== null ? (
+                                                                            <Badge className={dias < 0 ? 'bg-red-600' : dias < 7 ? 'bg-orange-500' : 'bg-green-600'}>
+                                                                                {dias < 0 ? `${Math.abs(dias)} dias vencido` : `${dias} dias`}
+                                                                            </Badge>
+                                                                        ) : (
+                                                                            <Badge variant="outline">Sem prazo definido</Badge>
+                                                                        )}
                                                                         <Link to={createPageUrl(`AnalisarResposta?determinacao=${det.id}`)}>
                                                                             <Button size="sm" className="mt-2 w-full">Analisar</Button>
                                                                         </Link>
@@ -451,19 +488,23 @@ export default function AcompanhamentoDeterminacoes() {
                                             <div className="border-t bg-red-50 p-4 space-y-3">
                                                 {detsNaoAtendidas.map(resp => {
                                                     const det = dets.find(d => d.id === resp.determinacao_id);
+                                                    const dataLimite = det ? getDataLimiteComTermo(det, fiscalizacao.id) : null;
+
                                                     return (
-                                                        <Card key={resp.id} className="bg-white border-red-300">
-                                                            <CardContent className="p-4">
-                                                                <div className="flex justify-between items-start">
-                                                                    <div className="flex-1">
-                                                                        <h4 className="font-semibold mb-2">{det?.numero_determinacao}</h4>
-                                                                        <p className="text-sm text-red-700 font-medium">Não atendida no prazo</p>
-                                                                        <p className="text-xs text-gray-500 mt-1">Vencimento: {new Date(det?.data_limite).toLocaleDateString('pt-BR')}</p>
-                                                                    </div>
-                                                                    <Badge className="bg-red-600">Não Atendida</Badge>
-                                                                </div>
-                                                            </CardContent>
-                                                        </Card>
+                                                       <Card key={resp.id} className="bg-white border-red-300">
+                                                           <CardContent className="p-4">
+                                                               <div className="flex justify-between items-start">
+                                                                   <div className="flex-1">
+                                                                       <h4 className="font-semibold mb-2">{det?.numero_determinacao}</h4>
+                                                                       <p className="text-sm text-red-700 font-medium">Não atendida no prazo</p>
+                                                                       <p className="text-xs text-gray-500 mt-1">
+                                                                           Vencimento: {dataLimite ? dataLimite.toLocaleDateString('pt-BR') : 'N/A'}
+                                                                       </p>
+                                                                   </div>
+                                                                   <Badge className="bg-red-600">Não Atendida</Badge>
+                                                               </div>
+                                                           </CardContent>
+                                                       </Card>
                                                     );
                                                 })}
                                             </div>
