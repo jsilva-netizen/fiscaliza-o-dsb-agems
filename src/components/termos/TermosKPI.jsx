@@ -4,8 +4,8 @@ import { FileText, Clock, AlertCircle } from 'lucide-react';
 
 export default function TermosKPI({ termos }) {
   const pendenteTNAssinado = termos.filter(t => !t.arquivo_url).length;
-  const pendenteProtocolo = termos.filter(t => t.arquivo_url && (!t.data_protocolo || !t.arquivo_protocolo_url)).length;
-  const ativos = termos.filter(t => t.arquivo_url && t.data_protocolo && t.arquivo_protocolo_url && !t.data_recebimento_resposta).length;
+  const pendenteProtocolo = termos.filter(t => t.arquivo_url && !t.data_protocolo).length;
+  const aguardandoResposta = termos.filter(t => t.arquivo_url && t.data_protocolo && !t.data_recebimento_resposta).length;
 
   const verificaPrazoVencido = (termo) => {
       if (!termo.data_maxima_resposta) return false;
@@ -16,7 +16,7 @@ export default function TermosKPI({ termos }) {
       return hoje > dataMax;
   };
 
-  const prazoVencido = termos.filter(t => t.arquivo_url && t.data_protocolo && t.arquivo_protocolo_url && !t.data_recebimento_resposta && verificaPrazoVencido(t)).length;
+  const prazoVencido = termos.filter(t => t.arquivo_url && t.data_protocolo && !t.data_recebimento_resposta && verificaPrazoVencido(t)).length;
   const respondidos = termos.filter(t => t.data_recebimento_resposta).length;
   const total = termos.length;
 
@@ -24,7 +24,7 @@ export default function TermosKPI({ termos }) {
     { label: 'Total de TNs', value: total, color: 'bg-blue-50', textColor: 'text-blue-600', icon: FileText },
     { label: 'Pendente TN Assinado', value: pendenteTNAssinado, color: 'bg-yellow-50', textColor: 'text-yellow-600', icon: AlertCircle },
     { label: 'Pendente Protocolo', value: pendenteProtocolo, color: 'bg-orange-50', textColor: 'text-orange-600', icon: Clock },
-    { label: 'Ativos', value: ativos, color: 'bg-green-50', textColor: 'text-green-600', icon: FileText },
+    { label: 'Aguardando Resposta', value: aguardandoResposta, color: 'bg-green-50', textColor: 'text-green-600', icon: FileText },
     { label: 'Prazo Vencido', value: prazoVencido, color: 'bg-red-50', textColor: 'text-red-600', icon: AlertCircle },
     { label: 'Respondidos', value: respondidos, color: 'bg-purple-50', textColor: 'text-purple-600', icon: FileText },
   ];
