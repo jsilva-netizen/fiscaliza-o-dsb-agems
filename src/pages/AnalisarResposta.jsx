@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { checkFiscalizacaoFinalizedDirect } from '@/components/utils/fiscalizacaoLock';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -74,6 +75,7 @@ export default function AnalisarResposta() {
 
     const salvarRespostaMutation = useMutation({
         mutationFn: async (dados) => {
+            checkFiscalizacaoFinalizedDirect(fiscalizacao);
             if (respostaDeterminacao) {
                 return base44.entities.RespostaDeterminacao.update(respostaDeterminacao.id, dados);
             } else {
