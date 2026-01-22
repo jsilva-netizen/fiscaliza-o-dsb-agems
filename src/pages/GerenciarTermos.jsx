@@ -701,13 +701,15 @@ export default function GerenciarTermos() {
                                                             {getStatusBadge(getStatusFluxo(termo)).label}
                                                         </Badge>
                                                     </div>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => setTermoDetalhes(termo)}
-                                                    >
-                                                        Editar
-                                                    </Button>
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => setTermoDetalhes(termo)}
+                                                            className="flex-1"
+                                                        >
+                                                            Editar
+                                                        </Button>
                                                     <AlertDialog 
                                                         open={deleteConfirmation.open && deleteConfirmation.termoId === termo.id}
                                                         onOpenChange={(open) => {
