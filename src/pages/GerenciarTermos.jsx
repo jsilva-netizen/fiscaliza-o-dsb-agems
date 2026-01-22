@@ -623,7 +623,7 @@ export default function GerenciarTermos() {
                         </Card>
                     ) : (
                         termosFiltrados.map(termo => (
-                                <Card key={termo.id} className="hover:shadow-lg transition-shadow">
+                            <Card key={termo.id} className="hover:shadow-lg transition-shadow">
                                     <CardContent className="p-4">
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex-1">
@@ -970,8 +970,8 @@ export default function GerenciarTermos() {
                                     </CardContent>
                                 </Card>
                             ))
-                            )}
-                        </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
