@@ -978,17 +978,17 @@ export default function GerenciarTermos() {
 
                                             {termo.arquivos_resposta && termo.arquivos_resposta.length > 0 && (
                                             <div className="flex gap-2 flex-wrap">
-                                            {termo.arquivos_resposta.map((arquivo, idx) => (
-                                            <Button
-                                            key={idx}
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => window.open(arquivo.url)}
-                                            >
-                                            <Download className="h-4 w-4 mr-1" />
-                                            Resposta {idx + 1}
-                                            </Button>
-                                            ))}
+                                                {termo.arquivos_resposta.map((arquivo, idx) => (
+                                                    <Button
+                                                        key={idx}
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => window.open(arquivo.url)}
+                                                    >
+                                                        <Download className="h-4 w-4 mr-1" />
+                                                        Baixar Resposta
+                                                    </Button>
+                                                ))}
                                             </div>
                                             )}
 
