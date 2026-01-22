@@ -837,7 +837,7 @@ export default function GerenciarTermos() {
                                               )}
 
                                               {termo.arquivo_url && termo.data_protocolo && !termo.arquivo_protocolo_url && (
-                                                  <Dialog open={protocoloArquivoOpen} onOpenChange={setProtocoloArquivoOpen}>
+                                                  <Dialog>
                                                       <DialogTrigger asChild>
                                                           <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700">
                                                               <Upload className="h-4 w-4 mr-1" />
@@ -849,18 +849,15 @@ export default function GerenciarTermos() {
                                                               <DialogTitle>Arquivo de Protocolo / AR</DialogTitle>
                                                           </DialogHeader>
                                                           <div className="space-y-3">
-                                                              <div>
-                                                                  <Label>Arquivo PDF *</Label>
-                                                                  <Input
-                                                                      type="file"
-                                                                      accept=".pdf"
-                                                                      id={`file-proto-${termo.id}`}
-                                                                  />
-                                                              </div>
+                                                              <Input
+                                                                  type="file"
+                                                                  accept=".pdf"
+                                                                  id={`file-proto-${termo.id}`}
+                                                              />
                                                               <Button
                                                                   onClick={async () => {
-                                                                      const fileinput = document.getElementById(`file-proto-${termo.id}`);
-                                                                      const file = fileinput?.files?.[0];
+                                                                      const fileInput = document.getElementById(`file-proto-${termo.id}`);
+                                                                      const file = fileInput?.files?.[0];
 
                                                                       if (!file) {
                                                                           alert('Selecione um arquivo');
@@ -879,25 +876,27 @@ export default function GerenciarTermos() {
 
                                                                           const dmax_str = `${dmax.getFullYear()}-${String(dmax.getMonth() + 1).padStart(2, '0')}-${String(dmax.getDate()).padStart(2, '0')}`;
 
-                                                                          await base44.entities.TermoNotificacao.update(termo.id, {
+                                                                          const termoAtualizado = await base44.entities.TermoNotificacao.update(termo.id, {
                                                                               arquivo_protocolo_url: file_url,
                                                                               data_maxima_resposta: dmax_str,
                                                                               status: 'ativo'
                                                                           });
 
-                                                                          await queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
-                                                                          setProtocoloArquivoOpen(false);
-                                                                          alert('Arquivo enviado!');
+                                                                          queryClient.setQueryData(['termos-notificacao'], (old) => {
+                                                                              return old.map(t => t.id === termo.id ? termoAtualizado : t);
+                                                                          });
+
+                                                                          alert('Arquivo de protocolo salvo com sucesso!');
                                                                       } catch (error) {
-                                                                          alert('Erro: ' + error.message);
+                                                                          alert('Erro ao salvar');
                                                                       } finally {
                                                                           setUploadingProtocoloArquivo(false);
                                                                       }
                                                                   }}
-                                                                  disabled={uploadingProtocoloArquivo}
                                                                   className="w-full"
+                                                                  disabled={uploadingProtocoloArquivo}
                                                               >
-                                                                  {uploadingProtocoloArquivo ? 'Enviando...' : 'Enviar'}
+                                                                  {uploadingProtocoloArquivo ? 'Salvando...' : 'Salvar'}
                                                               </Button>
                                                           </div>
                                                       </DialogContent>
