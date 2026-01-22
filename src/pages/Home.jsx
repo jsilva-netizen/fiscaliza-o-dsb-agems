@@ -23,8 +23,12 @@ export default function Home() {
             <div className="bg-white/10 backdrop-blur-sm border-b border-white/20">
                 <div className="max-w-6xl mx-auto px-4 py-6">
                     <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center">
-                            <span className="text-2xl font-bold text-blue-900">AG</span>
+                        <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center p-2">
+                            <img 
+                                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69331445067a2821c02acff8/680310e1f_ChatGPTImage22dejande202609_12_54.png" 
+                                alt="Logo AGEMS" 
+                                className="w-full h-full object-contain"
+                            />
                         </div>
                         <div className="text-white">
                             <h1 className="text-2xl font-bold">Fiscalização AGEMS</h1>
