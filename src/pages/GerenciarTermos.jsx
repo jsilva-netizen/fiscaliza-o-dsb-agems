@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileText, Send, Download, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, FileText, Download, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -26,10 +26,13 @@ export default function GerenciarTermos() {
         data_protocolo: '',
         prazo_resposta_dias: 30,
         observacoes: '',
-        arquivo_url: ''
+        arquivo_url: '',
+        arquivo_protocolo_url: ''
     });
     const [uploadingFile, setUploadingFile] = useState(false);
     const [deleteConfirmation, setDeleteConfirmation] = useState({ open: false, termoId: null, step: 1, inputValue: '' });
+    const [termoDetalhes, setTermoDetalhes] = useState(null);
+    const [uploadingProtocolo, setUploadingProtocolo] = useState(false);
 
     const { data: fiscalizacoes = [] } = useQuery({
         queryKey: ['fiscalizacoes'],
@@ -105,7 +108,7 @@ export default function GerenciarTermos() {
                 ...dados,
                 data_maxima_resposta: dataMaxima,
                 data_geracao: new Date().toISOString(),
-                status: 'rascunho',
+                status: dados.data_protocolo && dados.arquivo_protocolo_url ? 'ativo' : 'pendente_protocolo',
                 numero_termo: dados.numero_termo_notificacao
             });
             return novoTermo;
@@ -123,21 +126,32 @@ export default function GerenciarTermos() {
                 data_protocolo: '',
                 prazo_resposta_dias: 30,
                 observacoes: '',
-                arquivo_url: ''
+                arquivo_url: '',
+                arquivo_protocolo_url: ''
             });
         }
     });
 
-    const enviarTermoMutation = useMutation({
-        mutationFn: async ({ id, data_envio }) => {
+    const atualizarProtocoloMutation = useMutation({
+        mutationFn: async ({ id, data_protocolo, arquivo_protocolo_url }) => {
+            let dataMaxima = null;
+            const termo = termos.find(t => t.id === id);
+            if (data_protocolo && termo) {
+                const dp = new Date(data_protocolo);
+                dataMaxima = new Date(dp.getTime() + (termo.prazo_resposta_dias || 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            }
+            
             return base44.entities.TermoNotificacao.update(id, {
-                status: 'enviado',
-                data_envio
+                data_protocolo,
+                arquivo_protocolo_url,
+                data_maxima_resposta: dataMaxima,
+                status: 'ativo'
             });
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
-            alert('Termo enviado com sucesso!');
+            alert('Dados de protocolo atualizados com sucesso!');
+            setTermoDetalhes(null);
         }
     });
 
@@ -149,6 +163,11 @@ export default function GerenciarTermos() {
 
         if (!termoForm.numero_processo) {
             alert('Informe o número do processo');
+            return;
+        }
+
+        if (!termoForm.arquivo_url) {
+            alert('Faça upload do Termo de Notificação assinado (PDF)');
             return;
         }
 
@@ -201,26 +220,24 @@ export default function GerenciarTermos() {
     };
 
     const getStatusBadge = (status, termo) => {
-        if (status === 'rascunho') {
+        if (status === 'pendente_protocolo') {
             const semProtocolo = !termo.data_protocolo;
-            const semArquivo = !termo.arquivo_url;
+            const semArquivoProtocolo = !termo.arquivo_protocolo_url;
             
-            if (semProtocolo && semArquivo) {
-                return { label: 'Pendente - Protocolo e PDF', color: 'bg-orange-500' };
+            if (semProtocolo && semArquivoProtocolo) {
+                return { label: 'Pendente - Data e Arquivo de Protocolo', color: 'bg-yellow-500' };
             } else if (semProtocolo) {
-                return { label: 'Pendente - Protocolo', color: 'bg-yellow-500' };
-            } else if (semArquivo) {
-                return { label: 'Pendente - PDF', color: 'bg-yellow-500' };
+                return { label: 'Pendente - Data de Protocolo', color: 'bg-yellow-500' };
+            } else if (semArquivoProtocolo) {
+                return { label: 'Pendente - Arquivo de Protocolo', color: 'bg-yellow-500' };
             }
-            return { label: 'Rascunho', color: 'bg-gray-500' };
         }
         
         const statusMap = {
-            enviado: { label: 'Enviado', color: 'bg-blue-600' },
-            recebido: { label: 'Recebido', color: 'bg-green-600' },
+            ativo: { label: 'Ativo', color: 'bg-green-600' },
             respondido: { label: 'Respondido', color: 'bg-purple-600' }
         };
-        return statusMap[status] || { label: 'Rascunho', color: 'bg-gray-500' };
+        return statusMap[status] || { label: 'Criado', color: 'bg-blue-500' };
     };
 
     return (
@@ -360,7 +377,7 @@ export default function GerenciarTermos() {
                             )}
 
                             <div>
-                                <Label>Termo de Notificação Assinado (PDF)</Label>
+                                <Label>Termo de Notificação Assinado (PDF) *</Label>
                                 <Input
                                     type="file"
                                     accept=".pdf"
@@ -384,7 +401,7 @@ export default function GerenciarTermos() {
                                 {termoForm.arquivo_url && !uploadingFile && (
                                     <p className="text-xs text-green-600 mt-1">✓ Arquivo enviado</p>
                                 )}
-                                <p className="text-xs text-gray-500 mt-1">Pode ser anexado depois</p>
+                                <p className="text-xs text-gray-500 mt-1">Documento do Termo de Notificação assinado</p>
                             </div>
 
                             <div>
@@ -408,7 +425,7 @@ export default function GerenciarTermos() {
                                 <Button
                                     onClick={handleCriarTermo}
                                     className="flex-1 bg-blue-600 hover:bg-blue-700"
-                                    disabled={!termoForm.numero_processo}
+                                    disabled={!termoForm.numero_processo || !termoForm.arquivo_url || uploadingFile}
                                 >
                                     Criar Termo
                                 </Button>
@@ -417,11 +434,157 @@ export default function GerenciarTermos() {
                     </DialogContent>
                 </Dialog>
 
+                {/* Dialog de Detalhes do Termo */}
+                <Dialog open={termoDetalhes !== null} onOpenChange={(open) => !open && setTermoDetalhes(null)}>
+                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle>Detalhes do Termo de Notificação</DialogTitle>
+                        </DialogHeader>
+                        {termoDetalhes && (
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <Label className="text-gray-600">Número do TN</Label>
+                                        <p className="font-semibold">{termoDetalhes.numero_termo_notificacao || termoDetalhes.numero_termo}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-gray-600">Processo</Label>
+                                        <p className="font-semibold">{termoDetalhes.numero_processo}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-gray-600">Município</Label>
+                                        <p className="font-semibold">{getMunicipioNome(termoDetalhes.municipio_id)}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-gray-600">Prestador</Label>
+                                        <p className="font-semibold">{getPrestadorNome(termoDetalhes.prestador_servico_id)}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-gray-600">Câmara Técnica</Label>
+                                        <p className="font-semibold">{termoDetalhes.camara_tecnica}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-gray-600">Prazo Resposta</Label>
+                                        <p className="font-semibold">{termoDetalhes.prazo_resposta_dias} dias</p>
+                                    </div>
+                                </div>
+
+                                <div className="border-t pt-4">
+                                    <h3 className="font-semibold mb-3">Termo de Notificação Assinado</h3>
+                                    {termoDetalhes.arquivo_url ? (
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => window.open(termoDetalhes.arquivo_url)}
+                                            className="w-full"
+                                        >
+                                            <Download className="h-4 w-4 mr-2" />
+                                            Baixar Termo Assinado (PDF)
+                                        </Button>
+                                    ) : (
+                                        <p className="text-sm text-gray-500">Nenhum arquivo anexado</p>
+                                    )}
+                                </div>
+
+                                <div className="border-t pt-4">
+                                    <h3 className="font-semibold mb-3">Dados de Protocolo / AR</h3>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <Label>Data de Protocolo / AR *</Label>
+                                            <Input
+                                                type="date"
+                                                id="data-protocolo-detalhe"
+                                                defaultValue={termoDetalhes.data_protocolo || ''}
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label>Arquivo de Protocolo / AR (PDF)</Label>
+                                            <Input
+                                                type="file"
+                                                accept=".pdf"
+                                                onChange={async (e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        setUploadingProtocolo(true);
+                                                        try {
+                                                            const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                                                            const dataProtocolo = document.getElementById('data-protocolo-detalhe').value;
+                                                            
+                                                            if (!dataProtocolo) {
+                                                                alert('Informe a data de protocolo antes de enviar o arquivo');
+                                                                return;
+                                                            }
+                                                            
+                                                            await atualizarProtocoloMutation.mutateAsync({
+                                                                id: termoDetalhes.id,
+                                                                data_protocolo: dataProtocolo,
+                                                                arquivo_protocolo_url: file_url
+                                                            });
+                                                        } catch (error) {
+                                                            alert('Erro ao enviar arquivo');
+                                                        } finally {
+                                                            setUploadingProtocolo(false);
+                                                        }
+                                                    }
+                                                }}
+                                                disabled={uploadingProtocolo}
+                                            />
+                                            {uploadingProtocolo && <p className="text-xs text-gray-500 mt-1">Enviando arquivo...</p>}
+                                            {termoDetalhes.arquivo_protocolo_url && !uploadingProtocolo && (
+                                                <div className="mt-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => window.open(termoDetalhes.arquivo_protocolo_url)}
+                                                    >
+                                                        <Download className="h-4 w-4 mr-2" />
+                                                        Baixar Arquivo de Protocolo
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <Button
+                                            onClick={() => {
+                                                const dataProtocolo = document.getElementById('data-protocolo-detalhe').value;
+                                                if (!dataProtocolo) {
+                                                    alert('Informe a data de protocolo');
+                                                    return;
+                                                }
+                                                atualizarProtocoloMutation.mutate({
+                                                    id: termoDetalhes.id,
+                                                    data_protocolo: dataProtocolo,
+                                                    arquivo_protocolo_url: termoDetalhes.arquivo_protocolo_url
+                                                });
+                                            }}
+                                            className="w-full"
+                                        >
+                                            Salvar Dados de Protocolo
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {termoDetalhes.data_maxima_resposta && (
+                                    <div className="border-t pt-4">
+                                        <Label className="text-gray-600">Data Máxima para Resposta</Label>
+                                        <p className="font-semibold text-lg">{new Date(termoDetalhes.data_maxima_resposta).toLocaleDateString('pt-BR')}</p>
+                                    </div>
+                                )}
+
+                                {termoDetalhes.observacoes && (
+                                    <div className="border-t pt-4">
+                                        <Label className="text-gray-600">Observações</Label>
+                                        <p className="text-sm">{termoDetalhes.observacoes}</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </DialogContent>
+                </Dialog>
+
                 {/* Lista de Termos Criados */}
                 <div className="space-y-4">
                     {termos.map(termo => (
-                                <Card key={termo.id}>
-                                    <CardContent className="p-4">
+                                <Card key={termo.id} className="cursor-pointer hover:shadow-lg transition-shadow">
+                                    <CardContent className="p-4" onClick={() => setTermoDetalhes(termo)}>
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex-1">
                                                 <h3 className="font-semibold text-lg">{termo.numero_termo_notificacao || termo.numero_termo}</h3>
@@ -465,101 +628,8 @@ export default function GerenciarTermos() {
                                             </div>
                                         </div>
 
-                                        <div className="flex gap-2 pt-3 border-t">
-                                            {termo.status === 'rascunho' && (
-                                                <>
-                                                    <Dialog>
-                                                        <DialogTrigger asChild>
-                                                            <Button size="sm" variant="outline">
-                                                                Completar Dados
-                                                            </Button>
-                                                        </DialogTrigger>
-                                                        <DialogContent className="max-w-2xl">
-                                                            <DialogHeader>
-                                                                <DialogTitle>Completar Dados do Termo</DialogTitle>
-                                                            </DialogHeader>
-                                                            <div className="space-y-4">
-                                                                <div>
-                                                                    <Label>Data de Protocolo do TN</Label>
-                                                                    <Input
-                                                                        type="date"
-                                                                        id={`protocolo-${termo.id}`}
-                                                                        defaultValue={termo.data_protocolo || ''}
-                                                                    />
-                                                                </div>
-                                                                <div>
-                                                                    <Label>Termo de Notificação Assinado (PDF)</Label>
-                                                                    <Input
-                                                                        type="file"
-                                                                        accept=".pdf"
-                                                                        id={`arquivo-${termo.id}`}
-                                                                        onChange={async (e) => {
-                                                                            const file = e.target.files?.[0];
-                                                                            if (file) {
-                                                                                try {
-                                                                                    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-                                                                                    const dataProtocolo = document.getElementById(`protocolo-${termo.id}`).value;
-                                                                                    let dataMaxima = termo.data_maxima_resposta;
-                                                                                    if (dataProtocolo) {
-                                                                                        const dp = new Date(dataProtocolo);
-                                                                                        dataMaxima = new Date(dp.getTime() + (termo.prazo_resposta_dias || 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                                                                                    }
-                                                                                    await base44.entities.TermoNotificacao.update(termo.id, {
-                                                                                        arquivo_url: file_url,
-                                                                                        data_protocolo: dataProtocolo || termo.data_protocolo,
-                                                                                        data_maxima_resposta: dataMaxima
-                                                                                    });
-                                                                                    queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
-                                                                                    alert('Dados atualizados!');
-                                                                                } catch (error) {
-                                                                                    alert('Erro ao enviar arquivo');
-                                                                                }
-                                                                            }
-                                                                        }}
-                                                                    />
-                                                                    {termo.arquivo_url && <p className="text-xs text-green-600 mt-1">✓ Arquivo já enviado</p>}
-                                                                </div>
-                                                                <Button
-                                                                    onClick={async () => {
-                                                                        const dataProtocolo = document.getElementById(`protocolo-${termo.id}`).value;
-                                                                        if (dataProtocolo && dataProtocolo !== termo.data_protocolo) {
-                                                                            const dp = new Date(dataProtocolo);
-                                                                            const dataMaxima = new Date(dp.getTime() + (termo.prazo_resposta_dias || 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                                                                            await base44.entities.TermoNotificacao.update(termo.id, {
-                                                                                data_protocolo: dataProtocolo,
-                                                                                data_maxima_resposta: dataMaxima
-                                                                            });
-                                                                            queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
-                                                                            alert('Data de protocolo atualizada!');
-                                                                        }
-                                                                    }}
-                                                                    className="w-full"
-                                                                >
-                                                                    Salvar Alterações
-                                                                </Button>
-                                                            </div>
-                                                        </DialogContent>
-                                                    </Dialog>
-                                                    <Button
-                                                        size="sm"
-                                                        className="bg-blue-600 hover:bg-blue-700"
-                                                        onClick={() => {
-                                                            if (!termo.data_protocolo || !termo.arquivo_url) {
-                                                                alert('Complete os dados do termo antes de enviar (Data de Protocolo e PDF)');
-                                                                return;
-                                                            }
-                                                            enviarTermoMutation.mutate({
-                                                                id: termo.id,
-                                                                data_envio: new Date().toISOString()
-                                                            });
-                                                        }}
-                                                    >
-                                                        <Send className="h-4 w-4 mr-1" />
-                                                        Enviar
-                                                    </Button>
-                                                </>
-                                            )}
-                                            {(termo.status === 'enviado' || termo.status === 'recebido') && !termo.data_recebimento_resposta && (
+                                        <div className="flex gap-2 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
+                                            {(termo.status === 'ativo' || termo.status === 'pendente_protocolo') && !termo.data_recebimento_resposta && (
                                                 <Dialog>
                                                     <DialogTrigger asChild>
                                                         <Button size="sm" variant="outline">
