@@ -878,18 +878,14 @@ export default function GerenciarTermos() {
 
                                                                           const dmax_str = `${dmax.getFullYear()}-${String(dmax.getMonth() + 1).padStart(2, '0')}-${String(dmax.getDate()).padStart(2, '0')}`;
 
-                                                                          const termoAtualizado = await base44.entities.TermoNotificacao.update(termo.id, {
+                                                                          await base44.entities.TermoNotificacao.update(termo.id, {
                                                                               arquivo_protocolo_url: file_url,
                                                                               data_maxima_resposta: dmax_str,
                                                                               status: 'ativo'
                                                                           });
 
-                                                                          queryClient.setQueryData(['termos-notificacao'], (old) => {
-                                                                              return old.map(t => t.id === termo.id ? termoAtualizado : t);
-                                                                          });
-
-                                                                          // Force refetch para garantir sincronização
-                                                                          await queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                                          // Refetch imediato para forçar re-render
+                                                                          await queryClient.refetchQueries({ queryKey: ['termos-notificacao'] });
 
                                                                           setProtocoloArquivoOpenId(null);
                                                                           alert('Arquivo de protocolo salvo com sucesso!');
