@@ -710,6 +710,16 @@ export default function GerenciarTermos() {
                                                     Baixar Protocolo
                                                 </Button>
                                             )}
+                                            {termo.data_protocolo && !termo.arquivo_protocolo_url && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    disabled
+                                                >
+                                                    <Download className="h-4 w-4 mr-1" />
+                                                    Protocolo (Pendente)
+                                                </Button>
+                                            )}
                                             
                                             {/* Botão Excluir com dupla confirmação */}
                                             <AlertDialog 
