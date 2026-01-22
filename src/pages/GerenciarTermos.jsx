@@ -629,15 +629,24 @@ export default function GerenciarTermos() {
                                             <div className="flex-1">
                                                 <h3 className="font-semibold text-lg">{termo.numero_termo_notificacao || termo.numero_termo}</h3>
                                                 <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
-                                                    <div>
-                                                        <span className="font-medium">Município:</span> {getMunicipioNome(termo.municipio_id)}
-                                                    </div>
-                                                    <div>
-                                                        <span className="font-medium">Processo:</span> {termo.numero_processo || 'N/A'}
-                                                    </div>
-                                                    <div>
-                                                        <span className="font-medium">Câmara:</span> {termo.camara_tecnica || 'N/A'}
-                                                    </div>
+                                                     <div>
+                                                         <span className="font-medium">Município:</span> {getMunicipioNome(termo.municipio_id)}
+                                                     </div>
+                                                     <div>
+                                                         <span className="font-medium">Processo:</span> {termo.numero_processo || 'N/A'}
+                                                     </div>
+                                                     <div>
+                                                         <span className="font-medium">Prestador:</span> {getPrestadorNome(termo.prestador_servico_id)}
+                                                     </div>
+                                                     <div>
+                                                         <span className="font-medium">Serviços:</span> {(() => {
+                                                             const fisc = fiscalizacoes.find(f => f.id === termo.fiscalizacao_id);
+                                                             return fisc?.servicos?.join(', ') || 'N/A';
+                                                         })()}
+                                                     </div>
+                                                     <div>
+                                                         <span className="font-medium">Câmara:</span> {termo.camara_tecnica || 'N/A'}
+                                                     </div>
                                                     <div>
                                                         <span className="font-medium">Protocolo:</span> {termo.data_protocolo ? new Date(termo.data_protocolo).toLocaleDateString('pt-BR') : 'N/A'}
                                                     </div>
