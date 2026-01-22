@@ -888,7 +888,7 @@ export default function GerenciarTermos() {
                                                 </Button>
                                             )}
                                             {termo.data_protocolo && !termo.arquivo_protocolo_url && (
-                                                <Dialog>
+                                                <Dialog key={`protocolo-dialog-${termo.id}`}>
                                                     <DialogTrigger asChild>
                                                         <Button size="sm" variant="default" className="bg-orange-600 hover:bg-orange-700">
                                                             <Upload className="h-4 w-4 mr-1" />
@@ -917,13 +917,16 @@ export default function GerenciarTermos() {
                                                                     try {
                                                                         setUploadingProtocolo(true);
                                                                         const { file_url } = await base44.integrations.Core.UploadFile({ file });
-                                                                        await atualizarProtocoloMutation.mutateAsync({
-                                                                            id: termo.id,
-                                                                            data_protocolo: termo.data_protocolo,
-                                                                            arquivo_protocolo_url: file_url
+                                                                        await base44.entities.TermoNotificacao.update(termo.id, {
+                                                                            arquivo_protocolo_url: file_url,
+                                                                            status: 'ativo'
                                                                         });
+                                                                        queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                                        alert('Arquivo de protocolo salvo com sucesso!');
+                                                                        // Close dialog by clearing the file input
+                                                                        document.getElementById(`file-protocolo-fix-${termo.id}`).value = '';
                                                                     } catch (error) {
-                                                                        alert('Erro ao salvar');
+                                                                        alert('Erro ao salvar: ' + error.message);
                                                                     } finally {
                                                                         setUploadingProtocolo(false);
                                                                     }
