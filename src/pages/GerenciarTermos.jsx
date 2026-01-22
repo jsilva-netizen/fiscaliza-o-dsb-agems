@@ -696,19 +696,95 @@ export default function GerenciarTermos() {
                                                 </div>
                                             </div>
                                             <div className="text-right space-y-2">
-                                                <div>
-                                                    <Badge className={getStatusBadge(getStatusFluxo(termo)).color}>
-                                                        {getStatusBadge(getStatusFluxo(termo)).label}
-                                                    </Badge>
+                                                    <div>
+                                                        <Badge className={getStatusBadge(getStatusFluxo(termo)).color}>
+                                                            {getStatusBadge(getStatusFluxo(termo)).label}
+                                                        </Badge>
+                                                    </div>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => setTermoDetalhes(termo)}
+                                                    >
+                                                        Editar
+                                                    </Button>
+                                                    <AlertDialog 
+                                                        open={deleteConfirmation.open && deleteConfirmation.termoId === termo.id}
+                                                        onOpenChange={(open) => {
+                                                            if (!open) {
+                                                                setDeleteConfirmation({ open: false, termoId: null, step: 1, inputValue: '' });
+                                                            }
+                                                        }}
+                                                    >
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                                                onClick={() => setDeleteConfirmation({ open: true, termoId: termo.id, step: 1, inputValue: '' })}
+                                                            >
+                                                                <Trash2 className="h-4 w-4 mr-1" />
+                                                                Excluir
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            {deleteConfirmation.step === 1 ? (
+                                                                <>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+                                                                            <AlertTriangle className="h-5 w-5" />
+                                                                            Excluir Termo de Notificação?
+                                                                        </AlertDialogTitle>
+                                                                        <AlertDialogDescription className="space-y-2">
+                                                                            <p>Você está prestes a excluir permanentemente o termo:</p>
+                                                                            <p className="font-semibold text-gray-900">{termo.numero_termo_notificacao || termo.numero_termo}</p>
+                                                                            <p className="text-red-600">Esta ação não pode ser desfeita.</p>
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                        <Button
+                                                                            variant="destructive"
+                                                                            onClick={() => setDeleteConfirmation(prev => ({ ...prev, step: 2 }))}
+                                                                        >
+                                                                            Continuar
+                                                                        </Button>
+                                                                    </AlertDialogFooter>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+                                                                            <AlertTriangle className="h-5 w-5" />
+                                                                            Confirmação Final
+                                                                        </AlertDialogTitle>
+                                                                        <AlertDialogDescription className="space-y-3">
+                                                                            <p>Para confirmar a exclusão, digite <span className="font-bold">EXCLUIR</span> no campo abaixo:</p>
+                                                                            <Input
+                                                                                placeholder="Digite EXCLUIR"
+                                                                                value={deleteConfirmation.inputValue}
+                                                                                onChange={(e) => setDeleteConfirmation(prev => ({ ...prev, inputValue: e.target.value }))}
+                                                                                className="mt-2"
+                                                                            />
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel onClick={() => setDeleteConfirmation({ open: false, termoId: null, step: 1, inputValue: '' })}>
+                                                                            Cancelar
+                                                                        </AlertDialogCancel>
+                                                                        <Button
+                                                                            variant="destructive"
+                                                                            disabled={deleteConfirmation.inputValue !== 'EXCLUIR' || excluirTermoMutation.isPending}
+                                                                            onClick={() => excluirTermoMutation.mutate(termo.id)}
+                                                                        >
+                                                                            {excluirTermoMutation.isPending ? 'Excluindo...' : 'Excluir Permanentemente'}
+                                                                        </Button>
+                                                                    </AlertDialogFooter>
+                                                                </>
+                                                            )}
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
                                                 </div>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => setTermoDetalhes(termo)}
-                                                >
-                                                    Editar
-                                                </Button>
-                                            </div>
                                         </div>
 
                                         <div className="flex gap-2 pt-3 border-t flex-wrap">
