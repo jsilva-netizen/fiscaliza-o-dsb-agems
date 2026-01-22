@@ -784,131 +784,123 @@ export default function GerenciarTermos() {
                                               )}
 
                                               {termo.arquivo_url && !termo.data_protocolo && (
-                                                  <Dialog open={protocoloDataOpen} onOpenChange={setProtocoloDataOpen}>
-                                                      <DialogTrigger asChild>
-                                                          <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700">
-                                                              <Upload className="h-4 w-4 mr-1" />
-                                                              Registrar Data
-                                                          </Button>
-                                                      </DialogTrigger>
-                                                      <DialogContent>
-                                                          <DialogHeader>
-                                                              <DialogTitle>Data de Protocolo / AR</DialogTitle>
-                                                          </DialogHeader>
-                                                          <div className="space-y-3">
-                                                              <div>
-                                                                  <Label>Data de Protocolo *</Label>
-                                                                  <Input
-                                                                      type="date"
-                                                                      id={`data-proto-${termo.id}`}
-                                                                  />
-                                                              </div>
-                                                              <Button
-                                                                  onClick={async () => {
-                                                                      const datainput = document.getElementById(`data-proto-${termo.id}`);
-                                                                      const data = datainput?.value;
+                                                                  <Dialog open={dataProtocoloOpen} onOpenChange={setDataProtocoloOpen}>
+                                                                      <DialogTrigger asChild>
+                                                                          <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700">
+                                                                              <Upload className="h-4 w-4 mr-1" />
+                                                                              Registrar Data
+                                                                          </Button>
+                                                                      </DialogTrigger>
+                                                                      <DialogContent>
+                                                                          <DialogHeader>
+                                                                              <DialogTitle>Data de Protocolo / AR</DialogTitle>
+                                                                          </DialogHeader>
+                                                                          <div className="space-y-3">
+                                                                              <Label>Data de Protocolo *</Label>
+                                                                              <Input
+                                                                                  type="date"
+                                                                                  id={`data-proto-${termo.id}`}
+                                                                              />
+                                                                              <Button
+                                                                                  onClick={async () => {
+                                                                                      const dataInput = document.getElementById(`data-proto-${termo.id}`);
+                                                                                      const data = dataInput?.value;
 
-                                                                      if (!data) {
-                                                                          alert('Informe a data de protocolo');
-                                                                          return;
-                                                                      }
+                                                                                      if (!data) {
+                                                                                          alert('Informe a data de protocolo');
+                                                                                          return;
+                                                                                      }
 
-                                                                      try {
-                                                                          setUploadingProtocoloData(true);
-                                                                          const [a, m, d] = data.split('-');
-                                                                          const dprot = new Date(`${a}-${m}-${d}T00:00:00`);
-                                                                          const prazo = termo.prazo_resposta_dias || 30;
-                                                                          const dmax = new Date(dprot);
-                                                                          dmax.setDate(dmax.getDate() + prazo);
-                                                                          const dmax_str = `${dmax.getFullYear()}-${String(dmax.getMonth() + 1).padStart(2, '0')}-${String(dmax.getDate()).padStart(2, '0')}`;
+                                                                                      try {
+                                                                                          setUploadingProtocoloData(true);
+                                                                                          const [a, m, d] = data.split('-');
+                                                                                          const dprot = new Date(`${a}-${m}-${d}T00:00:00`);
+                                                                                          const prazo = termo.prazo_resposta_dias || 30;
+                                                                                          const dmax = new Date(dprot);
+                                                                                          dmax.setDate(dmax.getDate() + prazo);
+                                                                                          const dmax_str = `${dmax.getFullYear()}-${String(dmax.getMonth() + 1).padStart(2, '0')}-${String(dmax.getDate()).padStart(2, '0')}`;
 
-                                                                          const termoAtualizado = await base44.entities.TermoNotificacao.update(termo.id, {
-                                                                              data_protocolo: data,
-                                                                              data_maxima_resposta: dmax_str,
-                                                                              status: 'ativo'
-                                                                          });
+                                                                                          await base44.entities.TermoNotificacao.update(termo.id, {
+                                                                                              data_protocolo: data,
+                                                                                              data_maxima_resposta: dmax_str
+                                                                                          });
 
-                                                                          queryClient.setQueryData(['termos-notificacao'], (old) => {
-                                                                              return old.map(t => t.id === termo.id ? termoAtualizado : t);
-                                                                          });
+                                                                                          await queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                                                          setDataProtocoloOpen(false);
+                                                                                          alert('Data de protocolo salva!');
+                                                                                      } catch (error) {
+                                                                                          alert('Erro: ' + error.message);
+                                                                                      } finally {
+                                                                                          setUploadingProtocoloData(false);
+                                                                                      }
+                                                                                  }}
+                                                                                  disabled={uploadingProtocoloData}
+                                                                                  className="w-full"
+                                                                              >
+                                                                                  {uploadingProtocoloData ? 'Salvando...' : 'Salvar Data'}
+                                                                              </Button>
+                                                                          </div>
+                                                                      </DialogContent>
+                                                                  </Dialog>
+                                                              )}
 
-                                                                          setProtocoloDataOpen(false);
-                                                                          alert('Data registrada!');
-                                                                      } catch (error) {
-                                                                          alert('Erro: ' + error.message);
-                                                                      } finally {
-                                                                          setUploadingProtocoloData(false);
-                                                                      }
-                                                                  }}
-                                                                  disabled={uploadingProtocoloData}
-                                                                  className="w-full"
-                                                              >
-                                                                  {uploadingProtocoloData ? 'Salvando...' : 'Salvar Data'}
-                                                              </Button>
-                                                          </div>
-                                                      </DialogContent>
-                                                  </Dialog>
-                                              )}
+                                                              {termo.arquivo_url && termo.data_protocolo && !termo.arquivo_protocolo_url && (
+                                                                  <Dialog open={arquivoProtocoloOpen} onOpenChange={setArquivoProtocoloOpen}>
+                                                                      <DialogTrigger asChild>
+                                                                          <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700">
+                                                                              <Upload className="h-4 w-4 mr-1" />
+                                                                              Enviar Arquivo Protocolo
+                                                                          </Button>
+                                                                      </DialogTrigger>
+                                                                      <DialogContent>
+                                                                          <DialogHeader>
+                                                                              <DialogTitle>Arquivo de Protocolo / AR</DialogTitle>
+                                                                          </DialogHeader>
+                                                                          <div className="space-y-3">
+                                                                              <Input
+                                                                                  type="file"
+                                                                                  accept=".pdf"
+                                                                                  id={`file-proto-${termo.id}`}
+                                                                              />
+                                                                              <Button
+                                                                                  onClick={async () => {
+                                                                                      const fileInput = document.getElementById(`file-proto-${termo.id}`);
+                                                                                      const file = fileInput?.files?.[0];
 
-                                              {termo.data_protocolo && !termo.arquivo_protocolo_url && (
-                                                  <Dialog open={protocoloArquivoOpen} onOpenChange={setProtocoloArquivoOpen}>
-                                                      <DialogTrigger asChild>
-                                                          <Button size="sm" variant="outline">
-                                                              <Upload className="h-4 w-4 mr-1" />
-                                                              Enviar Arquivo (Opcional)
-                                                          </Button>
-                                                      </DialogTrigger>
-                                                      <DialogContent>
-                                                          <DialogHeader>
-                                                              <DialogTitle>Arquivo de Protocolo / AR</DialogTitle>
-                                                          </DialogHeader>
-                                                          <div className="space-y-3">
-                                                              <p className="text-sm text-gray-600">Envie o comprovante de protocolo (opcional)</p>
-                                                              <Input
-                                                                  type="file"
-                                                                  accept=".pdf"
-                                                                  id={`file-proto-${termo.id}`}
-                                                              />
-                                                              <Button
-                                                                  onClick={async () => {
-                                                                      const fileInput = document.getElementById(`file-proto-${termo.id}`);
-                                                                      const file = fileInput?.files?.[0];
+                                                                                      if (!file) {
+                                                                                          alert('Selecione um arquivo');
+                                                                                          return;
+                                                                                      }
 
-                                                                      if (!file) {
-                                                                          alert('Selecione um arquivo');
-                                                                          return;
-                                                                      }
+                                                                                      try {
+                                                                                          setUploadingProtocoloArquivo(true);
+                                                                                          const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
-                                                                      try {
-                                                                          setUploadingProtocoloArquivo(true);
-                                                                          const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                                                                                          await base44.entities.TermoNotificacao.update(termo.id, {
+                                                                                              arquivo_protocolo_url: file_url
+                                                                                          });
 
-                                                                          await base44.entities.TermoNotificacao.update(termo.id, {
-                                                                              arquivo_protocolo_url: file_url
-                                                                          });
+                                                                                          await queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                                                          setArquivoProtocoloOpen(false);
+                                                                                          alert('Arquivo de protocolo salvo com sucesso!');
+                                                                                      } catch (error) {
+                                                                                          alert('Erro ao salvar: ' + error.message);
+                                                                                      } finally {
+                                                                                          setUploadingProtocoloArquivo(false);
+                                                                                      }
+                                                                                  }}
+                                                                                  className="w-full"
+                                                                                  disabled={uploadingProtocoloArquivo}
+                                                                              >
+                                                                                  {uploadingProtocoloArquivo ? 'Salvando...' : 'Salvar Arquivo'}
+                                                                              </Button>
+                                                                          </div>
+                                                                      </DialogContent>
+                                                                  </Dialog>
+                                                              )}
 
-                                                                          await queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
-
-                                                                          setProtocoloArquivoOpen(false);
-                                                                          alert('Arquivo salvo com sucesso!');
-                                                                      } catch (error) {
-                                                                          alert('Erro ao salvar: ' + error.message);
-                                                                      } finally {
-                                                                          setUploadingProtocoloArquivo(false);
-                                                                      }
-                                                                  }}
-                                                                  className="w-full"
-                                                                  disabled={uploadingProtocoloArquivo}
-                                                              >
-                                                                  {uploadingProtocoloArquivo ? 'Salvando...' : 'Enviar'}
-                                                              </Button>
-                                                          </div>
-                                                      </DialogContent>
-                                                  </Dialog>
-                                              )}
-
-                                              {termo.data_protocolo && !termo.data_recebimento_resposta && (
-                                                  <Dialog open={respostaOpenId === termo.id} onOpenChange={(open) => setRespostaOpenId(open ? termo.id : null)}>
+                                                              {termo.arquivo_url && termo.data_protocolo && termo.arquivo_protocolo_url && !termo.data_recebimento_resposta && (
+                                                                  <Dialog open={respostaOpenId === termo.id} onOpenChange={(open) => setRespostaOpenId(open ? termo.id : null)}>
                                                     <DialogTrigger asChild>
                                                         <Button size="sm" variant={verificaPrazoVencido(termo) ? "destructive" : "outline"}>
                                                             {verificaPrazoVencido(termo) ? '⚠ Resposta Atrasada' : 'Registrar Resposta'}
