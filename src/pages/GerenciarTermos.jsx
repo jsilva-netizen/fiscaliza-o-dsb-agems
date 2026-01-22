@@ -618,7 +618,7 @@ export default function GerenciarTermos() {
                                             const status = getStatusFluxo(termo);
                                             const pendencias = [];
                                             if (status === 'pendente_tn') pendencias.push('TN Assinado');
-                                            else if (status === 'pendente_protocolo') pendencias.push('Data e Arquivo de Protocolo');
+                                            else if (status === 'pendente_protocolo') pendencias.push('Protocolo');
                                             
                                             return pendencias.length > 0 ? (
                                                 <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex gap-2">
