@@ -783,7 +783,7 @@ export default function GerenciarTermos() {
                                               )}
 
                                               {termo.arquivo_url && !termo.data_protocolo && (
-                                                  <Dialog>
+                                                  <Dialog open={protocoloDataOpen} onOpenChange={setProtocoloDataOpen}>
                                                       <DialogTrigger asChild>
                                                           <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700">
                                                               <Upload className="h-4 w-4 mr-1" />
@@ -819,6 +819,7 @@ export default function GerenciarTermos() {
                                                                           });
 
                                                                           await queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                                          setProtocoloDataOpen(false);
                                                                           alert('Data registrada!');
                                                                       } catch (error) {
                                                                           alert('Erro: ' + error.message);
@@ -837,7 +838,7 @@ export default function GerenciarTermos() {
                                               )}
 
                                               {termo.arquivo_url && termo.data_protocolo && !termo.arquivo_protocolo_url && (
-                                                  <Dialog>
+                                                  <Dialog open={protocoloArquivoOpen} onOpenChange={setProtocoloArquivoOpen}>
                                                       <DialogTrigger asChild>
                                                           <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700">
                                                               <Upload className="h-4 w-4 mr-1" />
@@ -886,6 +887,7 @@ export default function GerenciarTermos() {
                                                                           });
 
                                                                           await queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                                          setProtocoloArquivoOpen(false);
                                                                           alert('Arquivo enviado!');
                                                                       } catch (error) {
                                                                           alert('Erro: ' + error.message);
