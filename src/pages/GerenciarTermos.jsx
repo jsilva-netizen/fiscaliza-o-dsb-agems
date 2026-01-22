@@ -42,10 +42,8 @@ export default function GerenciarTermos() {
     const [deleteConfirmation, setDeleteConfirmation] = useState({ open: false, termoId: null, step: 1, inputValue: '' });
     const [termoDetalhes, setTermoDetalhes] = useState(null);
     const [uploadingProtocolo, setUploadingProtocolo] = useState(false);
-    const [dialogProtocoloOpen, setDialogProtocoloOpen] = useState(false);
     const [termoAssinadoTemp, setTermoAssinadoTemp] = useState(null);
-    const [protocoNoTemp, setProtocoloTemp] = useState(null);
-    const [protocoloCardTemp, setProtocoloCardTemp] = useState({});
+    const [protocoloDialogOpen, setProtocoloDialogOpen] = useState(null);
 
     const { data: fiscalizacoes = [] } = useQuery({
         queryKey: ['fiscalizacoes'],
