@@ -48,6 +48,17 @@ export default function DetalhePrestador() {
         enabled: fiscalizacoes.length > 0
     });
 
+    const { data: ncs = [] } = useQuery({
+        queryKey: ['ncs-prestador', prestadorId],
+        queryFn: async () => {
+            if (unidades.length === 0) return [];
+            return base44.entities.NaoConformidade.list('id', 500).then(ns => 
+                ns.filter(n => unidades.some(u => u.id === n.unidade_fiscalizada_id))
+            );
+        },
+        enabled: unidades.length > 0
+    });
+
     const { data: determinacoes = [] } = useQuery({
         queryKey: ['determinacoes-prestador', prestadorId],
         queryFn: async () => {
