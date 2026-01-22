@@ -228,6 +228,15 @@ export default function GerenciarTermos() {
         return 'respondido';
     };
 
+    const verificaPrazoVencido = (termo) => {
+        if (!termo.data_maxima_resposta) return false;
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const dataMax = new Date(termo.data_maxima_resposta);
+        dataMax.setHours(0, 0, 0, 0);
+        return hoje > dataMax;
+    };
+
     const termosFiltrados = termos.filter(termo => {
         if (filtros.busca && !termo.numero_termo_notificacao?.toLowerCase().includes(filtros.busca.toLowerCase())) return false;
         if (filtros.camaraTecnica && termo.camara_tecnica !== filtros.camaraTecnica) return false;
