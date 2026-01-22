@@ -63,17 +63,33 @@ export default function GerenciarTermos() {
             .toISOString().split('T')[0]
         : '';
 
-    // Gerar número do termo automaticamente
+    // Gerar número do termo automaticamente baseado nos existentes
     useEffect(() => {
         if (showDialog && !termoForm.numero_termo_notificacao) {
             const ano = new Date().getFullYear();
-            const proximo = termos.length + 1;
+            
+            // Buscar o maior número de TN do ano atual
+            let maiorNumero = 0;
+            termos.forEach(termo => {
+                const numeroTermo = termo.numero_termo_notificacao || termo.numero_termo || '';
+                // Extrair número do formato "TN XXX/YYYY/DSB/AGEMS"
+                const match = numeroTermo.match(/TN\s*(\d+)\/(\d{4})/i);
+                if (match) {
+                    const numero = parseInt(match[1], 10);
+                    const anoTermo = parseInt(match[2], 10);
+                    if (anoTermo === ano && numero > maiorNumero) {
+                        maiorNumero = numero;
+                    }
+                }
+            });
+            
+            const proximo = maiorNumero + 1;
             setTermoForm(prev => ({
                 ...prev,
                 numero_termo_notificacao: `TN ${String(proximo).padStart(3, '0')}/${ano}/DSB/AGEMS`
             }));
         }
-    }, [showDialog, termos.length]);
+    }, [showDialog, termos]);
 
     const criarTermoMutation = useMutation({
         mutationFn: async (dados) => {
