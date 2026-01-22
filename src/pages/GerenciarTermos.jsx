@@ -879,14 +879,54 @@ export default function GerenciarTermos() {
                                                 </Button>
                                             )}
                                             {termo.data_protocolo && !termo.arquivo_protocolo_url && (
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    disabled
-                                                >
-                                                    <Download className="h-4 w-4 mr-1" />
-                                                    Protocolo (Pendente)
-                                                </Button>
+                                                <Dialog>
+                                                    <DialogTrigger asChild>
+                                                        <Button size="sm" variant="default" className="bg-orange-600 hover:bg-orange-700">
+                                                            <Upload className="h-4 w-4 mr-1" />
+                                                            Enviar Protocolo
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle>Enviar Arquivo de Protocolo</DialogTitle>
+                                                        </DialogHeader>
+                                                        <div className="space-y-3">
+                                                            <Input
+                                                                type="file"
+                                                                accept=".pdf"
+                                                                id={`file-protocolo-fix-${termo.id}`}
+                                                            />
+                                                            <Button
+                                                                onClick={async () => {
+                                                                    const fileInput = document.getElementById(`file-protocolo-fix-${termo.id}`);
+                                                                    const file = fileInput?.files?.[0];
+
+                                                                    if (!file) {
+                                                                        alert('Selecione um arquivo');
+                                                                        return;
+                                                                    }
+                                                                    try {
+                                                                        setUploadingProtocolo(true);
+                                                                        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                                                                        await atualizarProtocoloMutation.mutateAsync({
+                                                                            id: termo.id,
+                                                                            data_protocolo: termo.data_protocolo,
+                                                                            arquivo_protocolo_url: file_url
+                                                                        });
+                                                                    } catch (error) {
+                                                                        alert('Erro ao salvar');
+                                                                    } finally {
+                                                                        setUploadingProtocolo(false);
+                                                                    }
+                                                                }}
+                                                                className="w-full"
+                                                                disabled={uploadingProtocolo}
+                                                            >
+                                                                {uploadingProtocolo ? 'Salvando...' : 'Salvar'}
+                                                            </Button>
+                                                        </div>
+                                                    </DialogContent>
+                                                </Dialog>
                                             )}
                                             
                                             {/* Botão Excluir com dupla confirmação */}
