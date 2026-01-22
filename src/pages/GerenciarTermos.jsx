@@ -221,28 +221,39 @@ export default function GerenciarTermos() {
                                     />
                                 </div>
                                 <div>
-                                    <Label>Município *</Label>
-                                    <Select value={termoForm.municipio_id} onValueChange={(v) => setTermoForm({ ...termoForm, municipio_id: v })} disabled>
-                                        <SelectTrigger className="bg-gray-100">
-                                            <SelectValue placeholder="Selecionado automaticamente" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {municipios.map(m => (
-                                                <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <Label>Número do Processo *</Label>
+                                    <Input
+                                        value={termoForm.numero_processo}
+                                        onChange={(e) => setTermoForm({ ...termoForm, numero_processo: e.target.value })}
+                                        placeholder="51.011.137-2025"
+                                    />
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <Label>Número do Processo *</Label>
-                                    <Input
-                                        value={termoForm.numero_processo}
-                                        onChange={(e) => setTermoForm({ ...termoForm, numero_processo: e.target.value })}
-                                        placeholder="Ex: 12345/2026"
-                                    />
+                                    <Label>Fiscalização *</Label>
+                                    <Select 
+                                        value={selectedFiscalizacao?.id || ''} 
+                                        onValueChange={(v) => {
+                                            const fisc = fiscalizacoes.find(f => f.id === v);
+                                            setSelectedFiscalizacao(fisc);
+                                            if (fisc) {
+                                                setTermoForm({ ...termoForm, municipio_id: fisc.municipio_id });
+                                            }
+                                        }}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecione uma fiscalização" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {fiscalizacoes.filter(f => f.status === 'finalizada').map(f => (
+                                                <SelectItem key={f.id} value={f.id}>
+                                                    {f.numero_termo} - {getMunicipioNome(f.municipio_id)} - {getPrestadorNome(f.prestador_servico_id)}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div>
                                     <Label>Câmara Técnica Setorial *</Label>
@@ -289,31 +300,6 @@ export default function GerenciarTermos() {
                                     />
                                 </div>
                             )}
-
-                            <div>
-                                <Label>Fiscalização</Label>
-                                <Select 
-                                    value={selectedFiscalizacao?.id || ''} 
-                                    onValueChange={(v) => {
-                                        const fisc = fiscalizacoes.find(f => f.id === v);
-                                        setSelectedFiscalizacao(fisc);
-                                        if (fisc) {
-                                            setTermoForm({ ...termoForm, municipio_id: fisc.municipio_id });
-                                        }
-                                    }}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Selecione uma fiscalização" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {fiscalizacoes.filter(f => f.status === 'finalizada').map(f => (
-                                            <SelectItem key={f.id} value={f.id}>
-                                                {f.numero_termo} - {getMunicipioNome(f.municipio_id)} - {getPrestadorNome(f.prestador_servico_id)}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
 
                             <div>
                                 <Label>Termo de Notificação Assinado (PDF)</Label>
