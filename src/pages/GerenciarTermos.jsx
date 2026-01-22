@@ -942,7 +942,17 @@ export default function GerenciarTermos() {
                                                 </Button>
                                             )}
 
-                                            
+                                            {termo.arquivo_resposta_url && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => window.open(termo.arquivo_resposta_url)}
+                                                >
+                                                    <Download className="h-4 w-4 mr-1" />
+                                                    Baixar Resposta
+                                                </Button>
+                                            )}
+
                                             {/* Botão Excluir com dupla confirmação */}
                                             <AlertDialog 
                                                 open={deleteConfirmation.open && deleteConfirmation.termoId === termo.id}
