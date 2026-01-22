@@ -839,7 +839,7 @@ export default function GerenciarTermos() {
                                               )}
 
                                               {termo.arquivo_url && termo.data_protocolo && !termo.arquivo_protocolo_url && (
-                                                  <Dialog>
+                                                  <Dialog open={protocoloArquivoOpen} onOpenChange={setProtocoloArquivoOpen}>
                                                       <DialogTrigger asChild>
                                                           <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700">
                                                               <Upload className="h-4 w-4 mr-1" />
@@ -885,6 +885,7 @@ export default function GerenciarTermos() {
                                                                           });
 
                                                                           await queryClient.refetchQueries({ queryKey: ['termos-notificacao'] });
+                                                                          setProtocoloArquivoOpen(false);
                                                                           alert('Arquivo de protocolo salvo com sucesso!');
                                                                       } catch (error) {
                                                                           alert('Erro ao salvar: ' + error.message);
