@@ -747,7 +747,13 @@ export default function GerenciarTermos() {
                                               )}
 
                                               {termo.arquivo_url && (!termo.data_protocolo || !termo.arquivo_protocolo_url) && (
-                                                  <Dialog open={protocoloCardTemp[termo.id]?.open || false} onOpenChange={(open) => setProtocoloCardTemp(prev => ({ ...prev, [termo.id]: { ...prev[termo.id], open } }))}>
+                                                  <Dialog open={protocoloCardTemp[termo.id]?.open || false} onOpenChange={(open) => {
+                                                      if (open) {
+                                                          setProtocoloCardTemp(prev => ({ ...prev, [termo.id]: { open: true, data: termo.data_protocolo || '', arquivo: termo.arquivo_protocolo_url || '' } }));
+                                                      } else {
+                                                          setProtocoloCardTemp(prev => ({ ...prev, [termo.id]: { open: false, data: '', arquivo: '' } }));
+                                                      }
+                                                  }}>
                                                       <DialogTrigger asChild>
                                                           <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700">
                                                               <FileText className="h-4 w-4 mr-1" />
@@ -763,8 +769,7 @@ export default function GerenciarTermos() {
                                                                   <Label>Data de Protocolo / AR *</Label>
                                                                   <Input
                                                                       type="date"
-                                                                      id={`data-protocolo-card-${termo.id}`}
-                                                                      defaultValue={termo.data_protocolo || ''}
+                                                                      value={protocoloCardTemp[termo.id]?.data || ''}
                                                                       onChange={(e) => setProtocoloCardTemp(prev => ({ ...prev, [termo.id]: { ...prev[termo.id], data: e.target.value } }))}
                                                                   />
                                                               </div>
