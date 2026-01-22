@@ -745,7 +745,7 @@ export default function GerenciarTermos() {
                                               )}
 
                                               {termo.arquivo_url && (!termo.data_protocolo || !termo.arquivo_protocolo_url) && (
-                                                  <Dialog>
+                                                  <Dialog open={protocoloDialogOpen === termo.id} onOpenChange={(open) => setProtocoloDialogOpen(open ? termo.id : null)}>
                                                       <DialogTrigger asChild>
                                                           <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700">
                                                               <FileText className="h-4 w-4 mr-1" />
@@ -793,7 +793,7 @@ export default function GerenciarTermos() {
                                                                           setUploadingProtocolo(true);
                                                                           const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
-                                                                          // Calcular data máxima
+                                                                          // Calcular data máxima - armazenar como string ISO
                                                                           const [ano, mes, dia] = data.split('-');
                                                                           const dataProtocolo = new Date(ano, parseInt(mes) - 1, parseInt(dia));
                                                                           const prazoResposta = termo.prazo_resposta_dias || 30;
@@ -805,6 +805,8 @@ export default function GerenciarTermos() {
                                                                           const diaMax = String(dataMaximaResposta.getDate()).padStart(2, '0');
                                                                           const dataMaximaFormatada = `${anoMax}-${mesMax}-${diaMax}`;
 
+                                                                          console.log('Protocolo - Salvando:', { data, file_url, dataMaximaFormatada, status: 'ativo' });
+
                                                                           // Atualizar no banco
                                                                           const termoAtualizado = await base44.entities.TermoNotificacao.update(termo.id, {
                                                                               data_protocolo: data,
@@ -813,14 +815,17 @@ export default function GerenciarTermos() {
                                                                               status: 'ativo'
                                                                           });
 
-                                                                          // Atualizar cache
+                                                                          console.log('Protocolo - Retorno:', termoAtualizado);
+
+                                                                          // Atualizar cache e fechar dialog
                                                                           queryClient.setQueryData(['termos-notificacao'], (old) => {
                                                                               return old.map(t => t.id === termo.id ? termoAtualizado : t);
                                                                           });
 
+                                                                          setProtocoloDialogOpen(null);
                                                                           alert('Protocolo salvo com sucesso!');
-                                                                          setProtocoloCardTemp(prev => ({ ...prev, [termo.id]: { open: false } }));
                                                                       } catch (error) {
+                                                                          console.error('Erro:', error);
                                                                           alert('Erro ao salvar: ' + error.message);
                                                                       } finally {
                                                                           setUploadingProtocolo(false);
