@@ -64,6 +64,22 @@ export default function AcompanhamentoDeterminacoes() {
         queryFn: () => base44.entities.TermoNotificacao.list()
     });
 
+    // Função para calcular data limite com base no TN
+    const getDataLimiteComTermo = (determinacao, fiscalizacaoId) => {
+        // Buscar o termo de notificação da fiscalização
+        const termo = termos.find(t => t.fiscalizacao_id === fiscalizacaoId);
+        
+        if (termo?.data_protocolo && determinacao.prazo_dias) {
+            // Calcular prazo a partir da data de protocolo do TN
+            const dataProtocolo = new Date(termo.data_protocolo);
+            const dataLimite = new Date(dataProtocolo.getTime() + determinacao.prazo_dias * 24 * 60 * 60 * 1000);
+            return dataLimite;
+        }
+        
+        // Fallback para data_limite original
+        return determinacao.data_limite ? new Date(determinacao.data_limite) : null;
+    };
+
     // Aplicar filtros
     const determFiltradas = useMemo(() => {
         return determinacoes.filter(det => {
@@ -170,21 +186,6 @@ export default function AcompanhamentoDeterminacoes() {
             nao_atendida: { label: 'Não Atendida', variant: 'destructive', color: 'text-red-600' }
         };
         return statusMap[status] || statusMap.pendente;
-    };
-
-    const getDataLimiteComTermo = (determinacao, fiscalizacaoId) => {
-        // Buscar o termo de notificação da fiscalização
-        const termo = termos.find(t => t.fiscalizacao_id === fiscalizacaoId);
-        
-        if (termo?.data_protocolo && determinacao.prazo_dias) {
-            // Calcular prazo a partir da data de protocolo do TN
-            const dataProtocolo = new Date(termo.data_protocolo);
-            const dataLimite = new Date(dataProtocolo.getTime() + determinacao.prazo_dias * 24 * 60 * 60 * 1000);
-            return dataLimite;
-        }
-        
-        // Fallback para data_limite original
-        return determinacao.data_limite ? new Date(determinacao.data_limite) : null;
     };
 
     const diasAteVencimento = (dataLimite) => {
