@@ -48,7 +48,8 @@ export default function ExportarPDFConsolidado({ fiscalizacoes }) {
                 pdf.rect(margin, yPos, pageWidth - 2 * margin, 10, 'F');
                 pdf.setFontSize(12);
                 pdf.setFont('helvetica', 'bold');
-                pdf.text(`${i + 1}. ${fisc.municipio_nome} - ${fisc.servico}`, margin + 3, yPos + 6);
+                const servicos = Array.isArray(fisc.servicos) ? fisc.servicos.join(', ') : (fisc.servico || '');
+                pdf.text(`${i + 1}. ${fisc.municipio_nome} - ${servicos}`, margin + 3, yPos + 6);
                 yPos += 12;
 
                 // Informações básicas
