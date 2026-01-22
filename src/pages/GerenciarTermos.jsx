@@ -115,7 +115,6 @@ export default function GerenciarTermos() {
                 ...dados,
                 data_maxima_resposta: dataMaxima,
                 data_geracao: new Date().toISOString(),
-                status: dados.data_protocolo && dados.arquivo_protocolo_url ? 'ativo' : 'pendente_protocolo',
                 numero_termo: dados.numero_termo_notificacao
             });
             return novoTermo;
