@@ -1075,9 +1075,8 @@ export default function GerenciarTermos() {
                                                 ))}
                                             </div>
                                             )}
-
-
                                         </div>
+                                    </div>
                                     </CardContent>
                                 </Card>
                             ))
