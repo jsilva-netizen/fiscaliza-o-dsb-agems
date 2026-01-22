@@ -1010,10 +1010,11 @@ export default function GerenciarTermos() {
                                                                           };
 
                                                                           const arquivosAtuais = termo.arquivos_resposta || [];
+                                                                          const dataMaxComHora = new Date(termo.data_maxima_resposta + 'T00:00:00');
                                                                           const termoAtualizado = await base44.entities.TermoNotificacao.update(termo.id, {
                                                                               data_recebimento_resposta: dataRecebStr,
-                                                                             arquivos_resposta: [...arquivosAtuais, novoArquivo],
-                                                                             recebida_no_prazo: dataReceb <= dataMax,
+                                                                              arquivos_resposta: [...arquivosAtuais, novoArquivo],
+                                                                              recebida_no_prazo: dataReceb <= dataMaxComHora,
                                                                              status: 'respondido'
                                                                          });
 
