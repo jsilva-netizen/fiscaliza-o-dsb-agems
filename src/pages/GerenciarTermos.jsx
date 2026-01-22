@@ -62,11 +62,7 @@ export default function GerenciarTermos() {
         }
     });
 
-    // Calcular data máxima de resposta
-    const dataMaximaResposta = termoForm.data_protocolo && termoForm.prazo_resposta_dias
-        ? new Date(new Date(termoForm.data_protocolo).getTime() + termoForm.prazo_resposta_dias * 24 * 60 * 60 * 1000)
-            .toISOString().split('T')[0]
-        : '';
+
 
     // Gerar número do termo automaticamente baseado nos existentes
     useEffect(() => {
@@ -341,37 +337,14 @@ export default function GerenciarTermos() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <Label>Data de Protocolo do TN</Label>
-                                    <Input
-                                        type="date"
-                                        value={termoForm.data_protocolo}
-                                        onChange={(e) => setTermoForm({ ...termoForm, data_protocolo: e.target.value })}
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">Pode ser preenchida depois</p>
-                                </div>
-                                <div>
-                                    <Label>Prazo para Resposta (dias)</Label>
-                                    <Input
-                                        type="number"
-                                        value={termoForm.prazo_resposta_dias}
-                                        onChange={(e) => setTermoForm({ ...termoForm, prazo_resposta_dias: parseInt(e.target.value) || 30 })}
-                                    />
-                                </div>
+                            <div>
+                                <Label>Prazo para Resposta (dias)</Label>
+                                <Input
+                                    type="number"
+                                    value={termoForm.prazo_resposta_dias}
+                                    onChange={(e) => setTermoForm({ ...termoForm, prazo_resposta_dias: parseInt(e.target.value) || 30 })}
+                                />
                             </div>
-
-                            {dataMaximaResposta && (
-                                <div>
-                                    <Label>Data Máxima para Resposta (calculado)</Label>
-                                    <Input
-                                        type="date"
-                                        value={dataMaximaResposta}
-                                        disabled
-                                        className="bg-gray-100"
-                                    />
-                                </div>
-                            )}
 
                             <div>
                                 <Label>Observações</Label>
