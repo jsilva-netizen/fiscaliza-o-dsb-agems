@@ -223,7 +223,8 @@ export default function GerenciarTermos() {
 
     const getStatusFluxo = (termo) => {
         if (!termo.arquivo_url) return 'pendente_tn';
-        if (!termo.data_protocolo || !termo.arquivo_protocolo_url) return 'pendente_protocolo';
+        if (!termo.data_protocolo) return 'pendente_protocolo';
+        if (!termo.arquivo_protocolo_url) return 'pendente_protocolo';
         if (!termo.data_recebimento_resposta) return 'ativo';
         return 'respondido';
     };
