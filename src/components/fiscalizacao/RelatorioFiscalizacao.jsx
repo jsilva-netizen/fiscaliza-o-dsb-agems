@@ -95,7 +95,10 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             pdf.setTextColor(255, 255, 255);
             pdf.setFontSize(20);
             pdf.setFont('helvetica', 'bold');
-            pdf.text('RELATÓRIO DE FISCALIZAÇÃO', pageWidth / 2, 15, { align: 'center' });
+            const titulo = fiscalizacao.numero_termo 
+                ? `TERMO DE VISTORIA ${fiscalizacao.numero_termo}` 
+                : 'RELATÓRIO DE FISCALIZAÇÃO';
+            pdf.text(titulo, pageWidth / 2, 15, { align: 'center' });
             
             pdf.setFontSize(11);
             pdf.setFont('helvetica', 'normal');

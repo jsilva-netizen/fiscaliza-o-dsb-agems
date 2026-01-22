@@ -58,9 +58,28 @@ export default function ExecutarFiscalizacao() {
                 }
             }
             
+            // Gerar número do termo sequencial
+            const dataFim = new Date();
+            const ano = dataFim.getFullYear();
+            
+            // Buscar fiscalizações finalizadas no mesmo ano
+            const fiscalizacoesDoAno = await base44.entities.Fiscalizacao.filter({
+                status: 'finalizada'
+            }, '-data_fim', 1000);
+            
+            const fiscalizacoesAnoAtual = fiscalizacoesDoAno.filter(f => {
+                if (!f.data_fim) return false;
+                const anoFisc = new Date(f.data_fim).getFullYear();
+                return anoFisc === ano;
+            });
+            
+            const proximoNumero = fiscalizacoesAnoAtual.length + 1;
+            const numeroTermo = `${String(proximoNumero).padStart(3, '0')}/${ano}`;
+            
             return base44.entities.Fiscalizacao.update(fiscalizacaoId, {
                 status: 'finalizada',
-                data_fim: new Date().toISOString()
+                data_fim: dataFim.toISOString(),
+                numero_termo: numeroTermo
             });
         },
         onSuccess: () => {
