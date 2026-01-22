@@ -698,6 +698,11 @@ export default function GerenciarTermos() {
                                                     </div>
                                                     <div>
                                                         <span className="font-medium">Data Máxima:</span> {termo.data_maxima_resposta ? new Date(termo.data_maxima_resposta).toLocaleDateString('pt-BR') : 'N/A'}
+                                                        {termo.data_maxima_resposta && !termo.data_recebimento_resposta && (
+                                                            <p className={`text-xs mt-1 ${verificaPrazoVencido(termo) ? 'text-red-600' : 'text-green-600'}`}>
+                                                                {verificaPrazoVencido(termo) ? '⚠️ Prazo vencido' : '✓ No prazo'}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                     {termo.data_recebimento_resposta && (
                                                         <>
