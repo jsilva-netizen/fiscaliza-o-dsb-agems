@@ -908,7 +908,9 @@ export default function GerenciarTermos() {
                                                                              status: 'respondido'
                                                                          });
 
-                                                                         queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                                         queryClient.setQueryData(['termos-notificacao'], (old) => {
+                                                                             return old.map(t => t.id === termo.id ? termoAtualizado : t);
+                                                                         });
 
                                                                          setRespostaOpenId(null);
                                                                          alert('Resposta registrada com sucesso!');
