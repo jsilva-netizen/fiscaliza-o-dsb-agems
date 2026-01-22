@@ -39,7 +39,8 @@ export default function GerenciarTermos() {
         arquivo_protocolo_url: ''
     });
     const [uploadingFile, setUploadingFile] = useState(false);
-    const [uploadingProtocolo, setUploadingProtocolo] = useState(false);
+    const [uploadingProtocoloData, setUploadingProtocoloData] = useState(false);
+    const [uploadingProtocoloArquivo, setUploadingProtocoloArquivo] = useState(false);
     const [uploadingResposta, setUploadingResposta] = useState(false);
     const [deleteConfirmation, setDeleteConfirmation] = useState({ open: false, termoId: null, step: 1, inputValue: '' });
     const [termoDetalhes, setTermoDetalhes] = useState(null);
