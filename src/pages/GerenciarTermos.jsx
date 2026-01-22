@@ -615,10 +615,10 @@ export default function GerenciarTermos() {
                                     <CardContent className="p-4">
                                         {/* Avisos de Pendências */}
                                         {(() => {
+                                            const status = getStatusFluxo(termo);
                                             const pendencias = [];
-                                            if (!termo.arquivo_url) pendencias.push('TN Assinado');
-                                            if (!termo.data_protocolo) pendencias.push('Data de Protocolo');
-                                            if (!termo.arquivo_protocolo_url) pendencias.push('Arquivo de Protocolo');
+                                            if (status === 'pendente_tn') pendencias.push('TN Assinado');
+                                            else if (status === 'pendente_protocolo') pendencias.push('Data e Arquivo de Protocolo');
                                             
                                             return pendencias.length > 0 ? (
                                                 <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex gap-2">
