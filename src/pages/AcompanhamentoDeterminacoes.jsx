@@ -108,7 +108,6 @@ export default function AcompanhamentoDeterminacoes() {
     const determPorStatus = {
         pendente: determFiltradas.filter(d => d.status === 'pendente'),
         atendidas: respostas.filter(r => r.status === 'atendida' && determFiltradas.find(d => d.id === r.determinacao_id)),
-        justificadas: respostas.filter(r => r.status === 'justificada' && determFiltradas.find(d => d.id === r.determinacao_id)),
         nao_atendidas: respostas.filter(r => r.status === 'nao_atendida' && determFiltradas.find(d => d.id === r.determinacao_id)),
         com_auto: autos.filter(a => a.status !== 'finalizado' && determFiltradas.find(d => d.id === a.determinacao_id))
     };
@@ -220,24 +219,11 @@ export default function AcompanhamentoDeterminacoes() {
                     </Card>
                 </div>
 
-                {/* Análises */}
-                <div className="mb-8">
-                    <h2 className="text-xl font-semibold mb-4">Análises</h2>
-                    <AnaliseTemposMedios determinacoes={determFiltradas} respostas={respostas} />
-                </div>
-
-                {/* Gráficos */}
-                <div className="grid grid-cols-2 gap-6 mb-8">
-                    <ChartEvolucaoStatus determinacoes={determFiltradas} respostas={respostas} />
-                    <MapaDistribuicao determinacoes={determFiltradas} autos={autos} municipios={municipios} />
-                </div>
-
                 {/* Tabs */}
-                <Tabs defaultValue="pendentes" className="w-full">
-                    <TabsList className="grid w-full grid-cols-5">
+                <Tabs defaultValue="pendentes" className="w-full mb-8">
+                    <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="pendentes">Pendentes ({determPorStatus.pendente.length})</TabsTrigger>
                         <TabsTrigger value="atendidas">Atendidas ({determPorStatus.atendidas.length})</TabsTrigger>
-                        <TabsTrigger value="justificadas">Justificadas ({determPorStatus.justificadas.length})</TabsTrigger>
                         <TabsTrigger value="nao_atendidas">Não Atendidas ({determPorStatus.nao_atendidas.length})</TabsTrigger>
                         <TabsTrigger value="autos">Com Auto ({determPorStatus.com_auto.length})</TabsTrigger>
                     </TabsList>
@@ -290,26 +276,6 @@ export default function AcompanhamentoDeterminacoes() {
                         })}
                     </TabsContent>
 
-                    <TabsContent value="justificadas" className="space-y-4">
-                        {respostas.filter(r => r.status === 'justificada').map(resp => {
-                            const det = determinacoes.find(d => d.id === resp.determinacao_id);
-                            return (
-                                <Card key={resp.id} className="border-blue-300 bg-blue-50">
-                                    <CardContent className="p-4">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1">
-                                                <h3 className="font-semibold mb-2">{det?.numero_determinacao}</h3>
-                                                <p className="text-sm text-gray-600 mb-1">Justificativa: {resp.descricao_atendimento}</p>
-                                                <p className="text-xs text-gray-500">Data: {new Date(resp.data_resposta).toLocaleDateString('pt-BR')}</p>
-                                            </div>
-                                            <Badge className="bg-blue-600">Justificada</Badge>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
-                    </TabsContent>
-
                     <TabsContent value="nao_atendidas" className="space-y-4">
                         {respostas.filter(r => r.status === 'nao_atendida').map(resp => {
                             const det = determinacoes.find(d => d.id === resp.determinacao_id);
@@ -352,6 +318,18 @@ export default function AcompanhamentoDeterminacoes() {
                         })}
                     </TabsContent>
                 </Tabs>
+
+                {/* Análises */}
+                <div className="mb-8">
+                    <h2 className="text-xl font-semibold mb-4">Análises</h2>
+                    <AnaliseTemposMedios determinacoes={determFiltradas} respostas={respostas} />
+                </div>
+
+                {/* Gráficos */}
+                <div className="grid grid-cols-2 gap-6">
+                    <ChartEvolucaoStatus determinacoes={determFiltradas} respostas={respostas} />
+                    <MapaDistribuicao determinacoes={determFiltradas} autos={autos} municipios={municipios} />
+                </div>
             </div>
         </div>
     );
