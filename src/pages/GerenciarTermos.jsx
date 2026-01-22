@@ -453,7 +453,7 @@ export default function GerenciarTermos() {
 
                                 <div className="border-t pt-4">
                                     <h3 className="font-semibold mb-3">Termo de Notificação Assinado</h3>
-                                    <div className="space-y-3">
+                                    <div className="space-y-2">
                                         <Input
                                             type="file"
                                             accept=".pdf"
@@ -473,121 +473,85 @@ export default function GerenciarTermos() {
                                             }}
                                             disabled={uploadingFile}
                                         />
-                                        {uploadingFile && <p className="text-xs text-gray-500 mt-1">Enviando arquivo...</p>}
+                                        {uploadingFile && <p className="text-xs text-gray-500">Enviando arquivo...</p>}
                                         {termoAssinadoTemp && !uploadingFile && (
-                                            <p className="text-xs text-green-600 mt-1">✓ Arquivo carregado. Clique em "Salvar" para confirmar.</p>
+                                            <p className="text-xs text-green-600">✓ Arquivo carregado</p>
                                         )}
                                         {termoAssinadoTemp && (
-                                            <Button
-                                                onClick={async () => {
-                                                    try {
-                                                        await base44.entities.TermoNotificacao.update(termoDetalhes.id, {
-                                                            arquivo_url: termoAssinadoTemp
-                                                        });
-                                                        queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
-                                                        setTermoDetalhes({ ...termoDetalhes, arquivo_url: termoAssinadoTemp });
-                                                        setTermoAssinadoTemp(null);
-                                                        alert('Termo assinado salvo com sucesso!');
-                                                    } catch (error) {
-                                                        alert('Erro ao salvar termo');
-                                                    }
-                                                }}
-                                                className="w-full"
-                                            >
-                                                Salvar Termo Assinado
+                                            <Button onClick={async () => {
+                                                try {
+                                                    await base44.entities.TermoNotificacao.update(termoDetalhes.id, {
+                                                        arquivo_url: termoAssinadoTemp
+                                                    });
+                                                    queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                    setTermoDetalhes({ ...termoDetalhes, arquivo_url: termoAssinadoTemp });
+                                                    setTermoAssinadoTemp(null);
+                                                    alert('Salvo com sucesso!');
+                                                } catch (error) {
+                                                    alert('Erro ao salvar');
+                                                }
+                                            }} className="w-full" size="sm">
+                                                Salvar
                                             </Button>
                                         )}
                                         {termoDetalhes.arquivo_url && (
-                                            <Button
-                                                variant="outline"
-                                                onClick={() => window.open(termoDetalhes.arquivo_url)}
-                                                className="w-full"
-                                            >
+                                            <Button variant="outline" onClick={() => window.open(termoDetalhes.arquivo_url)} className="w-full" size="sm">
                                                 <Download className="h-4 w-4 mr-2" />
-                                                Baixar Termo Assinado (PDF)
+                                                Baixar Termo Assinado
                                             </Button>
                                         )}
                                     </div>
                                 </div>
 
                                 <div className="border-t pt-4">
-                                    <h3 className="font-semibold mb-3">Dados de Protocolo / AR</h3>
-                                    <div className="space-y-3">
+                                    <h3 className="font-semibold mb-3">Arquivo de Protocolo / AR</h3>
+                                    <div className="space-y-2">
                                         <div>
-                                            <Label>Data de Protocolo / AR *</Label>
-                                            <Input
-                                                type="date"
-                                                id="data-protocolo-detalhe"
-                                                defaultValue={termoDetalhes.data_protocolo || ''}
-                                            />
+                                            <Label className="text-sm">Data de Protocolo / AR *</Label>
+                                            <Input type="date" id="data-protocolo-detalhe" defaultValue={termoDetalhes.data_protocolo || ''} />
                                         </div>
-                                        <div>
-                                            <Label>Arquivo de Protocolo / AR (PDF)</Label>
-                                            <Input
-                                                type="file"
-                                                accept=".pdf"
-                                                onChange={async (e) => {
-                                                    const file = e.target.files?.[0];
-                                                    if (file) {
-                                                        setUploadingProtocolo(true);
-                                                        try {
-                                                            const { file_url } = await base44.integrations.Core.UploadFile({ file });
-                                                            setProtocoloTemp(file_url);
-                                                        } catch (error) {
-                                                            alert('Erro ao enviar arquivo');
-                                                        } finally {
-                                                            setUploadingProtocolo(false);
-                                                        }
+                                        <Input
+                                            type="file"
+                                            accept=".pdf"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    setUploadingProtocolo(true);
+                                                    try {
+                                                        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                                                        setProtocoloTemp(file_url);
+                                                    } catch (error) {
+                                                        alert('Erro ao enviar arquivo');
+                                                    } finally {
+                                                        setUploadingProtocolo(false);
                                                     }
-                                                }}
-                                                disabled={uploadingProtocolo}
-                                            />
-                                            {uploadingProtocolo && <p className="text-xs text-gray-500 mt-1">Enviando arquivo...</p>}
-                                            {protocoNoTemp && !uploadingProtocolo && (
-                                                <p className="text-xs text-green-600 mt-1">✓ Arquivo carregado. Clique em "Salvar" para confirmar.</p>
-                                            )}
-                                            {termoDetalhes.arquivo_protocolo_url && (
-                                                <div className="mt-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => window.open(termoDetalhes.arquivo_protocolo_url)}
-                                                    >
-                                                        <Download className="h-4 w-4 mr-2" />
-                                                        Baixar Arquivo de Protocolo
-                                                    </Button>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <Button
-                                            onClick={() => {
+                                                }
+                                            }}
+                                            disabled={uploadingProtocolo}
+                                        />
+                                        {uploadingProtocolo && <p className="text-xs text-gray-500">Enviando arquivo...</p>}
+                                        {protocoNoTemp && !uploadingProtocolo && (
+                                            <p className="text-xs text-green-600">✓ Arquivo carregado</p>
+                                        )}
+                                        {protocoNoTemp && (
+                                            <Button onClick={() => {
                                                 const dataProtocolo = document.getElementById('data-protocolo-detalhe').value;
                                                 if (!dataProtocolo) {
                                                     alert('Informe a data de protocolo');
                                                     return;
                                                 }
-                                                const archivoParaSalvar = protocoNoTemp || termoDetalhes.arquivo_protocolo_url;
-                                                if (!archivoParaSalvar) {
-                                                    alert('Envie o arquivo de protocolo');
-                                                    return;
-                                                }
                                                 atualizarProtocoloMutation.mutate({
                                                     id: termoDetalhes.id,
                                                     data_protocolo: dataProtocolo,
-                                                    arquivo_protocolo_url: archivoParaSalvar
+                                                    arquivo_protocolo_url: protocoNoTemp
                                                 });
                                                 setProtocoloTemp(null);
-                                            }}
-                                            className="w-full"
-                                        >
-                                            Salvar Dados de Protocolo
-                                        </Button>
+                                            }} className="w-full" size="sm">
+                                                Salvar
+                                            </Button>
+                                        )}
                                         {termoDetalhes.arquivo_protocolo_url && (
-                                            <Button
-                                                variant="outline"
-                                                onClick={() => window.open(termoDetalhes.arquivo_protocolo_url)}
-                                                className="w-full"
-                                            >
+                                            <Button variant="outline" onClick={() => window.open(termoDetalhes.arquivo_protocolo_url)} className="w-full" size="sm">
                                                 <Download className="h-4 w-4 mr-2" />
                                                 Baixar Arquivo de Protocolo
                                             </Button>
@@ -597,8 +561,19 @@ export default function GerenciarTermos() {
 
                                 {termoDetalhes.data_maxima_resposta && (
                                     <div className="border-t pt-4">
-                                        <Label className="text-gray-600">Data Máxima para Resposta</Label>
-                                        <p className="font-semibold text-lg">{new Date(termoDetalhes.data_maxima_resposta).toLocaleDateString('pt-BR')}</p>
+                                        <h3 className="font-semibold mb-3">Arquivos de Resposta</h3>
+                                        <div className="space-y-2">
+                                            {termoDetalhes.arquivos_resposta && termoDetalhes.arquivos_resposta.length > 0 && (
+                                                <div className="space-y-1">
+                                                    {termoDetalhes.arquivos_resposta.map((arquivo, idx) => (
+                                                        <Button key={idx} variant="outline" onClick={() => window.open(arquivo.url)} className="w-full" size="sm">
+                                                            <Download className="h-4 w-4 mr-2" />
+                                                            Baixar Resposta ({idx + 1})
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
 
