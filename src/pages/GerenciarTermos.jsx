@@ -93,13 +93,15 @@ export default function GerenciarTermos() {
 
     const criarTermoMutation = useMutation({
         mutationFn: async (dados) => {
-            // Calcular data máxima de resposta
-            const dataProtocolo = new Date(dados.data_protocolo);
-            const dataMaxima = new Date(dataProtocolo.getTime() + dados.prazo_resposta_dias * 24 * 60 * 60 * 1000);
+            let dataMaxima = null;
+            if (dados.data_protocolo) {
+                const dataProtocolo = new Date(dados.data_protocolo);
+                dataMaxima = new Date(dataProtocolo.getTime() + dados.prazo_resposta_dias * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            }
             
             const novoTermo = await base44.entities.TermoNotificacao.create({
                 ...dados,
-                data_maxima_resposta: dataMaxima.toISOString().split('T')[0],
+                data_maxima_resposta: dataMaxima,
                 data_geracao: new Date().toISOString(),
                 status: 'rascunho',
                 numero_termo: dados.numero_termo_notificacao
@@ -143,8 +145,8 @@ export default function GerenciarTermos() {
             return;
         }
 
-        if (!termoForm.numero_processo || !termoForm.data_protocolo) {
-            alert('Preencha todos os campos obrigatórios');
+        if (!termoForm.numero_processo) {
+            alert('Informe o número do processo');
             return;
         }
 
@@ -185,14 +187,27 @@ export default function GerenciarTermos() {
         return m?.nome || 'N/A';
     };
 
-    const getStatusBadge = (status) => {
+    const getStatusBadge = (status, termo) => {
+        if (status === 'rascunho') {
+            const semProtocolo = !termo.data_protocolo;
+            const semArquivo = !termo.arquivo_url;
+            
+            if (semProtocolo && semArquivo) {
+                return { label: 'Pendente - Protocolo e PDF', color: 'bg-orange-500' };
+            } else if (semProtocolo) {
+                return { label: 'Pendente - Protocolo', color: 'bg-yellow-500' };
+            } else if (semArquivo) {
+                return { label: 'Pendente - PDF', color: 'bg-yellow-500' };
+            }
+            return { label: 'Rascunho', color: 'bg-gray-500' };
+        }
+        
         const statusMap = {
-            rascunho: { label: 'Rascunho', color: 'bg-gray-500' },
             enviado: { label: 'Enviado', color: 'bg-blue-600' },
             recebido: { label: 'Recebido', color: 'bg-green-600' },
             respondido: { label: 'Respondido', color: 'bg-purple-600' }
         };
-        return statusMap[status] || statusMap.rascunho;
+        return statusMap[status] || { label: 'Rascunho', color: 'bg-gray-500' };
     };
 
     return (
@@ -301,12 +316,13 @@ export default function GerenciarTermos() {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <Label>Data de Protocolo do TN *</Label>
+                                    <Label>Data de Protocolo do TN</Label>
                                     <Input
                                         type="date"
                                         value={termoForm.data_protocolo}
                                         onChange={(e) => setTermoForm({ ...termoForm, data_protocolo: e.target.value })}
                                     />
+                                    <p className="text-xs text-gray-500 mt-1">Pode ser preenchida depois</p>
                                 </div>
                                 <div>
                                     <Label>Prazo para Resposta (dias)</Label>
@@ -355,6 +371,7 @@ export default function GerenciarTermos() {
                                 {termoForm.arquivo_url && !uploadingFile && (
                                     <p className="text-xs text-green-600 mt-1">✓ Arquivo enviado</p>
                                 )}
+                                <p className="text-xs text-gray-500 mt-1">Pode ser anexado depois</p>
                             </div>
 
                             <div>
@@ -378,7 +395,7 @@ export default function GerenciarTermos() {
                                 <Button
                                     onClick={handleCriarTermo}
                                     className="flex-1 bg-blue-600 hover:bg-blue-700"
-                                    disabled={!termoForm.numero_processo || !termoForm.data_protocolo}
+                                    disabled={!termoForm.numero_processo}
                                 >
                                     Criar Termo
                                 </Button>
@@ -429,25 +446,105 @@ export default function GerenciarTermos() {
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <Badge className={getStatusBadge(termo.status).color}>
-                                                    {getStatusBadge(termo.status).label}
+                                                <Badge className={getStatusBadge(termo.status, termo).color}>
+                                                    {getStatusBadge(termo.status, termo).label}
                                                 </Badge>
                                             </div>
                                         </div>
 
                                         <div className="flex gap-2 pt-3 border-t">
                                             {termo.status === 'rascunho' && (
-                                                <Button
-                                                    size="sm"
-                                                    className="bg-blue-600 hover:bg-blue-700"
-                                                    onClick={() => enviarTermoMutation.mutate({
-                                                        id: termo.id,
-                                                        data_envio: new Date().toISOString()
-                                                    })}
-                                                >
-                                                    <Send className="h-4 w-4 mr-1" />
-                                                    Enviar
-                                                </Button>
+                                                <>
+                                                    <Dialog>
+                                                        <DialogTrigger asChild>
+                                                            <Button size="sm" variant="outline">
+                                                                Completar Dados
+                                                            </Button>
+                                                        </DialogTrigger>
+                                                        <DialogContent className="max-w-2xl">
+                                                            <DialogHeader>
+                                                                <DialogTitle>Completar Dados do Termo</DialogTitle>
+                                                            </DialogHeader>
+                                                            <div className="space-y-4">
+                                                                <div>
+                                                                    <Label>Data de Protocolo do TN</Label>
+                                                                    <Input
+                                                                        type="date"
+                                                                        id={`protocolo-${termo.id}`}
+                                                                        defaultValue={termo.data_protocolo || ''}
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <Label>Termo de Notificação Assinado (PDF)</Label>
+                                                                    <Input
+                                                                        type="file"
+                                                                        accept=".pdf"
+                                                                        id={`arquivo-${termo.id}`}
+                                                                        onChange={async (e) => {
+                                                                            const file = e.target.files?.[0];
+                                                                            if (file) {
+                                                                                try {
+                                                                                    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                                                                                    const dataProtocolo = document.getElementById(`protocolo-${termo.id}`).value;
+                                                                                    let dataMaxima = termo.data_maxima_resposta;
+                                                                                    if (dataProtocolo) {
+                                                                                        const dp = new Date(dataProtocolo);
+                                                                                        dataMaxima = new Date(dp.getTime() + (termo.prazo_resposta_dias || 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                                                                                    }
+                                                                                    await base44.entities.TermoNotificacao.update(termo.id, {
+                                                                                        arquivo_url: file_url,
+                                                                                        data_protocolo: dataProtocolo || termo.data_protocolo,
+                                                                                        data_maxima_resposta: dataMaxima
+                                                                                    });
+                                                                                    queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                                                    alert('Dados atualizados!');
+                                                                                } catch (error) {
+                                                                                    alert('Erro ao enviar arquivo');
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                    {termo.arquivo_url && <p className="text-xs text-green-600 mt-1">✓ Arquivo já enviado</p>}
+                                                                </div>
+                                                                <Button
+                                                                    onClick={async () => {
+                                                                        const dataProtocolo = document.getElementById(`protocolo-${termo.id}`).value;
+                                                                        if (dataProtocolo && dataProtocolo !== termo.data_protocolo) {
+                                                                            const dp = new Date(dataProtocolo);
+                                                                            const dataMaxima = new Date(dp.getTime() + (termo.prazo_resposta_dias || 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                                                                            await base44.entities.TermoNotificacao.update(termo.id, {
+                                                                                data_protocolo: dataProtocolo,
+                                                                                data_maxima_resposta: dataMaxima
+                                                                            });
+                                                                            queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                                            alert('Data de protocolo atualizada!');
+                                                                        }
+                                                                    }}
+                                                                    className="w-full"
+                                                                >
+                                                                    Salvar Alterações
+                                                                </Button>
+                                                            </div>
+                                                        </DialogContent>
+                                                    </Dialog>
+                                                    <Button
+                                                        size="sm"
+                                                        className="bg-blue-600 hover:bg-blue-700"
+                                                        onClick={() => {
+                                                            if (!termo.data_protocolo || !termo.arquivo_url) {
+                                                                alert('Complete os dados do termo antes de enviar (Data de Protocolo e PDF)');
+                                                                return;
+                                                            }
+                                                            enviarTermoMutation.mutate({
+                                                                id: termo.id,
+                                                                data_envio: new Date().toISOString()
+                                                            });
+                                                        }}
+                                                    >
+                                                        <Send className="h-4 w-4 mr-1" />
+                                                        Enviar
+                                                    </Button>
+                                                </>
                                             )}
                                             {(termo.status === 'enviado' || termo.status === 'recebido') && !termo.data_recebimento_resposta && (
                                                 <Dialog>
