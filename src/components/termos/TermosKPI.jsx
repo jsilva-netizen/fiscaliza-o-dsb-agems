@@ -25,6 +25,7 @@ export default function TermosKPI({ termos }) {
     { label: 'Pendente TN Assinado', value: pendenteTNAssinado, color: 'bg-yellow-50', textColor: 'text-yellow-600', icon: AlertCircle },
     { label: 'Pendente Protocolo', value: pendenteProtocolo, color: 'bg-orange-50', textColor: 'text-orange-600', icon: Clock },
     { label: 'Ativos', value: ativos, color: 'bg-green-50', textColor: 'text-green-600', icon: FileText },
+    { label: 'Prazo Vencido', value: prazoVencido, color: 'bg-red-50', textColor: 'text-red-600', icon: AlertCircle },
     { label: 'Respondidos', value: respondidos, color: 'bg-purple-50', textColor: 'text-purple-600', icon: FileText },
   ];
 
