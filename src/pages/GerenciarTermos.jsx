@@ -884,8 +884,9 @@ export default function GerenciarTermos() {
                                                                               status: 'ativo'
                                                                           });
 
+                                                                          queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
                                                                           setProtocoloArquivoOpenId(null);
-                                                                          window.location.reload();
+                                                                          alert('Arquivo de protocolo salvo com sucesso!');
                                                                       } catch (error) {
                                                                           alert('Erro ao salvar: ' + error.message);
                                                                       } finally {
