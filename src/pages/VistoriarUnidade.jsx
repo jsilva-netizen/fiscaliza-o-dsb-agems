@@ -161,7 +161,7 @@ export default function VistoriarUnidade() {
             } else {
                 // Carregar contadores globais na primeira resposta (se não carregou)
                 let contadoresAtuais = contadores;
-                if (!contadoresCarregados && !contadoresAtuais) {
+                if (!contadoresCarregados || !contadoresAtuais) {
                     const contadoresCalc = await calcularProximaNumeracao(unidade.fiscalizacao_id, unidadeId, base44);
                     contadoresAtuais = contadoresCalc;
                     setContadores(contadoresCalc);
