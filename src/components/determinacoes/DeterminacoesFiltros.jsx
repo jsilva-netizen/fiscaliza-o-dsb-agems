@@ -30,7 +30,7 @@ export default function DeterminacoesFiltros({
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value={null}>Todos</SelectItem>
-                                {municipios.map(m => (
+                                {[...municipios].sort((a, b) => a.nome.localeCompare(b.nome)).map(m => (
                                     <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
                                 ))}
                             </SelectContent>

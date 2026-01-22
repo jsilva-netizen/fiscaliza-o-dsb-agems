@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, AlertCircle, CheckCircle, Clock, FileText } from 'lucide-react';
+import { ArrowLeft, AlertCircle, CheckCircle, Clock, FileText, ChevronDown, ChevronRight, MapPin, Building2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import ChartEvolucaoStatus from '@/components/determinacoes/ChartEvolucaoStatus';
@@ -15,6 +15,7 @@ import DeterminacoesFiltros from '@/components/determinacoes/DeterminacoesFiltro
 
 export default function AcompanhamentoDeterminacoes() {
     const [selectedDeterminacao, setSelectedDeterminacao] = useState(null);
+    const [expandedFiscalizacao, setExpandedFiscalizacao] = useState(null);
     const [filtros, setFiltros] = useState({
         municipio: '',
         servico: '',
@@ -104,6 +105,33 @@ export default function AcompanhamentoDeterminacoes() {
 
     const determRespondidas = respostas.filter(r => r.status !== 'pendente' && determFiltradas.find(d => d.id === r.determinacao_id)).length;
 
+    // Agrupar determinações por fiscalização
+    const fiscalizacoesComDeterminacoes = useMemo(() => {
+        const fiscPorId = {};
+        
+        determFiltradas.forEach(det => {
+            const unidade = unidades.find(u => u.id === det.unidade_fiscalizada_id);
+            if (!unidade) return;
+            
+            const fisc = fiscalizacoes.find(f => f.id === unidade.fiscalizacao_id);
+            if (!fisc) return;
+            
+            if (!fiscPorId[fisc.id]) {
+                fiscPorId[fisc.id] = {
+                    fiscalizacao: fisc,
+                    determinacoes: []
+                };
+            }
+            
+            fiscPorId[fisc.id].determinacoes.push({
+                ...det,
+                unidade: unidade
+            });
+        });
+        
+        return Object.values(fiscPorId);
+    }, [determFiltradas, unidades, fiscalizacoes]);
+
     // Agrupar determinações por status (com filtros)
     const determPorStatus = {
         pendente: determFiltradas.filter(d => d.status === 'pendente'),
@@ -120,6 +148,10 @@ export default function AcompanhamentoDeterminacoes() {
     const getMunicipio = (id) => {
         const m = municipios.find(m => m.id === id);
         return m?.nome || 'N/A';
+    };
+    
+    const getFiscalizacaoUnidades = (fiscId) => {
+        return unidades.filter(u => u.fiscalizacao_id === fiscId).length;
     };
 
     const getStatusBadge = (status) => {
@@ -219,7 +251,7 @@ export default function AcompanhamentoDeterminacoes() {
                     </Card>
                 </div>
 
-                {/* Tabs */}
+                {/* Lista de Fiscalizações com Determinações */}
                 <Tabs defaultValue="pendentes" className="w-full mb-8">
                     <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="pendentes">Pendentes ({determPorStatus.pendente.length})</TabsTrigger>
@@ -229,71 +261,216 @@ export default function AcompanhamentoDeterminacoes() {
                     </TabsList>
 
                     <TabsContent value="pendentes" className="space-y-4">
-                        {determPorStatus.pendente.map(det => {
-                            const dias = diasAteVencimento(det.data_limite);
-                            return (
-                                <Card key={det.id} className={dias < 7 ? 'border-orange-300 bg-orange-50' : ''}>
-                                    <CardContent className="p-4">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1">
-                                                <h3 className="font-semibold mb-2">{det.numero_determinacao}</h3>
-                                                <p className="text-sm text-gray-600 mb-1">{det.descricao}</p>
-                                                <p className="text-xs text-gray-500">Unidade: {getUnidadeNome(det.unidade_fiscalizada_id)}</p>
-                                                <p className="text-xs text-gray-500">Prazo: {new Date(det.data_limite).toLocaleDateString('pt-BR')}</p>
+                        {fiscalizacoesComDeterminacoes
+                            .filter(f => f.determinacoes.some(d => d.status === 'pendente'))
+                            .map(({ fiscalizacao, determinacoes: dets }) => {
+                                const detsPendentes = dets.filter(d => d.status === 'pendente');
+                                const isExpanded = expandedFiscalizacao === fiscalizacao.id;
+                                
+                                return (
+                                    <Card key={fiscalizacao.id} className="overflow-hidden">
+                                        <CardContent 
+                                            className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                                            onClick={() => setExpandedFiscalizacao(isExpanded ? null : fiscalizacao.id)}
+                                        >
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex items-start gap-3 flex-1">
+                                                    {isExpanded ? <ChevronDown className="h-5 w-5 text-gray-500 mt-1" /> : <ChevronRight className="h-5 w-5 text-gray-500 mt-1" />}
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <h3 className="font-semibold text-lg">{fiscalizacao.numero_termo}</h3>
+                                                            <span className="text-gray-500">•</span>
+                                                            <div className="flex items-center gap-1 text-gray-600">
+                                                                <MapPin className="h-4 w-4" />
+                                                                <span className="text-sm">{getMunicipio(fiscalizacao.municipio_id)}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-4 text-sm text-gray-600">
+                                                            <div className="flex items-center gap-1">
+                                                                <FileText className="h-4 w-4" />
+                                                                <span>Concluída em: {new Date(fiscalizacao.data_fim).toLocaleDateString('pt-BR')}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <Building2 className="h-4 w-4" />
+                                                                <span>{getFiscalizacaoUnidades(fiscalizacao.id)} unidades</span>
+                                                            </div>
+                                                            <div>
+                                                                <Badge variant="outline">{detsPendentes.length} determinações pendentes</Badge>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="text-right">
-                                                <Badge className={dias < 0 ? 'bg-red-600' : dias < 7 ? 'bg-orange-500' : 'bg-green-600'}>
-                                                    {dias < 0 ? `${Math.abs(dias)} dias vencido` : `${dias} dias`}
-                                                </Badge>
-                                                <Link to={createPageUrl(`AnalisarResposta?determinacao=${det.id}`)}>
-                                                    <Button size="sm" className="mt-2 w-full">Analisar</Button>
-                                                </Link>
+                                        </CardContent>
+                                        
+                                        {isExpanded && (
+                                            <div className="border-t bg-gray-50 p-4 space-y-3">
+                                                {detsPendentes.map(det => {
+                                                    const dias = diasAteVencimento(det.data_limite);
+                                                    return (
+                                                        <Card key={det.id} className={dias < 7 ? 'border-orange-300 bg-orange-50' : 'bg-white'}>
+                                                            <CardContent className="p-4">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div className="flex-1">
+                                                                        <h4 className="font-semibold mb-2">{det.numero_determinacao}</h4>
+                                                                        <p className="text-sm text-gray-600 mb-2">{det.descricao}</p>
+                                                                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
+                                                                            <p>Unidade: {det.unidade.nome_unidade || 'N/A'}</p>
+                                                                            <p>Município: {getMunicipio(fiscalizacao.municipio_id)}</p>
+                                                                            <p>Termo: {fiscalizacao.numero_termo}</p>
+                                                                            <p>Prazo: {new Date(det.data_limite).toLocaleDateString('pt-BR')}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-right ml-4">
+                                                                        <Badge className={dias < 0 ? 'bg-red-600' : dias < 7 ? 'bg-orange-500' : 'bg-green-600'}>
+                                                                            {dias < 0 ? `${Math.abs(dias)} dias vencido` : `${dias} dias`}
+                                                                        </Badge>
+                                                                        <Link to={createPageUrl(`AnalisarResposta?determinacao=${det.id}`)}>
+                                                                            <Button size="sm" className="mt-2 w-full">Analisar</Button>
+                                                                        </Link>
+                                                                    </div>
+                                                                </div>
+                                                            </CardContent>
+                                                        </Card>
+                                                    );
+                                                })}
                                             </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
+                                        )}
+                                    </Card>
+                                );
+                            })}
                     </TabsContent>
 
                     <TabsContent value="atendidas" className="space-y-4">
-                        {respostas.filter(r => r.status === 'atendida').map(resp => {
-                            const det = determinacoes.find(d => d.id === resp.determinacao_id);
-                            return (
-                                <Card key={resp.id} className="border-green-300 bg-green-50">
-                                    <CardContent className="p-4">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1">
-                                                <h3 className="font-semibold mb-2">{det?.numero_determinacao}</h3>
-                                                <p className="text-sm text-gray-600 mb-1">Respondida em: {new Date(resp.data_resposta).toLocaleDateString('pt-BR')}</p>
-                                                <p className="text-xs text-gray-500">{resp.descricao_atendimento}</p>
+                        {fiscalizacoesComDeterminacoes
+                            .filter(f => {
+                                const detsIds = f.determinacoes.map(d => d.id);
+                                return respostas.some(r => r.status === 'atendida' && detsIds.includes(r.determinacao_id));
+                            })
+                            .map(({ fiscalizacao, determinacoes: dets }) => {
+                                const detsAtendidas = respostas.filter(r => 
+                                    r.status === 'atendida' && dets.some(d => d.id === r.determinacao_id)
+                                );
+                                const isExpanded = expandedFiscalizacao === fiscalizacao.id;
+                                
+                                return (
+                                    <Card key={fiscalizacao.id} className="overflow-hidden border-green-200">
+                                        <CardContent 
+                                            className="p-4 cursor-pointer hover:bg-green-50 transition-colors"
+                                            onClick={() => setExpandedFiscalizacao(isExpanded ? null : fiscalizacao.id)}
+                                        >
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex items-start gap-3 flex-1">
+                                                    {isExpanded ? <ChevronDown className="h-5 w-5 text-gray-500 mt-1" /> : <ChevronRight className="h-5 w-5 text-gray-500 mt-1" />}
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <h3 className="font-semibold text-lg">{fiscalizacao.numero_termo}</h3>
+                                                            <span className="text-gray-500">•</span>
+                                                            <div className="flex items-center gap-1 text-gray-600">
+                                                                <MapPin className="h-4 w-4" />
+                                                                <span className="text-sm">{getMunicipio(fiscalizacao.municipio_id)}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-4 text-sm text-gray-600">
+                                                            <div>
+                                                                <Badge className="bg-green-600">{detsAtendidas.length} atendidas</Badge>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <Badge className="bg-green-600">Atendida</Badge>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
+                                        </CardContent>
+                                        
+                                        {isExpanded && (
+                                            <div className="border-t bg-green-50 p-4 space-y-3">
+                                                {detsAtendidas.map(resp => {
+                                                    const det = dets.find(d => d.id === resp.determinacao_id);
+                                                    return (
+                                                        <Card key={resp.id} className="bg-white border-green-300">
+                                                            <CardContent className="p-4">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div className="flex-1">
+                                                                        <h4 className="font-semibold mb-2">{det?.numero_determinacao}</h4>
+                                                                        <p className="text-sm text-gray-600 mb-1">Respondida em: {new Date(resp.data_resposta).toLocaleDateString('pt-BR')}</p>
+                                                                        <p className="text-xs text-gray-500">{resp.descricao_atendimento}</p>
+                                                                    </div>
+                                                                    <Badge className="bg-green-600">Atendida</Badge>
+                                                                </div>
+                                                            </CardContent>
+                                                        </Card>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </Card>
+                                );
+                            })}
                     </TabsContent>
 
                     <TabsContent value="nao_atendidas" className="space-y-4">
-                        {respostas.filter(r => r.status === 'nao_atendida').map(resp => {
-                            const det = determinacoes.find(d => d.id === resp.determinacao_id);
-                            return (
-                                <Card key={resp.id} className="border-red-300 bg-red-50">
-                                    <CardContent className="p-4">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1">
-                                                <h3 className="font-semibold mb-2">{det?.numero_determinacao}</h3>
-                                                <p className="text-sm text-red-700 font-medium">Não atendida no prazo</p>
-                                                <p className="text-xs text-gray-500 mt-1">Vencimento: {new Date(det?.data_limite).toLocaleDateString('pt-BR')}</p>
+                        {fiscalizacoesComDeterminacoes
+                            .filter(f => {
+                                const detsIds = f.determinacoes.map(d => d.id);
+                                return respostas.some(r => r.status === 'nao_atendida' && detsIds.includes(r.determinacao_id));
+                            })
+                            .map(({ fiscalizacao, determinacoes: dets }) => {
+                                const detsNaoAtendidas = respostas.filter(r => 
+                                    r.status === 'nao_atendida' && dets.some(d => d.id === r.determinacao_id)
+                                );
+                                const isExpanded = expandedFiscalizacao === fiscalizacao.id;
+                                
+                                return (
+                                    <Card key={fiscalizacao.id} className="overflow-hidden border-red-200">
+                                        <CardContent 
+                                            className="p-4 cursor-pointer hover:bg-red-50 transition-colors"
+                                            onClick={() => setExpandedFiscalizacao(isExpanded ? null : fiscalizacao.id)}
+                                        >
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex items-start gap-3 flex-1">
+                                                    {isExpanded ? <ChevronDown className="h-5 w-5 text-gray-500 mt-1" /> : <ChevronRight className="h-5 w-5 text-gray-500 mt-1" />}
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <h3 className="font-semibold text-lg">{fiscalizacao.numero_termo}</h3>
+                                                            <span className="text-gray-500">•</span>
+                                                            <div className="flex items-center gap-1 text-gray-600">
+                                                                <MapPin className="h-4 w-4" />
+                                                                <span className="text-sm">{getMunicipio(fiscalizacao.municipio_id)}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-4 text-sm text-gray-600">
+                                                            <div>
+                                                                <Badge className="bg-red-600">{detsNaoAtendidas.length} não atendidas</Badge>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <Badge className="bg-red-600">Não Atendida</Badge>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
+                                        </CardContent>
+                                        
+                                        {isExpanded && (
+                                            <div className="border-t bg-red-50 p-4 space-y-3">
+                                                {detsNaoAtendidas.map(resp => {
+                                                    const det = dets.find(d => d.id === resp.determinacao_id);
+                                                    return (
+                                                        <Card key={resp.id} className="bg-white border-red-300">
+                                                            <CardContent className="p-4">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div className="flex-1">
+                                                                        <h4 className="font-semibold mb-2">{det?.numero_determinacao}</h4>
+                                                                        <p className="text-sm text-red-700 font-medium">Não atendida no prazo</p>
+                                                                        <p className="text-xs text-gray-500 mt-1">Vencimento: {new Date(det?.data_limite).toLocaleDateString('pt-BR')}</p>
+                                                                    </div>
+                                                                    <Badge className="bg-red-600">Não Atendida</Badge>
+                                                                </div>
+                                                            </CardContent>
+                                                        </Card>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </Card>
+                                );
+                            })}
                     </TabsContent>
 
                     <TabsContent value="autos" className="space-y-4">
