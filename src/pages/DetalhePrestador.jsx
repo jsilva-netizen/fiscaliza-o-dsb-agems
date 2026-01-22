@@ -254,7 +254,7 @@ export default function DetalhePrestador() {
             {/* Content */}
             <div className="max-w-6xl mx-auto px-4 py-6">
                 {/* Info Cards */}
-                <div className="grid grid-cols-5 gap-4 mb-6">
+                <div className="grid grid-cols-6 gap-4 mb-6">
                     <Card>
                         <CardContent className="p-4 text-center">
                             <p className="text-sm text-gray-600 mb-1">Fiscalizações</p>
@@ -265,6 +265,12 @@ export default function DetalhePrestador() {
                         <CardContent className="p-4 text-center">
                             <p className="text-sm text-gray-600 mb-1">Finalizadas</p>
                             <p className="text-2xl font-bold text-green-600">{fiscalizacoes.filter(f => f.status === 'finalizada').length}</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent className="p-4 text-center">
+                            <p className="text-sm text-gray-600 mb-1">NCs</p>
+                            <p className="text-2xl font-bold text-red-600">{ncs.length}</p>
                         </CardContent>
                     </Card>
                     <Card>
