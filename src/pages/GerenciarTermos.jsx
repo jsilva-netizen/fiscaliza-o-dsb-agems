@@ -33,6 +33,7 @@ export default function GerenciarTermos() {
     const [deleteConfirmation, setDeleteConfirmation] = useState({ open: false, termoId: null, step: 1, inputValue: '' });
     const [termoDetalhes, setTermoDetalhes] = useState(null);
     const [uploadingProtocolo, setUploadingProtocolo] = useState(false);
+    const [termoAssinadoTemp, setTermoAssinadoTemp] = useState(null);
 
     const { data: fiscalizacoes = [] } = useQuery({
         queryKey: ['fiscalizacoes'],
@@ -377,7 +378,12 @@ export default function GerenciarTermos() {
                 </Dialog>
 
                 {/* Dialog de Detalhes do Termo */}
-                <Dialog open={termoDetalhes !== null} onOpenChange={(open) => !open && setTermoDetalhes(null)}>
+                <Dialog open={termoDetalhes !== null} onOpenChange={(open) => {
+          if (!open) {
+              setTermoDetalhes(null);
+              setTermoAssinadoTemp(null);
+          }
+      }}>
                     <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle>Detalhes do Termo de Notificação</DialogTitle>
@@ -423,12 +429,7 @@ export default function GerenciarTermos() {
                                                     setUploadingFile(true);
                                                     try {
                                                         const { file_url } = await base44.integrations.Core.UploadFile({ file });
-                                                        await base44.entities.TermoNotificacao.update(termoDetalhes.id, {
-                                                            arquivo_url: file_url
-                                                        });
-                                                        queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
-                                                        setTermoDetalhes({ ...termoDetalhes, arquivo_url: file_url });
-                                                        alert('Termo assinado anexado com sucesso!');
+                                                        setTermoAssinadoTemp(file_url);
                                                     } catch (error) {
                                                         alert('Erro ao enviar arquivo');
                                                     } finally {
@@ -439,6 +440,29 @@ export default function GerenciarTermos() {
                                             disabled={uploadingFile}
                                         />
                                         {uploadingFile && <p className="text-xs text-gray-500 mt-1">Enviando arquivo...</p>}
+                                        {termoAssinadoTemp && !uploadingFile && (
+                                            <p className="text-xs text-green-600 mt-1">✓ Arquivo carregado. Clique em "Salvar" para confirmar.</p>
+                                        )}
+                                        {termoAssinadoTemp && (
+                                            <Button
+                                                onClick={async () => {
+                                                    try {
+                                                        await base44.entities.TermoNotificacao.update(termoDetalhes.id, {
+                                                            arquivo_url: termoAssinadoTemp
+                                                        });
+                                                        queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                        setTermoDetalhes({ ...termoDetalhes, arquivo_url: termoAssinadoTemp });
+                                                        setTermoAssinadoTemp(null);
+                                                        alert('Termo assinado salvo com sucesso!');
+                                                    } catch (error) {
+                                                        alert('Erro ao salvar termo');
+                                                    }
+                                                }}
+                                                className="w-full"
+                                            >
+                                                Salvar Termo Assinado
+                                            </Button>
+                                        )}
                                         {termoDetalhes.arquivo_url && (
                                             <Button
                                                 variant="outline"
