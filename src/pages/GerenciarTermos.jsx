@@ -878,13 +878,16 @@ export default function GerenciarTermos() {
 
                                                                           const dmax_str = `${dmax.getFullYear()}-${String(dmax.getMonth() + 1).padStart(2, '0')}-${String(dmax.getDate()).padStart(2, '0')}`;
 
-                                                                          await base44.entities.TermoNotificacao.update(termo.id, {
+                                                                          const termoAtualizado = await base44.entities.TermoNotificacao.update(termo.id, {
                                                                               arquivo_protocolo_url: file_url,
                                                                               data_maxima_resposta: dmax_str,
                                                                               status: 'ativo'
                                                                           });
 
-                                                                          queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                                          queryClient.setQueryData(['termos-notificacao'], (old) => {
+                                                                              return old.map(t => t.id === termo.id ? termoAtualizado : t);
+                                                                          });
+
                                                                           setProtocoloArquivoOpenId(null);
                                                                           alert('Arquivo de protocolo salvo com sucesso!');
                                                                       } catch (error) {
