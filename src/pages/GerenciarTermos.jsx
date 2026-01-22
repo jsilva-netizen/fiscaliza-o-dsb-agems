@@ -41,7 +41,9 @@ export default function GerenciarTermos() {
     const [uploadingFile, setUploadingFile] = useState(false);
     const [deleteConfirmation, setDeleteConfirmation] = useState({ open: false, termoId: null, step: 1, inputValue: '' });
     const [termoDetalhes, setTermoDetalhes] = useState(null);
+    const [uploadingFile, setUploadingFile] = useState(false);
     const [uploadingProtocolo, setUploadingProtocolo] = useState(false);
+    const [dialogProtocoloOpen, setDialogProtocoloOpen] = useState(false);
     const [termoAssinadoTemp, setTermoAssinadoTemp] = useState(null);
     const [protocoNoTemp, setProtocoloTemp] = useState(null);
 
