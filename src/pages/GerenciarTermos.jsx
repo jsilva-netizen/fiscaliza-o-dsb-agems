@@ -784,12 +784,15 @@ export default function GerenciarTermos() {
                                                                       try {
                                                                           setUploadingProtocolo(true);
                                                                           const { file_url } = await base44.integrations.Core.UploadFile({ file });
-                                                                          await base44.entities.TermoNotificacao.update(termo.id, {
+                                                                          const termoAtualizado = await base44.entities.TermoNotificacao.update(termo.id, {
                                                                               data_protocolo: data,
                                                                               arquivo_protocolo_url: file_url,
                                                                               status: 'ativo'
                                                                           });
-                                                                          queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                                          // Atualizar cache local imediatamente
+                                                                          queryClient.setQueryData(['termos-notificacao'], (old) => {
+                                                                              return old.map(t => t.id === termo.id ? termoAtualizado : t);
+                                                                          });
                                                                           alert('Protocolo salvo com sucesso!');
                                                                       } catch (error) {
                                                                           alert('Erro ao salvar: ' + error.message);
