@@ -820,13 +820,18 @@ export default function GerenciarTermos() {
 
                                                                           console.log('Protocolo - Retorno:', termoAtualizado);
 
-                                                                          // Atualizar cache e fechar dialog
-                                                                          queryClient.setQueryData(['termos-notificacao'], (old) => {
-                                                                              return old.map(t => t.id === termo.id ? termoAtualizado : t);
-                                                                          });
+                                                                          // Atualizar cache e forçar refetch
+                                                                                          queryClient.setQueryData(['termos-notificacao'], (old) => {
+                                                                                              return old.map(t => t.id === termo.id ? termoAtualizado : t);
+                                                                                          });
 
-                                                                          setProtocoloDialogOpen(null);
-                                                                          alert('Protocolo salvo com sucesso!');
+                                                                                          await queryClient.refetchQueries({ 
+                                                                                              queryKey: ['termos-notificacao'],
+                                                                                              exact: true 
+                                                                                          });
+
+                                                                                          setProtocoloDialogOpen(null);
+                                                                                          alert('Protocolo salvo com sucesso!');
                                                                       } catch (error) {
                                                                           console.error('Erro:', error);
                                                                           alert('Erro ao salvar: ' + error.message);
