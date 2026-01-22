@@ -907,7 +907,7 @@ export default function GerenciarTermos() {
                                               )}
 
                                               {termo.data_protocolo && termo.arquivo_protocolo_url && !termo.data_recebimento_resposta && (
-                                                <Dialog>
+                                                <Dialog open={respostaOpenId === termo.id} onOpenChange={(open) => setRespostaOpenId(open ? termo.id : null)}>
                                                     <DialogTrigger asChild>
                                                         <Button size="sm" variant={verificaPrazoVencido(termo) ? "destructive" : "outline"}>
                                                             {verificaPrazoVencido(termo) ? '⚠ Resposta Atrasada' : 'Registrar Resposta'}
@@ -955,17 +955,21 @@ export default function GerenciarTermos() {
                                                                         const dataMax = new Date(termo.data_maxima_resposta);
                                                                         const dataReceb = new Date(data);
 
-                                                                        await base44.entities.TermoNotificacao.update(termo.id, {
+                                                                        const termoAtualizado = await base44.entities.TermoNotificacao.update(termo.id, {
                                                                             data_recebimento_resposta: data,
                                                                             arquivo_resposta_url: file_url,
                                                                             recebida_no_prazo: dataReceb <= dataMax,
                                                                             status: 'respondido'
                                                                         });
 
-                                                                        await queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
-                                                                        alert('Resposta registrada!');
+                                                                        queryClient.setQueryData(['termos-notificacao'], (old) => {
+                                                                            return old.map(t => t.id === termo.id ? termoAtualizado : t);
+                                                                        });
+
+                                                                        setRespostaOpenId(null);
+                                                                        alert('Resposta registrada com sucesso!');
                                                                     } catch (error) {
-                                                                        alert('Erro: ' + error.message);
+                                                                        alert('Erro ao salvar: ' + error.message);
                                                                     } finally {
                                                                         setUploadingResposta(false);
                                                                     }
