@@ -575,8 +575,8 @@ export default function GerenciarTermos() {
                 {/* Lista de Termos Criados */}
                 <div className="space-y-4">
                     {termos.map(termo => (
-                                <Card key={termo.id} className="cursor-pointer hover:shadow-lg transition-shadow">
-                                    <CardContent className="p-4" onClick={() => setTermoDetalhes(termo)}>
+                                <Card key={termo.id} className="hover:shadow-lg transition-shadow">
+                                    <CardContent className="p-4">
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex-1">
                                                 <h3 className="font-semibold text-lg">{termo.numero_termo_notificacao || termo.numero_termo}</h3>
@@ -620,7 +620,14 @@ export default function GerenciarTermos() {
                                             </div>
                                         </div>
 
-                                        <div className="flex gap-2 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
+                                        <div className="flex gap-2 pt-3 border-t">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => setTermoDetalhes(termo)}
+                                            >
+                                                Editar
+                                            </Button>
                                             {termo.data_protocolo && termo.arquivo_protocolo_url && !termo.data_recebimento_resposta && (
                                                 <Dialog>
                                                     <DialogTrigger asChild>
