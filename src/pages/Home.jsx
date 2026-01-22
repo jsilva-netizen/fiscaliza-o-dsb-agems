@@ -70,16 +70,6 @@ export default function Home() {
                 {/* Menu Grid */}
                 <h2 className="text-white text-lg font-semibold mb-4">Menu Principal</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <Link to={createPageUrl('Municipios')}>
-                        <Card className="bg-white/10 hover:bg-white/20 transition-all cursor-pointer border-white/20 h-full">
-                            <CardContent className="p-4 text-center">
-                                <MapPin className="h-8 w-8 text-blue-300 mx-auto mb-2" />
-                                <h3 className="text-white font-medium text-sm">Municípios</h3>
-                                <p className="text-blue-300 text-xs">79 cadastrados</p>
-                            </CardContent>
-                        </Card>
-                    </Link>
-
                     <Link to={createPageUrl('TiposUnidade')}>
                         <Card className="bg-white/10 hover:bg-white/20 transition-all cursor-pointer border-white/20 h-full">
                             <CardContent className="p-4 text-center">
