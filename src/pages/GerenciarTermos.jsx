@@ -335,10 +335,8 @@ export default function GerenciarTermos() {
                 </Dialog>
 
                 {/* Lista de Termos Criados */}
-                <div>
-                        <h2 className="text-xl font-semibold mb-4">Termos Criados</h2>
-                        <div className="space-y-4">
-                            {termos.map(termo => (
+                <div className="space-y-4">
+                    {termos.map(termo => (
                                 <Card key={termo.id}>
                                     <CardContent className="p-4">
                                         <div className="flex justify-between items-start mb-3">
@@ -447,10 +445,8 @@ export default function GerenciarTermos() {
                                             )}
                                         </div>
                                     </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    </div>
+                        </Card>
+                    ))}
                 </div>
             </div>
         </div>
