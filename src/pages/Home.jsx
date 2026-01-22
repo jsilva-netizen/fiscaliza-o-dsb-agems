@@ -182,10 +182,9 @@ export default function Home() {
                             </Card>
                         </Link>
                     )}
-                    </div>
+                </div>
                 </>
                 )}
-
             </div>
 
             {/* Footer */}
