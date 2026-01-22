@@ -222,9 +222,9 @@ export default function GerenciarTermos() {
                                 </div>
                                 <div>
                                     <Label>Município *</Label>
-                                    <Select value={termoForm.municipio_id} onValueChange={(v) => setTermoForm({ ...termoForm, municipio_id: v })}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecione" />
+                                    <Select value={termoForm.municipio_id} onValueChange={(v) => setTermoForm({ ...termoForm, municipio_id: v })} disabled>
+                                        <SelectTrigger className="bg-gray-100">
+                                            <SelectValue placeholder="Selecionado automaticamente" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {municipios.map(m => (
@@ -294,7 +294,13 @@ export default function GerenciarTermos() {
                                 <Label>Fiscalização</Label>
                                 <Select 
                                     value={selectedFiscalizacao?.id || ''} 
-                                    onValueChange={(v) => setSelectedFiscalizacao(fiscalizacoes.find(f => f.id === v))}
+                                    onValueChange={(v) => {
+                                        const fisc = fiscalizacoes.find(f => f.id === v);
+                                        setSelectedFiscalizacao(fisc);
+                                        if (fisc) {
+                                            setTermoForm({ ...termoForm, municipio_id: fisc.municipio_id });
+                                        }
+                                    }}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Selecione uma fiscalização" />
@@ -302,7 +308,7 @@ export default function GerenciarTermos() {
                                     <SelectContent>
                                         {fiscalizacoes.filter(f => f.status === 'finalizada').map(f => (
                                             <SelectItem key={f.id} value={f.id}>
-                                                {f.numero_termo} - {getPrestadorNome(f.prestador_servico_id)}
+                                                {f.numero_termo} - {getMunicipioNome(f.municipio_id)} - {getPrestadorNome(f.prestador_servico_id)}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
