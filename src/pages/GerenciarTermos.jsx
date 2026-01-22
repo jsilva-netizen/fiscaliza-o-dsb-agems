@@ -867,11 +867,19 @@ export default function GerenciarTermos() {
                                                                               } 
                                                                           }));
 
-                                                                          // Calcular data máxima
-                                                                          const dataProtocolo = new Date(data);
+                                                                          // Calcular data máxima (sem problemas de timezone)
+                                                                          // Splits e recombina para evitar perda de data
+                                                                          const [ano, mes, dia] = data.split('-');
+                                                                          const dataProtocolo = new Date(ano, parseInt(mes) - 1, parseInt(dia));
                                                                           const prazoResposta = termo.prazo_resposta_dias || 30;
-                                                                          const dataMaximaResposta = new Date(dataProtocolo.getTime() + prazoResposta * 24 * 60 * 60 * 1000);
-                                                                          const dataMaximaFormatada = dataMaximaResposta.toISOString().split('T')[0];
+                                                                          const dataMaximaResposta = new Date(dataProtocolo);
+                                                                          dataMaximaResposta.setDate(dataMaximaResposta.getDate() + prazoResposta);
+
+                                                                          // Formatar data máxima
+                                                                          const anoMax = dataMaximaResposta.getFullYear();
+                                                                          const mesMax = String(dataMaximaResposta.getMonth() + 1).padStart(2, '0');
+                                                                          const diaMax = String(dataMaximaResposta.getDate()).padStart(2, '0');
+                                                                          const dataMaximaFormatada = `${anoMax}-${mesMax}-${diaMax}`;
 
                                                                           console.log('Salvando protocolo:', {
                                                                               id: termo.id,
@@ -891,10 +899,14 @@ export default function GerenciarTermos() {
 
                                                                           console.log('Termo atualizado:', termoAtualizado);
 
-                                                                          // Atualizar cache
+                                                                          // Atualizar cache com o termo atualizado
                                                                           queryClient.setQueryData(['termos-notificacao'], (old) => {
+                                                                              if (!old) return [termoAtualizado];
                                                                               return old.map(t => t.id === termo.id ? termoAtualizado : t);
                                                                           });
+
+                                                                          // Forçar refetch para garantir consistência
+                                                                          await queryClient.refetchQueries({ queryKey: ['termos-notificacao'] });
 
                                                                           // Limpar state e fechar
                                                                           setProtocoloCardTemp(prev => ({ 
