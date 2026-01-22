@@ -804,9 +804,17 @@ export default function GerenciarTermos() {
                                                                       try {
                                                                           setUploadingProtocolo(true);
                                                                           const { file_url } = await base44.integrations.Core.UploadFile({ file });
+
+                                                                          // Calcular data máxima
+                                                                          let dataMaxima = null;
+                                                                          const dp = new Date(data);
+                                                                          const prazo = termo.prazo_resposta_dias || 30;
+                                                                          dataMaxima = new Date(dp.getTime() + prazo * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
                                                                           const termoAtualizado = await base44.entities.TermoNotificacao.update(termo.id, {
                                                                               data_protocolo: data,
                                                                               arquivo_protocolo_url: file_url,
+                                                                              data_maxima_resposta: dataMaxima,
                                                                               status: 'ativo'
                                                                           });
                                                                           // Atualizar cache local imediatamente
