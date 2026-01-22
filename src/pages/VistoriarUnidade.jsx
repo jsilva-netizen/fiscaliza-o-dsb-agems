@@ -279,21 +279,21 @@ export default function VistoriarUnidade() {
 
     const adicionarRecomendacaoMutation = useMutation({
         mutationFn: async (texto) => {
-            // Usar contadores para numeração contínua (já carregados na primeira resposta)
-            const numeroRecomendacao = gerarNumeroRecomendacao(contadores);
-            
+            // Recarregar recomendações atuais da unidade para calcular o próximo número
+            const recsUnidade = await base44.entities.Recomendacao.filter({ 
+                unidade_fiscalizada_id: unidadeId 
+            });
+
+            // Calcular próximo número baseado em recomendações anteriores + recomendações desta unidade
+            const proximoNumero = contadores.R + recsUnidade.length + 1;
+            const numeroRecomendacao = `R${proximoNumero}`;
+
             await base44.entities.Recomendacao.create({
                 unidade_fiscalizada_id: unidadeId,
                 numero_recomendacao: numeroRecomendacao,
                 descricao: texto,
                 origem: 'manual'
             });
-            
-            // Incrementar contador de recomendações (apenas localmente)
-            setContadores(prev => ({
-                ...prev,
-                R: prev.R + 1
-            }));
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
