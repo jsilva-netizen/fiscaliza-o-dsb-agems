@@ -884,11 +884,8 @@ export default function GerenciarTermos() {
                                                                               status: 'ativo'
                                                                           });
 
-                                                                          // Refetch imediato para forçar re-render
-                                                                          await queryClient.refetchQueries({ queryKey: ['termos-notificacao'] });
-
                                                                           setProtocoloArquivoOpenId(null);
-                                                                          alert('Arquivo de protocolo salvo com sucesso!');
+                                                                          window.location.reload();
                                                                       } catch (error) {
                                                                           alert('Erro ao salvar: ' + error.message);
                                                                       } finally {
