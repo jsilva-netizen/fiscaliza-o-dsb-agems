@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LabelList } from 'recharts';
 
 const COLORS = ['#22c55e', '#ef4444', '#3b82f6', '#f59e0b'];
 const SERVICO_COLORS = {
@@ -339,16 +339,11 @@ export default function Relatorios() {
                                         <XAxis dataKey="servico" tick={{ fontSize: 9 }} angle={-15} textAnchor="end" height={80} />
                                         <YAxis />
                                         <Tooltip />
-                                        <Legend />
-                                        {dadosServico.map((item, index) => (
-                                            <Bar 
-                                                key={item.servico} 
-                                                dataKey="quantidade" 
-                                                fill={SERVICO_COLORS[item.servico] || '#3b82f6'} 
-                                                name={item.servico}
-                                                data={[item]}
-                                            />
-                                        ))}
+                                        <Bar dataKey="quantidade" name="Fiscalizações">
+                                            {dadosServico.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={SERVICO_COLORS[entry.servico] || '#3b82f6'} />
+                                            ))}
+                                        </Bar>
                                     </BarChart>
                                 </ResponsiveContainer>
                             ) : (
