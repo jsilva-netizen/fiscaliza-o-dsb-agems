@@ -337,7 +337,7 @@ export default function Relatorios() {
                                     <BarChart data={dadosServico}>
                                         <CartesianGrid strokeDasharray="3 3" />
                                         <XAxis dataKey="servico" tick={{ fontSize: 9 }} angle={-15} textAnchor="end" height={80} />
-                                        <YAxis />
+                                        <YAxis allowDecimals={false} />
                                         <Tooltip />
                                         <Bar dataKey="quantidade" name="Fiscalizações">
                                             {dadosServico.map((entry, index) => (
