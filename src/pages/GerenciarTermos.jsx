@@ -13,11 +13,20 @@ import { ArrowLeft, FileText, Download, Plus, Trash2, AlertTriangle } from 'luci
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import TermosKPI from '../components/termos/TermosKPI';
+import TermosFiltros from '../components/termos/TermosFiltros';
 
 export default function GerenciarTermos() {
     const queryClient = useQueryClient();
     const [selectedFiscalizacao, setSelectedFiscalizacao] = useState(null);
     const [showDialog, setShowDialog] = useState(false);
+    const [filtros, setFiltros] = useState({
+        camaraTecnica: '',
+        status: '',
+        dataInicio: '',
+        dataFim: '',
+        busca: ''
+    });
     const [termoForm, setTermoForm] = useState({
         numero_termo_notificacao: '',
         municipio_id: '',
@@ -213,6 +222,22 @@ export default function GerenciarTermos() {
         return m?.nome || 'N/A';
     };
 
+    const getStatusFluxo = (termo) => {
+        if (!termo.arquivo_url) return 'pendente_tn';
+        if (!termo.data_protocolo || !termo.arquivo_protocolo_url) return 'pendente_protocolo';
+        if (!termo.data_recebimento_resposta) return 'ativo';
+        return 'respondido';
+    };
+
+    const termosFiltrados = termos.filter(termo => {
+        if (filtros.busca && !termo.numero_termo_notificacao?.toLowerCase().includes(filtros.busca.toLowerCase())) return false;
+        if (filtros.camaraTecnica && termo.camara_tecnica !== filtros.camaraTecnica) return false;
+        if (filtros.status && getStatusFluxo(termo) !== filtros.status) return false;
+        if (filtros.dataInicio && new Date(termo.data_geracao) < new Date(filtros.dataInicio)) return false;
+        if (filtros.dataFim && new Date(termo.data_geracao) > new Date(filtros.dataFim)) return false;
+        return true;
+    });
+
     const getStatusBadge = (status, termo) => {
         const semTermoAssinado = !termo.arquivo_url;
         const semProtocolo = !termo.data_protocolo;
@@ -260,6 +285,12 @@ export default function GerenciarTermos() {
                         Novo Termo
                     </Button>
                 </div>
+
+                {/* Dashboard KPI */}
+                <TermosKPI termos={termos} />
+
+                {/* Filtros */}
+                <TermosFiltros onFilterChange={setFiltros} filtros={filtros} />
 
                 {/* Dialog de Criar Termo */}
                 <Dialog open={showDialog} onOpenChange={setShowDialog}>
@@ -583,7 +614,15 @@ export default function GerenciarTermos() {
 
                 {/* Lista de Termos Criados */}
                 <div className="space-y-4">
-                    {termos.map(termo => (
+                    {termosFiltrados.length === 0 ? (
+                        <Card className="p-8">
+                            <div className="text-center text-gray-500">
+                                <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                                <p>Nenhum termo encontrado com os filtros aplicados</p>
+                            </div>
+                        </Card>
+                    ) : (
+                        termosFiltrados.map(termo => (
                                 <Card key={termo.id} className="hover:shadow-lg transition-shadow">
                                     <CardContent className="p-4">
                                         <div className="flex justify-between items-start mb-3">
@@ -810,9 +849,11 @@ export default function GerenciarTermos() {
                                                 </AlertDialogContent>
                                             </AlertDialog>
                                         </div>
-                                    </CardContent>
-                        </Card>
-                    ))}
+                                        </CardContent>
+                                        </Card>
+                                        ))
+                                        )}
+                                        </div>
                 </div>
             </div>
         </div>
