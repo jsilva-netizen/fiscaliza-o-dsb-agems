@@ -159,15 +159,17 @@ export default function Home() {
                         </Card>
                     </Link>
 
-                    <Link to={createPageUrl('GerenciarUsuarios')}>
-                        <Card className="bg-white/10 hover:bg-white/20 transition-all cursor-pointer border-white/20 h-full">
-                            <CardContent className="p-4 text-center">
-                                <Users className="h-8 w-8 text-blue-300 mx-auto mb-2" />
-                                <h3 className="text-white font-medium text-sm">Usuários</h3>
-                                <p className="text-blue-300 text-xs">Gestão e Permissões</p>
-                            </CardContent>
-                        </Card>
-                    </Link>
+                    {isAdmin && (
+                        <Link to={createPageUrl('GerenciarUsuarios')}>
+                            <Card className="bg-white/10 hover:bg-white/20 transition-all cursor-pointer border-white/20 h-full">
+                                <CardContent className="p-4 text-center">
+                                    <Users className="h-8 w-8 text-blue-300 mx-auto mb-2" />
+                                    <h3 className="text-white font-medium text-sm">Usuários</h3>
+                                    <p className="text-blue-300 text-xs">Gestão e Permissões</p>
+                                </CardContent>
+                            </Card>
+                        </Link>
+                    )}
                     </div>
 
 
