@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
                         // Criar novo tipo
                         const novoTipo = await base44.asServiceRole.entities.TipoUnidade.create({
                             nome: tipo_unidade_nome,
-                            descricao: `Tipo: ${tipo_unidade_codigo}`,
+                            tipo_unidade_codigo: tipo_unidade_codigo || '',
                             servicos_aplicaveis: servico ? [servico] : [],
                             ativo: true
                         });
