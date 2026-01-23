@@ -34,6 +34,11 @@ export default function AnaliseManifestacao() {
         queryFn: () => base44.entities.Determinacao.list()
     });
 
+    const { data: unidadesFiscalizadas = [] } = useQuery({
+        queryKey: ['unidades-fiscalizadas'],
+        queryFn: () => base44.entities.UnidadeFiscalizada.list()
+    });
+
     const { data: prestadores = [] } = useQuery({
         queryKey: ['prestadores'],
         queryFn: () => base44.entities.PrestadorServico.list()
@@ -61,7 +66,11 @@ export default function AnaliseManifestacao() {
 
     const getDeterminacoesPorTermo = (termo) => {
         if (!termo.fiscalizacao_id) return [];
-        return determinacoes.filter(d => d.fiscalizacao_id === termo.fiscalizacao_id);
+        // Buscar unidades desta fiscalização
+        const unidadesDaFisc = unidadesFiscalizadas.filter(u => u.fiscalizacao_id === termo.fiscalizacao_id);
+        const unidadeIds = unidadesDaFisc.map(u => u.id);
+        // Buscar determinações das unidades
+        return determinacoes.filter(d => unidadeIds.includes(d.unidade_fiscalizada_id));
     };
 
     const getStatusDeterminacao = (detId) => {
