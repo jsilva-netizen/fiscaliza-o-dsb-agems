@@ -20,21 +20,33 @@ export default function FluxoUploadDocumentos({ auto, onUpdate }) {
             const { file_url } = await base44.integrations.Core.UploadFile({ file });
             
             const updateData = {};
+            let novoStatus = auto.status;
+
             if (tipoArquivo === 'ai_assinado') {
                 updateData.arquivo_url = file_url;
             } else if (tipoArquivo === 'protocolo_oficio') {
                 updateData.arquivo_protocolo_oficio = file_url;
             } else if (tipoArquivo === 'protocolo_ai_recebido') {
                 updateData.arquivo_protocolo_ai_recebido = file_url;
+                // Se tem ambos os protocolos, muda para "enviado"
+                if (auto.arquivo_protocolo_oficio || updateData.arquivo_protocolo_oficio) {
+                    novoStatus = 'enviado';
+                }
             } else if (tipoArquivo === 'defesa_oficio') {
                 updateData.arquivo_defesa_oficio = file_url;
             } else if (tipoArquivo === 'defesa_arquivo') {
                 updateData.arquivo_defesa = file_url;
+                // Se tem ambos os de defesa, muda para "em_analise"
+                if (auto.arquivo_defesa_oficio || updateData.arquivo_defesa_oficio) {
+                    novoStatus = 'em_analise';
+                }
             }
+
+            updateData.status = novoStatus;
 
             await base44.entities.AutoInfracao.update(auto.id, updateData);
             onUpdate();
-            alert(`Arquivo de ${tipoArquivo} salvo com sucesso!`);
+            alert(`Arquivo salvo com sucesso!`);
         } catch (error) {
             alert('Erro ao fazer upload');
         } finally {
