@@ -1038,7 +1038,7 @@ export default function GerenciarTermos() {
                                                               </div>
 
                                                               {/* Download Buttons - Vertical Stack */}
-                                                              <div className="flex flex-col gap-2 pt-3 border-t">
+                                                              <div className="flex flex-col gap-2">
                                                               {termo.arquivo_url && (
                                                               <Button
                                                               size="sm"
