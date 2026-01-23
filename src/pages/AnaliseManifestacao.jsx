@@ -343,6 +343,137 @@ export default function AnaliseManifestacao() {
             yPos += cellLineHeight + 5;
         });
 
+        return numeroAM;
+    };
+
+    const baixarAnaliseManifestacao = async (termo) => {
+        const dets = getDeterminacoesPorTermo(termo).sort((a, b) => {
+            const numA = parseInt(a.numero_determinacao?.replace(/\D/g, '') || '0');
+            const numB = parseInt(b.numero_determinacao?.replace(/\D/g, '') || '0');
+            return numA - numB;
+        });
+        
+        const resp = respostasDeterminacao.filter(r => 
+            dets.map(d => d.id).includes(r.determinacao_id)
+        );
+        
+        const numeroAM = termo.numero_am;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 12;
+        let yPos = margin;
+
+        // Título
+        doc.setFontSize(16);
+        doc.setFont(undefined, 'bold');
+        doc.text(numeroAM, margin, yPos);
+        yPos += 8;
+
+        // Informações do TN
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        doc.text(`TN: ${termo.numero_termo_notificacao}`, margin, yPos);
+        yPos += 5;
+        doc.text(`Município: ${getMunicipioNome(termo.municipio_id)} | Prestador: ${getPrestadorNome(termo.prestador_servico_id)}`, margin, yPos);
+        yPos += 8;
+
+        // Buscar números dos AIs gerados
+        const autos = await base44.entities.AutoInfracao.list();
+        const autosPorDeterminacao = {};
+        autos.forEach(auto => {
+            if (auto.determinacao_id) {
+                autosPorDeterminacao[auto.determinacao_id] = auto.numero_auto;
+            }
+        });
+
+        // Processar cada determinação
+        dets.forEach((det, detIndex) => {
+            const resposta = resp.find(r => r.determinacao_id === det.id);
+            
+            // Verificar espaço para nova linha (aprox 40mm por determinação)
+            if (yPos + 40 > pageHeight - 10) {
+                doc.addPage();
+                yPos = margin;
+            }
+
+            const colLeft = margin;
+            const colWidth = pageWidth - (2 * margin);
+            const cellLineHeight = 5;
+            
+            // Cabeçalho da determinação
+            doc.setFillColor(180, 180, 180);
+            doc.rect(colLeft, yPos, colWidth, cellLineHeight, 'F');
+            doc.setFont(undefined, 'bold');
+            doc.setFontSize(9);
+            doc.text(`Determinação: ${det.numero_determinacao}`, colLeft + 1, yPos + 3.5);
+            yPos += cellLineHeight;
+
+            // Dados em formato de linhas
+            const dadoLinhas = [
+                { label: 'Base Legal:', valor: 'Portaria AGEMS nº 233/2022 e suas alterações' },
+                { label: 'Manifestação:', valor: resposta?.manifestacao_prestador || 'Sem informação' },
+                { label: 'Análise:', valor: resposta?.descricao_atendimento || 'Sem informação' }
+            ];
+
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(8);
+
+            dadoLinhas.forEach(linha => {
+                const textHeight = doc.getTextDimensions(linha.valor).h;
+                const wrappedText = doc.splitTextToSize(linha.valor, colWidth - 40);
+                const lineCount = wrappedText.length;
+                const cellHeight = Math.max(cellLineHeight, lineCount * cellLineHeight + 2);
+
+                // Label em fundo claro
+                doc.setFillColor(240, 240, 240);
+                doc.rect(colLeft, yPos, 35, cellHeight, 'F');
+                doc.setFont(undefined, 'bold');
+                doc.text(linha.label, colLeft + 1, yPos + 3);
+
+                // Valor
+                doc.setFont(undefined, 'normal');
+                doc.text(wrappedText, colLeft + 37, yPos + 2, { maxWidth: colWidth - 39 });
+
+                yPos += cellHeight;
+            });
+
+            // Resultado da Análise
+            const resultado = resposta?.status === 'atendida' ? 'ACATADA' : 'NÃO ACATADA';
+            const corResultado = resposta?.status === 'atendida' ? [0, 128, 0] : [255, 0, 0];
+            
+            doc.setFillColor(240, 240, 240);
+            doc.rect(colLeft, yPos, 35, cellLineHeight, 'F');
+            doc.setFont(undefined, 'bold');
+            doc.setFontSize(8);
+            doc.text('Resultado:', colLeft + 1, yPos + 3);
+
+            doc.setFont(undefined, 'bold');
+            doc.setFontSize(9);
+            doc.setTextColor(corResultado[0], corResultado[1], corResultado[2]);
+            doc.text(resultado, colLeft + 37, yPos + 3);
+            doc.setTextColor(0, 0, 0);
+
+            yPos += cellLineHeight;
+
+            // Nº AI
+            const numeroAI = autosPorDeterminacao[det.id];
+            const textoAI = numeroAI ? numeroAI : (resposta?.status === 'nao_atendida' ? 'Gerar' : 'NÃO SE APLICA');
+            
+            doc.setFillColor(240, 240, 240);
+            doc.rect(colLeft, yPos, 35, cellLineHeight, 'F');
+            doc.setFont(undefined, 'bold');
+            doc.setFontSize(8);
+            doc.text('Nº AI:', colLeft + 1, yPos + 3);
+
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(0, 0, 0);
+            doc.text(textoAI, colLeft + 37, yPos + 3);
+
+            yPos += cellLineHeight + 5;
+        });
+
         doc.save(`${numeroAM}.pdf`);
     };
 
