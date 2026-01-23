@@ -163,7 +163,7 @@ export default function AnaliseManifestacao() {
                                     <p className="text-2xl font-bold">
                                         {termosFiltrados.filter(t => {
                                             const stats = contarStatusDeterminacoes(t);
-                                            return stats.aguardandoAnalise > 0;
+                                            return t.data_recebimento_resposta && stats.total > 0 && (stats.atendidas + stats.naoAtendidas < stats.total);
                                         }).length}
                                     </p>
                                 </div>
@@ -179,7 +179,7 @@ export default function AnaliseManifestacao() {
                                     <p className="text-2xl font-bold">
                                         {termosFiltrados.filter(t => {
                                             const stats = contarStatusDeterminacoes(t);
-                                            return stats.atendidas + stats.naoAtendidas === stats.total && stats.total > 0;
+                                            return t.data_recebimento_resposta && stats.atendidas + stats.naoAtendidas === stats.total && stats.total > 0;
                                         }).length}
                                     </p>
                                 </div>
