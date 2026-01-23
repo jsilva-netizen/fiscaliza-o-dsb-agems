@@ -1039,13 +1039,14 @@ export default function GerenciarTermos() {
                                                               )}
                                                               </div>
 
-                                                              {/* Download Buttons - Side by Side */}
-                                                              <div className="flex gap-2 flex-wrap pt-3 border-t">
+                                                              {/* Download Buttons - Vertical Stack */}
+                                                              <div className="flex flex-col gap-2 pt-3 border-t">
                                                               {termo.arquivo_url && (
                                                               <Button
                                                               size="sm"
                                                               variant="outline"
                                                               onClick={() => window.open(termo.arquivo_url)}
+                                                              className="w-full"
                                                               >
                                                               <Download className="h-4 w-4 mr-1" />
                                                               Baixar TN Assinado
@@ -1056,6 +1057,7 @@ export default function GerenciarTermos() {
                                                               size="sm"
                                                               variant="outline"
                                                               onClick={() => window.open(termo.arquivo_protocolo_url)}
+                                                              className="w-full"
                                                               >
                                                               <Download className="h-4 w-4 mr-1" />
                                                               Baixar Arquivo de Protocolo
@@ -1070,6 +1072,7 @@ export default function GerenciarTermos() {
                                                               size="sm"
                                                               variant="outline"
                                                               onClick={() => window.open(arquivo.url)}
+                                                              className="w-full"
                                                               >
                                                               <Download className="h-4 w-4 mr-1" />
                                                               Baixar Resposta
