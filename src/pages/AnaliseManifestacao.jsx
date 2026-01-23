@@ -24,7 +24,8 @@ export default function AnaliseManifestacao() {
 
     const { data: auto } = useQuery({
         queryKey: ['auto', autoId],
-        queryFn: () => base44.entities.AutoInfracao.list().then(as => as.find(a => a.id === autoId))
+        queryFn: () => base44.entities.AutoInfracao.list().then(as => as.find(a => a.id === autoId)),
+        enabled: !!autoId
     });
 
     const { data: manifestacao } = useQuery({
@@ -32,7 +33,8 @@ export default function AnaliseManifestacao() {
         queryFn: async () => {
             const manifestacoes = await base44.entities.ManifestacaoAuto.list();
             return manifestacoes.find(m => m.auto_id === autoId);
-        }
+        },
+        enabled: !!autoId
     });
 
     const { data: parecer } = useQuery({
@@ -40,7 +42,8 @@ export default function AnaliseManifestacao() {
         queryFn: async () => {
             const pareres = await base44.entities.ParerTecnico.list();
             return pareres.find(p => p.auto_id === autoId);
-        }
+        },
+        enabled: !!autoId
     });
 
     const { data: determinacao } = useQuery({
@@ -82,6 +85,21 @@ export default function AnaliseManifestacao() {
             status: 'finalizado'
         });
     };
+
+    if (!autoId) {
+        return (
+            <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+                <Card className="max-w-md">
+                    <CardContent className="p-6 text-center">
+                        <p className="text-gray-600 mb-4">Nenhum auto de infração foi selecionado.</p>
+                        <Link to={createPageUrl('GestaoAutos')}>
+                            <Button>Ir para Gestão de Autos</Button>
+                        </Link>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     if (!auto) return <div className="p-6">Carregando...</div>;
 
