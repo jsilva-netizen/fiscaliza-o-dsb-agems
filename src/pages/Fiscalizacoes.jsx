@@ -29,6 +29,7 @@ export default function Fiscalizacoes() {
     const [dataFim, setDataFim] = useState('');
     const [fiscalizacaoParaDeletar, setFiscalizacaoParaDeletar] = useState(null);
     const [mostrarFiltros, setMostrarFiltros] = useState(false);
+    const [deleteConfirmation, setDeleteConfirmation] = useState({ open: false, fiscId: null, step: 1, inputValue: '' });
 
     const { data: user } = useQuery({
         queryKey: ['user'],
@@ -52,6 +53,7 @@ export default function Fiscalizacoes() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['fiscalizacoes'] });
             setFiscalizacaoParaDeletar(null);
+            setDeleteConfirmation({ open: false, fiscId: null, step: 1, inputValue: '' });
         },
         onError: (error) => {
             alert('Erro ao deletar fiscalização: ' + error.message);
@@ -292,17 +294,82 @@ export default function Fiscalizacoes() {
                                                  </>
                                              )}
                                              {podeDeleter && (
-                                                 <Button
-                                                     variant="outline"
-                                                     size="sm"
-                                                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                     onClick={(e) => {
-                                                         e.preventDefault();
-                                                         setFiscalizacaoParaDeletar(fisc);
+                                                 <AlertDialog 
+                                                     open={deleteConfirmation.open && deleteConfirmation.fiscId === fisc.id}
+                                                     onOpenChange={(open) => {
+                                                         if (!open) {
+                                                             setDeleteConfirmation({ open: false, fiscId: null, step: 1, inputValue: '' });
+                                                         }
                                                      }}
                                                  >
-                                                     <Trash2 className="h-4 w-4" />
-                                                 </Button>
+                                                     <Button
+                                                         variant="outline"
+                                                         size="sm"
+                                                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                         onClick={(e) => {
+                                                             e.preventDefault();
+                                                             setDeleteConfirmation({ open: true, fiscId: fisc.id, step: 1, inputValue: '' });
+                                                         }}
+                                                     >
+                                                         <Trash2 className="h-4 w-4" />
+                                                     </Button>
+                                                     <AlertDialogContent>
+                                                         {deleteConfirmation.step === 1 ? (
+                                                             <>
+                                                                 <AlertDialogHeader>
+                                                                     <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+                                                                         <AlertTriangle className="h-5 w-5" />
+                                                                         Excluir Fiscalização?
+                                                                     </AlertDialogTitle>
+                                                                     <AlertDialogDescription className="space-y-2">
+                                                                         <p>Você está prestes a excluir permanentemente:</p>
+                                                                         <p className="font-semibold text-gray-900">{fisc.numero_termo} - {fisc.municipio_nome}</p>
+                                                                         <p className="text-red-600">Esta ação não pode ser desfeita e removerá todas as unidades, NCs, determinações e dados relacionados.</p>
+                                                                     </AlertDialogDescription>
+                                                                 </AlertDialogHeader>
+                                                                 <AlertDialogFooter>
+                                                                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                     <Button
+                                                                         variant="destructive"
+                                                                         onClick={() => setDeleteConfirmation(prev => ({ ...prev, step: 2 }))}
+                                                                     >
+                                                                         Continuar
+                                                                     </Button>
+                                                                 </AlertDialogFooter>
+                                                             </>
+                                                         ) : (
+                                                             <>
+                                                                 <AlertDialogHeader>
+                                                                     <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+                                                                         <AlertTriangle className="h-5 w-5" />
+                                                                         Confirmação Final
+                                                                     </AlertDialogTitle>
+                                                                     <AlertDialogDescription className="space-y-3">
+                                                                         <p>Para confirmar a exclusão, digite <span className="font-bold">EXCLUIR</span> no campo abaixo:</p>
+                                                                         <Input
+                                                                             placeholder="Digite EXCLUIR"
+                                                                             value={deleteConfirmation.inputValue}
+                                                                             onChange={(e) => setDeleteConfirmation(prev => ({ ...prev, inputValue: e.target.value }))}
+                                                                             className="mt-2"
+                                                                         />
+                                                                     </AlertDialogDescription>
+                                                                 </AlertDialogHeader>
+                                                                 <AlertDialogFooter>
+                                                                     <AlertDialogCancel onClick={() => setDeleteConfirmation({ open: false, fiscId: null, step: 1, inputValue: '' })}>
+                                                                         Cancelar
+                                                                     </AlertDialogCancel>
+                                                                     <Button
+                                                                         variant="destructive"
+                                                                         disabled={deleteConfirmation.inputValue !== 'EXCLUIR' || deletarFiscalizacaoMutation.isPending}
+                                                                         onClick={() => deletarFiscalizacaoMutation.mutate(fisc.id)}
+                                                                     >
+                                                                         {deletarFiscalizacaoMutation.isPending ? 'Excluindo...' : 'Excluir Permanentemente'}
+                                                                     </Button>
+                                                                 </AlertDialogFooter>
+                                                             </>
+                                                         )}
+                                                     </AlertDialogContent>
+                                                 </AlertDialog>
                                              )}
                                          </div>
                                     </CardContent>
@@ -326,29 +393,7 @@ export default function Fiscalizacoes() {
                 )}
             </div>
 
-            {/* Dialog de confirmação */}
-            <AlertDialog open={!!fiscalizacaoParaDeletar} onOpenChange={() => setFiscalizacaoParaDeletar(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Deletar Fiscalização?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Tem certeza que deseja deletar a fiscalização de <strong>{fiscalizacaoParaDeletar?.municipio_nome}</strong>?
-                            <br /><br />
-                            Esta ação é <strong>irreversível</strong> e irá deletar todas as unidades, respostas, não conformidades, determinações, recomendações e fotos associadas.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                            className="bg-red-600 hover:bg-red-700"
-                            onClick={() => deletarFiscalizacaoMutation.mutate(fiscalizacaoParaDeletar.id)}
-                            disabled={deletarFiscalizacaoMutation.isPending}
-                        >
-                            {deletarFiscalizacaoMutation.isPending ? 'Deletando...' : 'Deletar'}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+
             </div>
             );
 }
