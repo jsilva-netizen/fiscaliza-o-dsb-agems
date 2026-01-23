@@ -648,8 +648,7 @@ export default function GerenciarTermos() {
                                                     arquivo_resposta_url: null
                                                 });
                                                 setProtocoloTemp(null);
-                                                document.getElementById('data-protocolo-detalhe').value = termoDetalhes.data_protocolo || '';
-                                                document.getElementById('data-resposta-detalhe').value = termoDetalhes.data_recebimento_resposta || '';
+                                                setTermoDetalhes(null);
                                             }}
                                             className="flex-1"
                                         >
