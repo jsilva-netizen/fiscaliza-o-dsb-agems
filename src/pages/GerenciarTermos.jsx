@@ -844,7 +844,7 @@ export default function GerenciarTermos() {
                                                                       <DialogTrigger asChild>
                                                                           <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700">
                                                                               <Upload className="h-4 w-4 mr-1" />
-                                                                              Registrar Data
+                                                                              Registrar Data Protocolo
                                                                           </Button>
                                                                       </DialogTrigger>
                                                                       <DialogContent className="max-w-2xl">
