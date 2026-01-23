@@ -680,27 +680,26 @@ export default function AnaliseManifestacao() {
                                                                 Gerar Análise
                                                             </Button>
                                                         ) : (
-                                                            <div className="flex gap-2">
-                                                                 <Button 
-                                                                     size="sm" 
-                                                                     className="bg-blue-600 hover:bg-blue-700"
-                                                                     onClick={() => baixarAnaliseManifestacao(termo)}
-                                                                 >
-                                                                     <Download className="h-4 w-4 mr-1" />
-                                                                     Baixar AM PDF
-                                                                 </Button>
-                                                                 <Link to={createPageUrl('AnalisarResposta') + `?termo=${termo.id}`}>
-                                                                     <Button 
-                                                                         size="sm" 
-                                                                         variant="outline"
-                                                                         className="border-orange-300 text-orange-600 hover:bg-orange-50"
-                                                                     >
-                                                                         Editar Análises
-                                                                     </Button>
-                                                                 </Link>
-                                                             </div>
-                                                             )}
-                                                             </div>
+                                                            <>
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    className="bg-blue-600 hover:bg-blue-700"
+                                                                    onClick={() => baixarAnaliseManifestacao(termo)}
+                                                                >
+                                                                    <Download className="h-4 w-4 mr-1" />
+                                                                    Baixar AM PDF
+                                                                </Button>
+                                                                <Link to={createPageUrl('AnalisarResposta') + `?termo=${termo.id}`}>
+                                                                    <Button 
+                                                                        size="sm" 
+                                                                        variant="outline"
+                                                                        className="border-orange-300 text-orange-600 hover:bg-orange-50"
+                                                                    >
+                                                                        Editar Análises
+                                                                    </Button>
+                                                                </Link>
+                                                            </>
+                                                        )}
                                                              </CardContent>
                                 </Card>
                             );
