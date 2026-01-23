@@ -135,16 +135,28 @@ export default function AnaliseManifestacao() {
     };
 
     const gerarAnaliseManifestacao = async (termo) => {
-        const dets = getDeterminacoesPorTermo(termo);
+        const dets = getDeterminacoesPorTermo(termo).sort((a, b) => {
+            const numA = parseInt(a.numero_determinacao?.replace(/\D/g, '') || '0');
+            const numB = parseInt(b.numero_determinacao?.replace(/\D/g, '') || '0');
+            return numA - numB;
+        });
+        
         const resp = respostasDeterminacao.filter(r => 
             dets.map(d => d.id).includes(r.determinacao_id)
         );
         
         const ano = new Date().getFullYear();
         const camaraTecnica = termo.camara_tecnica;
-        const timestamp = new Date().getTime();
-        const proximoNumero = Math.floor(timestamp / 1000) % 1000;
-        const numeroAM = `AM ${String(proximoNumero).padStart(3, '0')}/${ano}/DSB/${camaraTecnica}`;
+        
+        // Contar AMs já geradas neste ano para esta câmara técnica
+        const todasAsAMs = await base44.entities.TermoNotificacao.list();
+        const amsDoAno = todasAsAMs.filter(t => {
+            if (!t.numero_termo_notificacao) return false;
+            const match = t.numero_termo_notificacao.match(/AM\s*(\d+)\/\d+\/DSB\/(\w+)/);
+            return match && match[2] === camaraTecnica && t.numero_termo_notificacao.includes(`/${ano}/`);
+        });
+        const proximoNumeroAM = amsDoAno.length + 1;
+        const numeroAM = `AM ${String(proximoNumeroAM).padStart(3, '0')}/${ano}/DSB/${camaraTecnica}`;
 
         const doc = new jsPDF('l', 'mm', 'a4');
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -163,46 +175,69 @@ export default function AnaliseManifestacao() {
         doc.text(`TN: ${termo.numero_termo_notificacao}`, margin, 22);
         doc.text(`Município: ${getMunicipioNome(termo.municipio_id)} | Prestador: ${getPrestadorNome(termo.prestador_servico_id)}`, margin, 28);
 
-        // Tabela
+        // Tabela com melhor formatação
         const tableTop = 35;
-        const colWidths = [15, 30, 35, 40, 25, 20];
-        const headers = ['Determinação', 'Base Legal', 'Manifestação Apresentada', 'Análise', 'Resultado', 'Nº AI'];
+        const colWidths = [18, 28, 32, 36, 22, 18];
+        const headers = ['Determinação', 'Base Legal', 'Manifestação Apresentada', 'Análise', 'Resultado da Análise', 'Nº AI'];
         
         doc.setFont(undefined, 'bold');
-        doc.setFillColor(200, 200, 255);
+        doc.setFillColor(180, 200, 255);
+        doc.setFontSize(9);
         let xPos = margin;
         headers.forEach((header, i) => {
-            doc.rect(xPos, tableTop, colWidths[i], 8, 'F');
-            doc.text(header, xPos + 1, tableTop + 6, { maxWidth: colWidths[i] - 2 });
+            doc.rect(xPos, tableTop, colWidths[i], 7, 'F');
+            const lines = doc.splitTextToSize(header, colWidths[i] - 2);
+            doc.text(lines, xPos + 1, tableTop + 3.5, { align: 'left' });
             xPos += colWidths[i];
+        });
+
+        // Buscar números dos AIs gerados
+        const autos = await base44.entities.AutoInfracao.list();
+        const autosPorDeterminacao = {};
+        autos.forEach(auto => {
+            if (auto.determinacao_id) {
+                autosPorDeterminacao[auto.determinacao_id] = auto.numero_auto;
+            }
         });
 
         // Dados das determinações
         doc.setFont(undefined, 'normal');
         doc.setFontSize(8);
-        let yPos = tableTop + 8;
+        let yPos = tableTop + 7;
 
         dets.forEach(det => {
             const resposta = resp.find(r => r.determinacao_id === det.id);
-            const naoConformidade = determinacoes.find(d => d.id === det.nao_conformidade_id);
+            
+            // Calcular altura da linha baseado no conteúdo
+            const manifestacaoLines = doc.splitTextToSize(resposta?.manifestacao_prestador || 'N/A', colWidths[2] - 2);
+            const analiseLines = doc.splitTextToSize(resposta?.descricao_atendimento || 'N/A', colWidths[3] - 2);
+            const maxLines = Math.max(manifestacaoLines.length, analiseLines.length, 2);
+            const rowHeight = maxLines * 3.5 + 2;
+
+            // Verificar se precisa de nova página
+            if (yPos + rowHeight > pageHeight - 10) {
+                doc.addPage();
+                yPos = 10;
+            }
 
             xPos = margin;
-            const rowHeight = 15;
 
             // Determinação
-            doc.text(det.numero_determinacao, xPos + 1, yPos + 4, { maxWidth: colWidths[0] - 2 });
+            doc.text(det.numero_determinacao, xPos + 1, yPos + 2, { maxWidth: colWidths[0] - 2 });
             xPos += colWidths[0];
 
             // Base Legal
-            doc.text('Portaria AGEMS nº 233/2022', xPos + 1, yPos + 4, { maxWidth: colWidths[1] - 2 });
+            doc.text('Portaria AGEMS nº 233/2022', xPos + 1, yPos + 2, { maxWidth: colWidths[1] - 2 });
             xPos += colWidths[1];
 
-            // Manifestação
-            doc.text(resposta?.manifestacao_prestador || '', xPos + 1, yPos + 4, { maxWidth: colWidths[2] - 2 });
+            // Manifestação Apresentada
+            const manifestacaoText = doc.splitTextToSize(resposta?.manifestacao_prestador || 'N/A', colWidths[2] - 2);
+            doc.text(manifestacaoText, xPos + 1, yPos + 2);
             xPos += colWidths[2];
 
             // Análise
-            doc.text(resposta?.descricao_atendimento || '', xPos + 1, yPos + 4, { maxWidth: colWidths[3] - 2 });
+            const analiseText = doc.splitTextToSize(resposta?.descricao_atendimento || 'N/A', colWidths[3] - 2);
+            doc.text(analiseText, xPos + 1, yPos + 2);
             xPos += colWidths[3];
 
             // Resultado
@@ -213,23 +248,22 @@ export default function AnaliseManifestacao() {
             } else {
                 doc.setTextColor(255, 0, 0);
             }
-            doc.text(resultado, xPos + 1, yPos + 4, { maxWidth: colWidths[4] - 2 });
+            doc.text(resultado, xPos + 1, yPos + 2, { maxWidth: colWidths[4] - 2 });
             doc.setTextColor(0, 0, 0);
             doc.setFont(undefined, 'normal');
             xPos += colWidths[4];
 
             // Nº AI
-            if (resposta?.status === 'nao_atendida') {
-                doc.text('Gerar', xPos + 1, yPos + 4, { maxWidth: colWidths[5] - 2 });
+            const numeroAI = autosPorDeterminacao[det.id];
+            if (numeroAI) {
+                doc.text(numeroAI, xPos + 1, yPos + 2, { maxWidth: colWidths[5] - 2 });
+            } else if (resposta?.status === 'nao_atendida') {
+                doc.text('Gerar', xPos + 1, yPos + 2, { maxWidth: colWidths[5] - 2 });
             }
 
+            // Desenhar bordo da célula
             doc.rect(margin, yPos, pageWidth - 2 * margin, rowHeight);
             yPos += rowHeight;
-
-            if (yPos > pageHeight - 20) {
-                doc.addPage();
-                yPos = 15;
-            }
         });
 
         doc.save(`${numeroAM}.pdf`);
