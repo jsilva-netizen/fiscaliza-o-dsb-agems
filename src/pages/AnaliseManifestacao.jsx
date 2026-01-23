@@ -426,12 +426,22 @@ export default function AnaliseManifestacao() {
                                             </div>
                                             <div className="flex flex-col gap-2 items-end">
                                                 <Badge className={statusInfo.color}>{statusInfo.label}</Badge>
-                                                {stats.total > 0 && (
+                                                {stats.total > 0 && !todasDeterminacoesAnalisadas(termo) && (
                                                     <Link to={createPageUrl('AnalisarResposta') + `?termo=${termo.id}`}>
                                                         <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
                                                             Analisar Determinações
                                                         </Button>
                                                     </Link>
+                                                )}
+                                                {stats.total > 0 && todasDeterminacoesAnalisadas(termo) && (
+                                                    <Button 
+                                                        size="sm" 
+                                                        className="bg-green-600 hover:bg-green-700"
+                                                        onClick={() => gerarAnaliseManifestacao(termo)}
+                                                    >
+                                                        <Download className="h-4 w-4 mr-1" />
+                                                        Gerar Análise
+                                                    </Button>
                                                 )}
                                             </div>
                                         </div>
