@@ -55,7 +55,11 @@ export default function GerenciarTermos() {
         data_protocolo: null,
         arquivo_protocolo_url: null,
         data_recebimento_resposta: null,
-        arquivo_resposta_url: null
+        arquivo_resposta_url: null,
+        numero_processo: null,
+        fiscalizacao_id: null,
+        camara_tecnica: null,
+        prazo_resposta_dias: null
     });
 
     const { data: fiscalizacoes = [] } = useQuery({
@@ -450,33 +454,94 @@ export default function GerenciarTermos() {
                             <DialogTitle>Detalhes do Termo de Notificação</DialogTitle>
                         </DialogHeader>
                         {termoDetalhes && (
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                        <Label className="text-gray-600">Número do TN</Label>
-                                        <p className="font-semibold">{termoDetalhes.numero_termo_notificacao || termoDetalhes.numero_termo}</p>
-                                    </div>
-                                    <div>
-                                        <Label className="text-gray-600">Processo</Label>
-                                        <p className="font-semibold">{termoDetalhes.numero_processo}</p>
-                                    </div>
-                                    <div>
-                                        <Label className="text-gray-600">Município</Label>
-                                        <p className="font-semibold">{getMunicipioNome(termoDetalhes.municipio_id)}</p>
-                                    </div>
-                                    <div>
-                                        <Label className="text-gray-600">Prestador</Label>
-                                        <p className="font-semibold">{getPrestadorNome(termoDetalhes.prestador_servico_id)}</p>
-                                    </div>
-                                    <div>
-                                        <Label className="text-gray-600">Câmara Técnica</Label>
-                                        <p className="font-semibold">{termoDetalhes.camara_tecnica}</p>
-                                    </div>
-                                    <div>
-                                        <Label className="text-gray-600">Prazo Resposta</Label>
-                                        <p className="font-semibold">{termoDetalhes.prazo_resposta_dias} dias</p>
-                                    </div>
-                                </div>
+                        <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label className="text-gray-600">Número do TN</Label>
+                                <p className="font-semibold">{termoDetalhes.numero_termo_notificacao || termoDetalhes.numero_termo}</p>
+                            </div>
+                            <div>
+                                <Label>Processo *</Label>
+                                <Input
+                                    value={dadosEditados.numero_processo !== null ? dadosEditados.numero_processo : termoDetalhes.numero_processo || ''}
+                                    onChange={(e) => {
+                                        let valor = e.target.value.replace(/\D/g, '');
+                                        if (valor.length > 13) valor = valor.slice(0, 13);
+
+                                        if (valor.length > 9) {
+                                            valor = `${valor.slice(0, 2)}.${valor.slice(2, 5)}.${valor.slice(5, 8)}-${valor.slice(8)}`;
+                                        } else if (valor.length > 5) {
+                                            valor = `${valor.slice(0, 2)}.${valor.slice(2, 5)}.${valor.slice(5)}`;
+                                        } else if (valor.length > 2) {
+                                            valor = `${valor.slice(0, 2)}.${valor.slice(2)}`;
+                                        }
+
+                                        setDadosEditados(prev => ({ ...prev, numero_processo: valor }));
+                                        setAlteracoesPendentes(true);
+                                    }}
+                                    placeholder="51.011.137-2025"
+                                />
+                            </div>
+                            <div>
+                                <Label>Fiscalização *</Label>
+                                <Select 
+                                    value={dadosEditados.fiscalizacao_id !== null ? dadosEditados.fiscalizacao_id : termoDetalhes.fiscalizacao_id || ''}
+                                    onValueChange={(v) => {
+                                        setDadosEditados(prev => ({ ...prev, fiscalizacao_id: v }));
+                                        setAlteracoesPendentes(true);
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione uma fiscalização" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {fiscalizacoes.filter(f => f.status === 'finalizada').map(f => (
+                                            <SelectItem key={f.id} value={f.id}>
+                                                {f.numero_termo} - {getMunicipioNome(f.municipio_id)} - {getPrestadorNome(f.prestador_servico_id)}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div>
+                                <Label>Câmara Técnica *</Label>
+                                <Select 
+                                    value={dadosEditados.camara_tecnica !== null ? dadosEditados.camara_tecnica : termoDetalhes.camara_tecnica || ''}
+                                    onValueChange={(v) => {
+                                        setDadosEditados(prev => ({ ...prev, camara_tecnica: v }));
+                                        setAlteracoesPendentes(true);
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="CATESA">CATESA</SelectItem>
+                                        <SelectItem value="CATERS">CATERS</SelectItem>
+                                        <SelectItem value="CRES">CRES</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div>
+                                <Label>Município</Label>
+                                <p className="font-semibold mt-2">{getMunicipioNome(termoDetalhes.municipio_id)}</p>
+                            </div>
+                            <div>
+                                <Label>Prestador</Label>
+                                <p className="font-semibold mt-2">{getPrestadorNome(termoDetalhes.prestador_servico_id)}</p>
+                            </div>
+                            <div>
+                                <Label>Prazo para Resposta (dias)</Label>
+                                <Input
+                                    type="number"
+                                    value={dadosEditados.prazo_resposta_dias !== null ? dadosEditados.prazo_resposta_dias : termoDetalhes.prazo_resposta_dias || 30}
+                                    onChange={(e) => {
+                                        setDadosEditados(prev => ({ ...prev, prazo_resposta_dias: parseInt(e.target.value) || 30 }));
+                                        setAlteracoesPendentes(true);
+                                    }}
+                                />
+                            </div>
+                        </div>
 
                                 <div className="border-t pt-4">
                                     <h3 className="font-semibold mb-3">Termo de Notificação Assinado</h3>
@@ -650,7 +715,11 @@ export default function GerenciarTermos() {
                                                     data_protocolo: null,
                                                     arquivo_protocolo_url: null,
                                                     data_recebimento_resposta: null,
-                                                    arquivo_resposta_url: null
+                                                    arquivo_resposta_url: null,
+                                                    numero_processo: null,
+                                                    fiscalizacao_id: null,
+                                                    camara_tecnica: null,
+                                                    prazo_resposta_dias: null
                                                 });
                                                 setProtocoloTemp(null);
                                                 setTermoDetalhes(null);
@@ -675,55 +744,85 @@ export default function GerenciarTermos() {
                                                 <AlertDialogFooter>
                                                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                                     <AlertDialogAction onClick={async () => {
-                                                        try {
-                                                            const updateData = {};
+                                                    try {
+                                                        const updateData = {};
 
-                                                            if (dadosEditados.data_protocolo) {
-                                                                updateData.data_protocolo = dadosEditados.data_protocolo;
-                                                                const dp = new Date(dadosEditados.data_protocolo + 'T00:00:00');
-                                                                const prazo = termoDetalhes.prazo_resposta_dias || 30;
+                                                        // Dados básicos do termo
+                                                        if (dadosEditados.numero_processo !== null) {
+                                                            updateData.numero_processo = dadosEditados.numero_processo;
+                                                        }
+                                                        if (dadosEditados.fiscalizacao_id !== null) {
+                                                            updateData.fiscalizacao_id = dadosEditados.fiscalizacao_id;
+                                                            const fisc = fiscalizacoes.find(f => f.id === dadosEditados.fiscalizacao_id);
+                                                            if (fisc) {
+                                                                updateData.municipio_id = fisc.municipio_id;
+                                                                updateData.prestador_servico_id = fisc.prestador_servico_id;
+                                                            }
+                                                        }
+                                                        if (dadosEditados.camara_tecnica !== null) {
+                                                            updateData.camara_tecnica = dadosEditados.camara_tecnica;
+                                                        }
+                                                        if (dadosEditados.prazo_resposta_dias !== null) {
+                                                            updateData.prazo_resposta_dias = dadosEditados.prazo_resposta_dias;
+                                                            // Recalcular data_maxima_resposta se houver data_protocolo
+                                                            if (termoDetalhes.data_protocolo) {
+                                                                const dp = new Date(termoDetalhes.data_protocolo + 'T00:00:00');
                                                                 const dmax = new Date(dp);
-                                                                dmax.setDate(dmax.getDate() + prazo);
+                                                                dmax.setDate(dmax.getDate() + dadosEditados.prazo_resposta_dias);
                                                                 updateData.data_maxima_resposta = `${dmax.getFullYear()}-${String(dmax.getMonth() + 1).padStart(2, '0')}-${String(dmax.getDate()).padStart(2, '0')}`;
                                                             }
-
-                                                            if (dadosEditados.arquivo_protocolo_url) {
-                                                                updateData.arquivo_protocolo_url = dadosEditados.arquivo_protocolo_url;
-                                                            }
-
-                                                            if (dadosEditados.data_recebimento_resposta) {
-                                                                updateData.data_recebimento_resposta = dadosEditados.data_recebimento_resposta;
-                                                                const dataMax = new Date(termoDetalhes.data_maxima_resposta + 'T00:00:00');
-                                                                const dataReceb = new Date(dadosEditados.data_recebimento_resposta + 'T00:00:00');
-                                                                updateData.recebida_no_prazo = dataReceb <= dataMax;
-                                                                updateData.status = 'respondido';
-                                                            }
-
-                                                            if (dadosEditados.arquivo_resposta_url) {
-                                                                const novoArquivo = {
-                                                                    url: dadosEditados.arquivo_resposta_url,
-                                                                    nome: 'Resposta do Prestador',
-                                                                    data_upload: new Date().toISOString()
-                                                                };
-                                                                const arquivosAtuais = termoDetalhes.arquivos_resposta || [];
-                                                                updateData.arquivos_resposta = [...arquivosAtuais, novoArquivo];
-                                                            }
-
-                                                            await base44.entities.TermoNotificacao.update(termoDetalhes.id, updateData);
-                                                            queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
-                                                            setTermoDetalhes(null);
-                                                            setAlteracoesPendentes(false);
-                                                            setDadosEditados({
-                                                                data_protocolo: null,
-                                                                arquivo_protocolo_url: null,
-                                                                data_recebimento_resposta: null,
-                                                                arquivo_resposta_url: null
-                                                            });
-                                                            setProtocoloTemp(null);
-                                                            alert('Alterações salvas com sucesso!');
-                                                        } catch (error) {
-                                                            alert('Erro ao salvar alterações: ' + error.message);
                                                         }
+
+                                                        if (dadosEditados.data_protocolo) {
+                                                            updateData.data_protocolo = dadosEditados.data_protocolo;
+                                                            const dp = new Date(dadosEditados.data_protocolo + 'T00:00:00');
+                                                            const prazo = dadosEditados.prazo_resposta_dias !== null ? dadosEditados.prazo_resposta_dias : termoDetalhes.prazo_resposta_dias || 30;
+                                                            const dmax = new Date(dp);
+                                                            dmax.setDate(dmax.getDate() + prazo);
+                                                            updateData.data_maxima_resposta = `${dmax.getFullYear()}-${String(dmax.getMonth() + 1).padStart(2, '0')}-${String(dmax.getDate()).padStart(2, '0')}`;
+                                                        }
+
+                                                        if (dadosEditados.arquivo_protocolo_url) {
+                                                            updateData.arquivo_protocolo_url = dadosEditados.arquivo_protocolo_url;
+                                                        }
+
+                                                        if (dadosEditados.data_recebimento_resposta) {
+                                                            updateData.data_recebimento_resposta = dadosEditados.data_recebimento_resposta;
+                                                            const dataMax = new Date(termoDetalhes.data_maxima_resposta + 'T00:00:00');
+                                                            const dataReceb = new Date(dadosEditados.data_recebimento_resposta + 'T00:00:00');
+                                                            updateData.recebida_no_prazo = dataReceb <= dataMax;
+                                                            updateData.status = 'respondido';
+                                                        }
+
+                                                        if (dadosEditados.arquivo_resposta_url) {
+                                                            const novoArquivo = {
+                                                                url: dadosEditados.arquivo_resposta_url,
+                                                                nome: 'Resposta do Prestador',
+                                                                data_upload: new Date().toISOString()
+                                                            };
+                                                            const arquivosAtuais = termoDetalhes.arquivos_resposta || [];
+                                                            updateData.arquivos_resposta = [...arquivosAtuais, novoArquivo];
+                                                        }
+
+                                                        await base44.entities.TermoNotificacao.update(termoDetalhes.id, updateData);
+                                                        queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                        setTermoDetalhes(null);
+                                                        setAlteracoesPendentes(false);
+                                                        setDadosEditados({
+                                                            data_protocolo: null,
+                                                            arquivo_protocolo_url: null,
+                                                            data_recebimento_resposta: null,
+                                                            arquivo_resposta_url: null,
+                                                            numero_processo: null,
+                                                            fiscalizacao_id: null,
+                                                            camara_tecnica: null,
+                                                            prazo_resposta_dias: null
+                                                        });
+                                                        setProtocoloTemp(null);
+                                                        alert('Alterações salvas com sucesso!');
+                                                    } catch (error) {
+                                                        alert('Erro ao salvar alterações: ' + error.message);
+                                                    }
                                                     }}>
                                                         Confirmar
                                                     </AlertDialogAction>
