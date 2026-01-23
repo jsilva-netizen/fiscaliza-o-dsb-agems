@@ -1,7 +1,6 @@
 import AcompanhamentoDeterminacoes from './pages/AcompanhamentoDeterminacoes';
 import AdicionarUnidade from './pages/AdicionarUnidade';
 import AnalisarResposta from './pages/AnalisarResposta';
-import AnaliseManifestacao from './pages/AnaliseManifestacao';
 import CamaraJulgamento from './pages/CamaraJulgamento';
 import Checklists from './pages/Checklists';
 import DetalhePrestador from './pages/DetalhePrestador';
@@ -17,6 +16,7 @@ import PrestadoresServico from './pages/PrestadoresServico';
 import Relatorios from './pages/Relatorios';
 import TiposUnidade from './pages/TiposUnidade';
 import VistoriarUnidade from './pages/VistoriarUnidade';
+import AnaliseManifestacao from './pages/AnaliseManifestacao';
 import __Layout from './Layout.jsx';
 
 
@@ -24,7 +24,6 @@ export const PAGES = {
     "AcompanhamentoDeterminacoes": AcompanhamentoDeterminacoes,
     "AdicionarUnidade": AdicionarUnidade,
     "AnalisarResposta": AnalisarResposta,
-    "AnaliseManifestacao": AnaliseManifestacao,
     "CamaraJulgamento": CamaraJulgamento,
     "Checklists": Checklists,
     "DetalhePrestador": DetalhePrestador,
@@ -40,6 +39,7 @@ export const PAGES = {
     "Relatorios": Relatorios,
     "TiposUnidade": TiposUnidade,
     "VistoriarUnidade": VistoriarUnidade,
+    "AnaliseManifestacao": AnaliseManifestacao,
 }
 
 export const pagesConfig = {
