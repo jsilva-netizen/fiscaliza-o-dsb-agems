@@ -147,7 +147,7 @@ export default function AnaliseManifestacao() {
 
     const excluirAnalise = async (termo) => {
         // Restaurar para o número original do TN (sem AM)
-        const numeroOriginal = `TN ${termo.numero_rfp}/${new Date().getFullYear()}/DSB/${termo.camara_tecnica}`;
+        const numeroOriginal = `TN 002/${new Date().getFullYear()}/DSB/${termo.camara_tecnica}`;
         await base44.entities.TermoNotificacao.update(termo.id, { 
             numero_termo_notificacao: numeroOriginal 
         });
