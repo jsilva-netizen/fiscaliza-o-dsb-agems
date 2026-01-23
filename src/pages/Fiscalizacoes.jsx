@@ -285,12 +285,9 @@ export default function Fiscalizacoes() {
                                         {/* Botões de ação */}
                                          <div className="mt-3 pt-3 border-t flex gap-2">
                                              {fisc.status === 'finalizada' && (
-                                                 <>
-                                                     <div className="flex-1">
-                                                         <RelatorioFiscalizacao fiscalizacao={fisc} />
-                                                     </div>
-                                                     <ResumoFiscalizacao fiscalizacao_id={fisc.id} prestadorNome={fisc.prestador_servico_nome} />
-                                                 </>
+                                                 <div className="flex-1">
+                                                     <RelatorioFiscalizacao fiscalizacao={fisc} />
+                                                 </div>
                                              )}
                                              {podeDeleter && (
                                                  <AlertDialog 
