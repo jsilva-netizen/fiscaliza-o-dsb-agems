@@ -66,7 +66,7 @@ export default function TiposUnidade() {
     const handleEdit = (tipo) => {
         setFormData({
             nome: tipo.nome,
-            descricao: tipo.descricao || '',
+            tipo_unidade_codigo: tipo.tipo_unidade_codigo || '',
             servicos_aplicaveis: tipo.servicos_aplicaveis || [],
             ativo: tipo.ativo !== false
         });
