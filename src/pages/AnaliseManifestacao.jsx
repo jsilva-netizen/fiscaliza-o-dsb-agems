@@ -10,6 +10,7 @@ import { ArrowLeft, FileText, AlertCircle, CheckCircle, Clock, Download, Trash2 
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import jsPDF from 'jspdf';
+import { getBaseLegalForDeterminacao } from '../components/AnaliseManifestacaoUtils';
 import {
     AlertDialog,
     AlertDialogAction,
