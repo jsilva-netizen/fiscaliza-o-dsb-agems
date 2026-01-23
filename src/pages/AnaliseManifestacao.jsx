@@ -134,6 +134,19 @@ export default function AnaliseManifestacao() {
         return stats.atendidas + stats.naoAtendidas === stats.total;
     };
 
+    const calcularNumeroAM = async (termo) => {
+        const ano = new Date().getFullYear();
+        const camaraTecnica = termo.camara_tecnica;
+        const todosOsAIs = await base44.entities.AutoInfracao.list();
+        const aisDoAno = todosOsAIs.filter(ai => {
+            if (!ai.numero_auto) return false;
+            const match = ai.numero_auto.match(/AI\s*nº\s*(\d+)\/(\d{4})\/DSB\/(\w+)/);
+            return match && parseInt(match[2]) === ano && match[3] === camaraTecnica;
+        });
+        const proximoNumeroAM = aisDoAno.length + 1;
+        return `AM ${String(proximoNumeroAM).padStart(3, '0')}/${ano}/DSB/${camaraTecnica}`;
+    };
+
     const gerarAnaliseManifestacao = async (termo) => {
         const dets = getDeterminacoesPorTermo(termo).sort((a, b) => {
             const numA = parseInt(a.numero_determinacao?.replace(/\D/g, '') || '0');
