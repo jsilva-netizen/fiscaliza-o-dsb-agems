@@ -211,6 +211,11 @@ export default function AnalisarResposta() {
                 <Card className="mb-6">
                     <CardHeader>
                         <CardTitle>{termo.numero_termo_notificacao || termo.numero_termo}</CardTitle>
+                        {termo.numero_rfp && (
+                            <p className="text-sm text-blue-600 font-medium mt-1">
+                                RFP/DSB/{termo.camara_tecnica}/{String(termo.numero_rfp).padStart(3, '0')}/{new Date(termo.data_geracao || Date.now()).getFullYear()}
+                            </p>
+                        )}
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-2 gap-4 text-sm">
