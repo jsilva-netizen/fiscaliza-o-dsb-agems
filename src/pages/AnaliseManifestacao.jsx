@@ -207,13 +207,8 @@ export default function AnaliseManifestacao() {
             dets.map(d => d.id).includes(r.determinacao_id)
         );
         
-        // Usar numero_am existente ou gerar novo
+        // Usar numero_am já gerado
         let numeroAM = termo.numero_am;
-        if (!numeroAM) {
-            numeroAM = await calcularNumeroAM(termo);
-            await base44.entities.TermoNotificacao.update(termo.id, { numero_am: numeroAM });
-            refetchTermos();
-        }
 
         const doc = new jsPDF('p', 'mm', 'a4');
         const pageWidth = doc.internal.pageSize.getWidth();
