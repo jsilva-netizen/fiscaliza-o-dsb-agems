@@ -91,10 +91,10 @@ export default function AdicionarUnidade() {
         const tipo = tipos.find(t => t.id === tipoId);
         if (!tipo) return;
 
-        // Obter código do tipo de unidade (tipo_unidade_codigo da importação)
-        const prefixo = tipo.nome || tipo.nome.substring(0, 3).toUpperCase();
+        // Obter sigla do tipo de unidade (tipo_unidade_codigo da importação)
+        const prefixo = tipo.tipo_unidade_codigo || tipo.nome.substring(0, 3).toUpperCase();
 
-        // Contar quantas unidades deste tipo já existem
+        // Contar quantas unidades deste tipo já existem nesta fiscalização
         const unidadesMesmoTipo = unidadesExistentes.filter(u => u.tipo_unidade_id === tipoId);
         const proximoNumero = unidadesMesmoTipo.length + 1;
         const codigo = `${prefixo}-${String(proximoNumero).padStart(3, '0')}`;
