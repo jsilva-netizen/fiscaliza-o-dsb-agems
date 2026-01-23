@@ -98,23 +98,21 @@ export default function GerenciarTermos() {
 
 
 
-    // Gerar número do termo automaticamente baseado nos existentes e câmara técnica
+    // Gerar número do termo automaticamente baseado nos existentes
     useEffect(() => {
-        if (showDialog) {
+        if (showDialog && !termoForm.numero_termo_notificacao) {
             const ano = new Date().getFullYear();
-            const camaraTecnica = termoForm.camara_tecnica;
             
-            // Buscar o maior número de TN do ano atual para esta câmara técnica
+            // Buscar o maior número de TN do ano atual
             let maiorNumero = 0;
             termos.forEach(termo => {
                 const numeroTermo = termo.numero_termo_notificacao || termo.numero_termo || '';
-                // Extrair número do formato "TN XXX/YYYY/DSB/CATESA" (ou outra câmara)
-                const match = numeroTermo.match(/TN\s*(\d+)\/(\d{4})\/DSB\/(\w+)/i);
+                // Extrair número do formato "TN XXX/YYYY/DSB/AGEMS"
+                const match = numeroTermo.match(/TN\s*(\d+)\/(\d{4})/i);
                 if (match) {
                     const numero = parseInt(match[1], 10);
                     const anoTermo = parseInt(match[2], 10);
-                    const camaraTermoTermo = match[3];
-                    if (anoTermo === ano && camaraTermoTermo === camaraTecnica && numero > maiorNumero) {
+                    if (anoTermo === ano && numero > maiorNumero) {
                         maiorNumero = numero;
                     }
                 }
@@ -123,10 +121,10 @@ export default function GerenciarTermos() {
             const proximo = maiorNumero + 1;
             setTermoForm(prev => ({
                 ...prev,
-                numero_termo_notificacao: `TN ${String(proximo).padStart(3, '0')}/${ano}/DSB/${camaraTecnica}`
+                numero_termo_notificacao: `TN ${String(proximo).padStart(3, '0')}/${ano}/DSB/AGEMS`
             }));
         }
-    }, [showDialog, termoForm.camara_tecnica, termos]);
+    }, [showDialog, termos]);
 
     const criarTermoMutation = useMutation({
         mutationFn: async (dados) => {
