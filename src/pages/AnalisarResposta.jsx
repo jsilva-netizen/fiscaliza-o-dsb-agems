@@ -110,7 +110,16 @@ export default function AnalisarResposta() {
                 const determinacao = determinacoes.find(d => d.id === variables.determinacaoId);
                 const autosExistentes = await base44.entities.AutoInfracao.list();
                 const ano = new Date().getFullYear();
-                const numeroAuto = `AI-${ano}-${String(autosExistentes.length + 1).padStart(3, '0')}`;
+                const camaraTecnica = termo.camara_tecnica;
+                
+                // Contar AIs da mesma câmara técnica do ano
+                const autosDA = autosExistentes.filter(a => {
+                    if (!a.numero_auto) return false;
+                    const match = a.numero_auto.match(/AI\s*nº\s*(\d+)\/\d+\/DSB\/(\w+)/);
+                    return match && match[2] === camaraTecnica;
+                });
+                const proximoNumero = autosDA.length + 1;
+                const numeroAuto = `AI nº ${String(proximoNumero).padStart(3, '0')}/${ano}/DSB/${camaraTecnica}`;
                 
                 await base44.entities.AutoInfracao.create({
                     determinacao_id: variables.determinacaoId,
