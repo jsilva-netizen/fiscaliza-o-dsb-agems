@@ -302,7 +302,19 @@ export default function AcompanhamentoDeterminacoes() {
                                                     {isExpanded ? <ChevronDown className="h-5 w-5 text-gray-500 mt-1" /> : <ChevronRight className="h-5 w-5 text-gray-500 mt-1" />}
                                                     <div className="flex-1">
                                                         <div className="flex items-center gap-2 mb-2">
-                                                            <h3 className="font-semibold text-lg">{fiscalizacao.numero_termo}</h3>
+                                                            <div>
+                                                                <h3 className="font-semibold text-lg">{fiscalizacao.numero_termo}</h3>
+                                                                {(() => {
+                                                                    const termo = termos.find(t => t.fiscalizacao_id === fiscalizacao.id);
+                                                                    if (termo?.numero_rfp) {
+                                                                        return (
+                                                                            <p className="text-sm text-blue-600 font-medium">
+                                                                                RFP/DSB/{termo.camara_tecnica}/{String(termo.numero_rfp).padStart(3, '0')}/{new Date(termo.data_geracao || Date.now()).getFullYear()}
+                                                                            </p>
+                                                                        );
+                                                                    }
+                                                                })()}
+                                                            </div>
                                                             <span className="text-gray-500">•</span>
                                                             <div className="flex items-center gap-1 text-gray-600">
                                                                 <MapPin className="h-4 w-4" />
@@ -402,7 +414,19 @@ export default function AcompanhamentoDeterminacoes() {
                                                     {isExpanded ? <ChevronDown className="h-5 w-5 text-gray-500 mt-1" /> : <ChevronRight className="h-5 w-5 text-gray-500 mt-1" />}
                                                     <div className="flex-1">
                                                         <div className="flex items-center gap-2 mb-2">
-                                                            <h3 className="font-semibold text-lg">{fiscalizacao.numero_termo}</h3>
+                                                            <div>
+                                                                <h3 className="font-semibold text-lg">{fiscalizacao.numero_termo}</h3>
+                                                                {(() => {
+                                                                    const termo = termos.find(t => t.fiscalizacao_id === fiscalizacao.id);
+                                                                    if (termo?.numero_rfp) {
+                                                                        return (
+                                                                            <p className="text-sm text-blue-600 font-medium">
+                                                                                RFP/DSB/{termo.camara_tecnica}/{String(termo.numero_rfp).padStart(3, '0')}/{new Date(termo.data_geracao || Date.now()).getFullYear()}
+                                                                            </p>
+                                                                        );
+                                                                    }
+                                                                })()}
+                                                            </div>
                                                             <span className="text-gray-500">•</span>
                                                             <div className="flex items-center gap-1 text-gray-600">
                                                                 <MapPin className="h-4 w-4" />
@@ -468,7 +492,19 @@ export default function AcompanhamentoDeterminacoes() {
                                                     {isExpanded ? <ChevronDown className="h-5 w-5 text-gray-500 mt-1" /> : <ChevronRight className="h-5 w-5 text-gray-500 mt-1" />}
                                                     <div className="flex-1">
                                                         <div className="flex items-center gap-2 mb-2">
-                                                            <h3 className="font-semibold text-lg">{fiscalizacao.numero_termo}</h3>
+                                                            <div>
+                                                                <h3 className="font-semibold text-lg">{fiscalizacao.numero_termo}</h3>
+                                                                {(() => {
+                                                                    const termo = termos.find(t => t.fiscalizacao_id === fiscalizacao.id);
+                                                                    if (termo?.numero_rfp) {
+                                                                        return (
+                                                                            <p className="text-sm text-blue-600 font-medium">
+                                                                                RFP/DSB/{termo.camara_tecnica}/{String(termo.numero_rfp).padStart(3, '0')}/{new Date(termo.data_geracao || Date.now()).getFullYear()}
+                                                                            </p>
+                                                                        );
+                                                                    }
+                                                                })()}
+                                                            </div>
                                                             <span className="text-gray-500">•</span>
                                                             <div className="flex items-center gap-1 text-gray-600">
                                                                 <MapPin className="h-4 w-4" />
