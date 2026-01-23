@@ -456,7 +456,7 @@ export default function AcompanhamentoDeterminacoes() {
                                                                         <p className="text-sm text-gray-600 mb-1">Respondida em: {new Date(resp.data_resposta).toLocaleDateString('pt-BR')}</p>
                                                                         <p className="text-xs text-gray-500">{resp.descricao_atendimento}</p>
                                                                     </div>
-                                                                    <Badge className="bg-green-600">Atendida</Badge>
+                                                                    <Badge className="bg-green-600">Acatada</Badge>
                                                                 </div>
                                                             </CardContent>
                                                         </Card>
