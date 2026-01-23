@@ -212,46 +212,57 @@ export default function GestaoAutos() {
 
                     <TabsContent value="gerados" className="space-y-4">
                         {autosPorStatus.gerados.map(auto => (
-                            <Card key={auto.id}>
-                                <CardContent className="p-4">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className="flex-1">
-                                            <h3 className="font-semibold">{auto.numero_auto}</h3>
-                                            <p className="text-xs text-gray-500 mt-1">Prestador: {getPrestadorNome(auto.prestador_servico_id)}</p>
-                                            <p className="text-xs text-gray-500">Município: {getMunicipioNome(auto.id)}</p>
-                                            <p className="text-xs text-gray-500">Processo: {auto.numero_processo || 'N/A'}</p>
-                                            <p className="text-xs text-gray-500 mt-2">{auto.motivo_infracao}</p>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="file"
-                                                id={`upload-${auto.id}`}
-                                                className="hidden"
-                                                onChange={(e) => handleUploadAuto(auto.id, e)}
-                                                disabled={uploadingFile}
-                                            />
-                                            <label htmlFor={`upload-${auto.id}`}>
-                                                <Button size="sm" variant="outline" asChild>
-                                                    <span>
-                                                        <Upload className="h-4 w-4 mr-1" />
-                                                        Upload PDF
-                                                    </span>
-                                                </Button>
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div className="border-t pt-4 grid grid-cols-2 gap-4">
-                                        <div>
-                                            <Label>Pena Base (UFERMS)</Label>
-                                            <Input type="number" placeholder="0" className="mt-1" />
-                                        </div>
-                                        <div>
-                                            <Label>Pena Base (R$)</Label>
-                                            <Input type="text" placeholder="R$ 0,00" className="mt-1" />
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                        <Card key={auto.id}>
+                        <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-4">
+                         <div className="flex-1">
+                             <h3 className="font-semibold">{auto.numero_auto}</h3>
+                             <p className="text-xs text-gray-500 mt-1">Prestador: {getPrestadorNome(auto.prestador_servico_id)}</p>
+                             <p className="text-xs text-gray-500">Município: {getMunicipioNome(auto.id)}</p>
+                             <p className="text-xs text-gray-500">Processo: {getNumeroProcesso(auto.id)}</p>
+                             <p className="text-xs text-gray-500 mt-2">{auto.motivo_infracao}</p>
+                         </div>
+                         <div className="flex gap-2">
+                             <FluxoUploadDocumentos auto={auto} onUpdate={() => queryClient.invalidateQueries({ queryKey: ['autos-infracao'] })} />
+                         </div>
+                        </div>
+                        <div className="border-t pt-4 grid grid-cols-2 gap-4 mb-4">
+                         <div>
+                             <Label>Pena Base (UFERMS)</Label>
+                             <Input 
+                                 type="number" 
+                                 placeholder="0" 
+                                 className="mt-1"
+                                 defaultValue={auto.pena_base_uferms || ''}
+                                 onChange={(e) => setPenaBase({ ...penaBase, [`${auto.id}-uferms`]: e.target.value })}
+                             />
+                         </div>
+                         <div>
+                             <Label>Pena Base (R$)</Label>
+                             <Input 
+                                 type="text" 
+                                 placeholder="R$ 0,00" 
+                                 className="mt-1"
+                                 defaultValue={auto.pena_base_rs ? `R$ ${auto.pena_base_rs.toFixed(2).replace('.', ',')}` : ''}
+                                 onChange={(e) => setPenaBase({ ...penaBase, [`${auto.id}-rs`]: e.target.value })}
+                             />
+                         </div>
+                        </div>
+                        <Button 
+                         size="sm" 
+                         className="w-full bg-green-600 hover:bg-green-700"
+                         onClick={() => salvarPenaBaseMutation.mutate({
+                             autoId: auto.id,
+                             penaUferms: penaBase[`${auto.id}-uferms`] || auto.pena_base_uferms || 0,
+                             penaRs: penaBase[`${auto.id}-rs`] || `R$ ${(auto.pena_base_rs || 0).toFixed(2).replace('.', ',')}`
+                         })}
+                         disabled={salvarPenaBaseMutation.isPending}
+                        >
+                         <Save className="h-4 w-4 mr-2" />
+                         Salvar Alterações
+                        </Button>
+                        </CardContent>
+                        </Card>
                         ))}
                     </TabsContent>
 
