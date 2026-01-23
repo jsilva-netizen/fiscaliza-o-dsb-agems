@@ -283,30 +283,6 @@ export default function GestaoAutos() {
                         ))}
                     </TabsContent>
 
-                    <TabsContent value="respondidos" className="space-y-4">
-                        {autosPorStatus.respondidos.map(auto => {
-                            const manifestacao = manifestacoes.find(m => m.auto_id === auto.id);
-                            return (
-                                <Card key={auto.id} className="border-green-300">
-                                    <CardContent className="p-4">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1">
-                                                <h3 className="font-semibold">{auto.numero_auto}</h3>
-                                                <p className="text-xs text-gray-500">Respondido: {new Date(manifestacao?.data_manifestacao).toLocaleDateString('pt-BR')}</p>
-                                                <p className="text-xs text-gray-500 line-clamp-2">{manifestacao?.descricao_manifestacao}</p>
-                                            </div>
-                                            <Link to={createPageUrl(`AnaliseManifestacao?auto=${auto.id}`)}>
-                                                <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
-                                                    Analisar
-                                                </Button>
-                                            </Link>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
-                    </TabsContent>
-
                     <TabsContent value="analise" className="space-y-4">
                         {autosPorStatus.em_analise.map(auto => (
                             <Card key={auto.id} className="border-orange-300">
@@ -314,9 +290,27 @@ export default function GestaoAutos() {
                                     <div className="flex justify-between items-start">
                                         <div className="flex-1">
                                             <h3 className="font-semibold">{auto.numero_auto}</h3>
-                                            <p className="text-xs text-gray-500">Em análise do parecer técnico</p>
+                                            <p className="text-xs text-gray-500">Aguardando parecer técnico</p>
+                                            <p className="text-xs text-gray-500 mt-2">{auto.motivo_infracao}</p>
                                         </div>
                                         <Badge className="bg-orange-600">Em Análise</Badge>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </TabsContent>
+
+                    <TabsContent value="finalizados" className="space-y-4">
+                        {autosPorStatus.finalizados.map(auto => (
+                            <Card key={auto.id} className="border-purple-300">
+                                <CardContent className="p-4">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold">{auto.numero_auto}</h3>
+                                            <p className="text-xs text-gray-500">Prestador: {getPrestadorNome(auto.prestador_servico_id)}</p>
+                                            <p className="text-xs text-gray-500">Município: {getMunicipioNome(auto.id)}</p>
+                                        </div>
+                                        <Badge className="bg-purple-600">Finalizado</Badge>
                                     </div>
                                 </CardContent>
                             </Card>
