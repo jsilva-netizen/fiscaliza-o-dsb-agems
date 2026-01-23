@@ -57,13 +57,13 @@ export default function GestaoAutos() {
 
     const criarAutoMutation = useMutation({
         mutationFn: async (dados) => {
-            const numeroAuto = `AI-${new Date().getFullYear()}-${String(autos.length + 1).padStart(3, '0')}`;
+            const { numero_auto } = await base44.functions.invoke('gerarNumeroAuto', {});
             const dataLimite = new Date();
             dataLimite.setDate(dataLimite.getDate() + parseInt(dados.prazo_manifestacao));
 
             return base44.entities.AutoInfracao.create({
                 ...dados,
-                numero_auto: numeroAuto,
+                numero_auto: numero_auto,
                 data_geracao: new Date().toISOString(),
                 data_limite_manifestacao: dataLimite.toISOString().split('T')[0],
                 status: 'gerado'
