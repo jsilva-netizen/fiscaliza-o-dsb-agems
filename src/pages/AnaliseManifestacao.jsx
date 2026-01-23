@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileText, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { ArrowLeft, FileText, AlertCircle, CheckCircle, Clock, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function AnaliseManifestacao() {
     const [filtros, setFiltros] = useState({
@@ -18,6 +19,7 @@ export default function AnaliseManifestacao() {
         dataInicio: '',
         dataFim: ''
     });
+    const [pdfViewer, setPdfViewer] = useState({ open: false, url: '' });
 
     const { data: termos = [] } = useQuery({
         queryKey: ['termos-notificacao'],
@@ -293,12 +295,28 @@ export default function AnaliseManifestacao() {
                                                         <span className="font-medium">Câmara:</span> {termo.camara_tecnica}
                                                     </div>
                                                     <div>
-                                                        <span className="font-medium">Processo:</span> {termo.numero_processo || 'N/A'}
+                                                       <span className="font-medium">Processo:</span> {termo.numero_processo || 'N/A'}
                                                     </div>
                                                     <div className="col-span-2">
-                                                        <span className="font-medium">Serviços:</span> {fisc?.servicos?.join(', ') || 'N/A'}
+                                                       <span className="font-medium">Serviços:</span> {fisc?.servicos?.join(', ') || 'N/A'}
                                                     </div>
-                                                </div>
+                                                    </div>
+                                                    {termo.arquivos_resposta?.length > 0 && (
+                                                    <div className="mt-3 pt-3 border-t">
+                                                       <p className="text-sm font-medium mb-2">Arquivo de Resposta do Prestador:</p>
+                                                       {termo.arquivos_resposta.map((arquivo, idx) => (
+                                                           <Button
+                                                               key={idx}
+                                                               variant="outline"
+                                                               size="sm"
+                                                               onClick={() => setPdfViewer({ open: true, url: arquivo.url })}
+                                                           >
+                                                               <Download className="h-4 w-4 mr-2" />
+                                                               Visualizar PDF
+                                                           </Button>
+                                                       ))}
+                                                    </div>
+                                                    )}
                                                 <div className="flex gap-2 text-xs">
                                                     <Badge className="bg-blue-600">Total: {stats.total} determinações</Badge>
                                                     {stats.aguardandoAnalise > 0 && (
@@ -329,6 +347,22 @@ export default function AnaliseManifestacao() {
                         })
                     )}
                 </div>
+
+                {/* Visualizador de PDF */}
+                <Dialog open={pdfViewer.open} onOpenChange={(open) => setPdfViewer({ open, url: '' })}>
+                    <DialogContent className="max-w-[90vw] max-h-[90vh] p-0">
+                        <DialogHeader className="p-4 pb-0">
+                            <DialogTitle>Visualizador de PDF</DialogTitle>
+                        </DialogHeader>
+                        <div className="w-full h-[80vh]">
+                            <iframe
+                                src={`https://docs.google.com/viewer?url=${encodeURIComponent(pdfViewer.url)}&embedded=true`}
+                                className="w-full h-full border-0"
+                                title="PDF Viewer"
+                            />
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         </div>
     );
