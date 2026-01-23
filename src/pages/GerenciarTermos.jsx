@@ -150,6 +150,19 @@ export default function GerenciarTermos() {
         }
     }, [showDialog, termoForm.camara_tecnica, termos]);
 
+    // Calcular próximo número de AM
+    const calcularNumeroAM = async () => {
+        const ano = new Date().getFullYear();
+        const todosOsTermos = termos;
+        const amsDoAno = todosOsTermos.filter(t => {
+            if (!t.numero_am) return false;
+            const match = t.numero_am.match(/AM\s*(\d+)\/(\d{4})\/DSB\/AGEMS/);
+            return match && parseInt(match[2]) === ano;
+        });
+        const proximoNumeroAM = amsDoAno.length + 1;
+        return `AM ${String(proximoNumeroAM).padStart(3, '0')}/${ano}/DSB/AGEMS`;
+    };
+
      const criarTermoMutation = useMutation({
         mutationFn: async (dados) => {
             let dataMaxima = null;
