@@ -29,6 +29,7 @@ export default function GerenciarTermos() {
     });
     const [termoForm, setTermoForm] = useState({
         numero_termo_notificacao: '',
+        numero_rfp: '',
         municipio_id: '',
         numero_processo: '',
         camara_tecnica: 'CATESA',
@@ -150,6 +151,7 @@ export default function GerenciarTermos() {
             setSelectedFiscalizacao(null);
             setTermoForm({
                 numero_termo_notificacao: '',
+                numero_rfp: '',
                 municipio_id: '',
                 numero_processo: '',
                 camara_tecnica: 'CATESA',
@@ -196,6 +198,11 @@ export default function GerenciarTermos() {
 
         if (!termoForm.numero_processo) {
             alert('Informe o número do processo');
+            return;
+        }
+
+        if (!termoForm.numero_rfp) {
+            alert('Informe o número do RFP');
             return;
         }
 
@@ -328,7 +335,7 @@ export default function GerenciarTermos() {
                             <DialogTitle>Criar Termo de Notificação</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-3 gap-4">
                                 <div>
                                     <Label>Número do TN *</Label>
                                     <Input
@@ -338,13 +345,30 @@ export default function GerenciarTermos() {
                                     />
                                 </div>
                                 <div>
+                                    <Label>Número do RFP *</Label>
+                                    <Input
+                                        value={termoForm.numero_rfp}
+                                        onChange={(e) => {
+                                            const valor = e.target.value.replace(/\D/g, '').slice(0, 3);
+                                            setTermoForm({ ...termoForm, numero_rfp: valor });
+                                        }}
+                                        placeholder="001"
+                                        maxLength={3}
+                                    />
+                                    {termoForm.numero_rfp && termoForm.camara_tecnica && (
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            RFP/DSB/{termoForm.camara_tecnica}/{termoForm.numero_rfp}/{new Date().getFullYear()}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
                                     <Label>Número do Processo *</Label>
                                     <Input
                                         value={termoForm.numero_processo}
                                         onChange={(e) => {
                                             let valor = e.target.value.replace(/\D/g, '');
                                             if (valor.length > 13) valor = valor.slice(0, 13);
-                                            
+
                                             if (valor.length > 9) {
                                                 valor = `${valor.slice(0, 2)}.${valor.slice(2, 5)}.${valor.slice(5, 8)}-${valor.slice(8)}`;
                                             } else if (valor.length > 5) {
@@ -352,7 +376,7 @@ export default function GerenciarTermos() {
                                             } else if (valor.length > 2) {
                                                 valor = `${valor.slice(0, 2)}.${valor.slice(2)}`;
                                             }
-                                            
+
                                             setTermoForm({ ...termoForm, numero_processo: valor });
                                         }}
                                         placeholder="51.011.137-2025"
@@ -433,7 +457,7 @@ export default function GerenciarTermos() {
                                 <Button
                                     onClick={handleCriarTermo}
                                     className="flex-1 bg-blue-600 hover:bg-blue-700"
-                                    disabled={!termoForm.numero_processo}
+                                    disabled={!termoForm.numero_processo || !termoForm.numero_rfp}
                                 >
                                     Criar Termo
                                 </Button>
@@ -954,10 +978,15 @@ export default function GerenciarTermos() {
                                                 </div>
                                             ) : null;
                                         })()}
-                                        
+
                                         <div className="flex justify-between items-start mb-3">
                                              <div className="flex-1">
                                                  <h3 className="font-semibold text-lg">{termo.numero_termo_notificacao || termo.numero_termo}</h3>
+                                                 {termo.numero_rfp && (
+                                                     <p className="text-sm text-blue-600 font-medium">
+                                                         RFP/DSB/{termo.camara_tecnica}/{String(termo.numero_rfp).padStart(3, '0')}/{new Date(termo.data_geracao || Date.now()).getFullYear()}
+                                                     </p>
+                                                 )}
                                                  <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
                                                       <div>
                                                           <span className="font-medium">Município:</span> {getMunicipioNome(termo.municipio_id)}
