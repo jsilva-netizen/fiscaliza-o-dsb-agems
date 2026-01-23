@@ -6,7 +6,6 @@ import Checklists from './pages/Checklists';
 import DetalhePrestador from './pages/DetalhePrestador';
 import ExecutarFiscalizacao from './pages/ExecutarFiscalizacao';
 import Fiscalizacoes from './pages/Fiscalizacoes';
-import GerenciarTermos from './pages/GerenciarTermos';
 import GerenciarUsuarios from './pages/GerenciarUsuarios';
 import GestaoAutos from './pages/GestaoAutos';
 import Home from './pages/Home';
@@ -17,6 +16,7 @@ import Relatorios from './pages/Relatorios';
 import TiposUnidade from './pages/TiposUnidade';
 import VistoriarUnidade from './pages/VistoriarUnidade';
 import AnalisarResposta from './pages/AnalisarResposta';
+import GerenciarTermos from './pages/GerenciarTermos';
 import __Layout from './Layout.jsx';
 
 
@@ -29,7 +29,6 @@ export const PAGES = {
     "DetalhePrestador": DetalhePrestador,
     "ExecutarFiscalizacao": ExecutarFiscalizacao,
     "Fiscalizacoes": Fiscalizacoes,
-    "GerenciarTermos": GerenciarTermos,
     "GerenciarUsuarios": GerenciarUsuarios,
     "GestaoAutos": GestaoAutos,
     "Home": Home,
@@ -40,6 +39,7 @@ export const PAGES = {
     "TiposUnidade": TiposUnidade,
     "VistoriarUnidade": VistoriarUnidade,
     "AnalisarResposta": AnalisarResposta,
+    "GerenciarTermos": GerenciarTermos,
 }
 
 export const pagesConfig = {

@@ -126,7 +126,31 @@ export default function GerenciarTermos() {
         }
     }, [showDialog, termos]);
 
-    const criarTermoMutation = useMutation({
+    // Atualizar RFP automaticamente quando câmara é mudada
+    useEffect(() => {
+        if (showDialog && termoForm.camara_tecnica) {
+            const ano = new Date().getFullYear();
+
+            // Buscar o maior número de RFP para esta câmara no ano atual
+            let maiorRFP = 0;
+            termos.forEach(termo => {
+                if (termo.camara_tecnica === termoForm.camara_tecnica) {
+                    const rfpNum = parseInt(termo.numero_rfp || 0, 10);
+                    if (rfpNum > maiorRFP) {
+                        maiorRFP = rfpNum;
+                    }
+                }
+            });
+
+            const proximoRFP = maiorRFP + 1;
+            setTermoForm(prev => ({
+                ...prev,
+                numero_rfp: String(proximoRFP).padStart(3, '0')
+            }));
+        }
+    }, [showDialog, termoForm.camara_tecnica, termos]);
+
+     const criarTermoMutation = useMutation({
         mutationFn: async (dados) => {
             let dataMaxima = null;
             if (dados.data_protocolo) {
