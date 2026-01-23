@@ -603,7 +603,8 @@ export default function AnaliseManifestacao() {
                                 Limpar Filtros
                             </Button>
                         )}
-                    </CardContent>
+                        </div>
+                        </CardContent>
                 </Card>
 
                 {/* Lista de TNs */}
