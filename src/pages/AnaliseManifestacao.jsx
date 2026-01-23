@@ -220,46 +220,28 @@ export default function AnaliseManifestacao() {
         );
         
         const numeroAM = await calcularNumeroAM(termo);
-        
-        // Salvar número da AM no termo
         await base44.entities.TermoNotificacao.update(termo.id, { numero_termo_notificacao: numeroAM });
-        
-        // Atualizar lista de termos
         refetchTermos();
 
-        const doc = new jsPDF('l', 'mm', 'a4');
+        const doc = new jsPDF('p', 'mm', 'a4');
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 10;
+        const margin = 12;
+        let yPos = margin;
 
         // Título
-        doc.setFontSize(14);
+        doc.setFontSize(16);
         doc.setFont(undefined, 'bold');
-        doc.text(numeroAM, margin, 15);
+        doc.text(numeroAM, margin, yPos);
+        yPos += 8;
 
         // Informações do TN
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
-        const fisc = fiscalizacoes.find(f => f.id === termo.fiscalizacao_id);
-        doc.text(`TN: ${termo.numero_termo_notificacao}`, margin, 22);
-        doc.text(`Município: ${getMunicipioNome(termo.municipio_id)} | Prestador: ${getPrestadorNome(termo.prestador_servico_id)}`, margin, 28);
-
-        // Tabela com melhor formatação
-        const tableTop = 35;
-        const colWidths = [14, 24, 31, 33, 28, 18];
-        const headers = ['Determinação', 'Base Legal', 'Manifestação Apresentada', 'Análise', 'Resultado da Análise', 'Nº AI'];
-        
-        doc.setFont(undefined, 'bold');
-        doc.setFillColor(150, 170, 220);
         doc.setFontSize(9);
-        let xPos = margin;
-        headers.forEach((header, i) => {
-            doc.rect(xPos, tableTop, colWidths[i], 6, 'F');
-            doc.setTextColor(0, 0, 0);
-            const headerLines = doc.splitTextToSize(header, colWidths[i] - 1);
-            doc.text(headerLines, xPos + 0.5, tableTop + 3.5, { maxWidth: colWidths[i] - 1 });
-            xPos += colWidths[i];
-        });
+        doc.setFont(undefined, 'normal');
+        doc.text(`TN: ${termo.numero_termo_notificacao}`, margin, yPos);
+        yPos += 5;
+        doc.text(`Município: ${getMunicipioNome(termo.municipio_id)} | Prestador: ${getPrestadorNome(termo.prestador_servico_id)}`, margin, yPos);
+        yPos += 8;
 
         // Buscar números dos AIs gerados
         const autos = await base44.entities.AutoInfracao.list();
@@ -270,80 +252,91 @@ export default function AnaliseManifestacao() {
             }
         });
 
-        // Dados das determinações
-        doc.setFont(undefined, 'normal');
-        doc.setFontSize(7);
-        let yPos = tableTop + 6;
-
+        // Processar cada determinação
         dets.forEach((det, detIndex) => {
             const resposta = resp.find(r => r.determinacao_id === det.id);
             
-            // Quebrar texto em múltiplas linhas
-            const manifestacaoLines = doc.splitTextToSize(resposta?.manifestacao_prestador || '', colWidths[2] - 1);
-            const analiseLines = doc.splitTextToSize(resposta?.descricao_atendimento || '', colWidths[3] - 1);
-            const baseLegalLines = doc.splitTextToSize('Portaria AGEMS nº 233/2022 e suas alterações', colWidths[1] - 1);
-            
-            const maxLines = Math.max(manifestacaoLines.length || 1, analiseLines.length || 1, baseLegalLines.length || 1);
-            const lineHeight = 2.5;
-            const rowHeight = Math.max(6, maxLines * lineHeight + 2);
-
-            // Verificar se precisa de nova página
-            if (yPos + rowHeight > pageHeight - 10) {
+            // Verificar espaço para nova linha (aprox 40mm por determinação)
+            if (yPos + 40 > pageHeight - 10) {
                 doc.addPage();
-                yPos = 10;
+                yPos = margin;
             }
 
-            xPos = margin;
-            const cellStartY = yPos + 1;
-
-            // Célula: Determinação
-            doc.rect(xPos, yPos, colWidths[0], rowHeight);
+            const colLeft = margin;
+            const colWidth = pageWidth - (2 * margin);
+            const cellLineHeight = 5;
+            
+            // Cabeçalho da determinação
+            doc.setFillColor(180, 180, 180);
+            doc.rect(colLeft, yPos, colWidth, cellLineHeight, 'F');
             doc.setFont(undefined, 'bold');
-            doc.text(det.numero_determinacao, xPos + 0.5, cellStartY, { maxWidth: colWidths[0] - 1 });
-            xPos += colWidths[0];
+            doc.setFontSize(9);
+            doc.text(`Determinação: ${det.numero_determinacao}`, colLeft + 1, yPos + 3.5);
+            yPos += cellLineHeight;
 
-            // Célula: Base Legal
-            doc.rect(xPos, yPos, colWidths[1], rowHeight);
+            // Dados em formato de linhas
+            const dadoLinhas = [
+                { label: 'Base Legal:', valor: 'Portaria AGEMS nº 233/2022 e suas alterações' },
+                { label: 'Manifestação:', valor: resposta?.manifestacao_prestador || 'Sem informação' },
+                { label: 'Análise:', valor: resposta?.descricao_atendimento || 'Sem informação' }
+            ];
+
             doc.setFont(undefined, 'normal');
-            doc.text(baseLegalLines, xPos + 0.5, cellStartY, { maxWidth: colWidths[1] - 1 });
-            xPos += colWidths[1];
+            doc.setFontSize(8);
 
-            // Célula: Manifestação Apresentada
-            doc.rect(xPos, yPos, colWidths[2], rowHeight);
-            doc.text(manifestacaoLines, xPos + 0.5, cellStartY, { maxWidth: colWidths[2] - 1 });
-            xPos += colWidths[2];
+            dadoLinhas.forEach(linha => {
+                const textHeight = doc.getTextDimensions(linha.valor).h;
+                const wrappedText = doc.splitTextToSize(linha.valor, colWidth - 40);
+                const lineCount = wrappedText.length;
+                const cellHeight = Math.max(cellLineHeight, lineCount * cellLineHeight + 2);
 
-            // Célula: Análise
-            doc.rect(xPos, yPos, colWidths[3], rowHeight);
-            doc.text(analiseLines, xPos + 0.5, cellStartY, { maxWidth: colWidths[3] - 1 });
-            xPos += colWidths[3];
+                // Label em fundo claro
+                doc.setFillColor(240, 240, 240);
+                doc.rect(colLeft, yPos, 35, cellHeight, 'F');
+                doc.setFont(undefined, 'bold');
+                doc.text(linha.label, colLeft + 1, yPos + 3);
 
-            // Célula: Resultado da Análise
-            doc.rect(xPos, yPos, colWidths[4], rowHeight);
+                // Valor
+                doc.setFont(undefined, 'normal');
+                doc.text(wrappedText, colLeft + 37, yPos + 2, { maxWidth: colWidth - 39 });
+
+                yPos += cellHeight;
+            });
+
+            // Resultado da Análise
             const resultado = resposta?.status === 'atendida' ? 'ACATADA' : 'NÃO ACATADA';
+            const corResultado = resposta?.status === 'atendida' ? [0, 128, 0] : [255, 0, 0];
+            
+            doc.setFillColor(240, 240, 240);
+            doc.rect(colLeft, yPos, 35, cellLineHeight, 'F');
             doc.setFont(undefined, 'bold');
-            if (resposta?.status === 'atendida') {
-                doc.setTextColor(0, 128, 0);
-            } else {
-                doc.setTextColor(255, 0, 0);
-            }
-            doc.text(resultado, xPos + 0.5, cellStartY, { maxWidth: colWidths[4] - 1 });
+            doc.setFontSize(8);
+            doc.text('Resultado:', colLeft + 1, yPos + 3);
+
+            doc.setFont(undefined, 'bold');
+            doc.setFontSize(9);
+            doc.setTextColor(corResultado[0], corResultado[1], corResultado[2]);
+            doc.text(resultado, colLeft + 37, yPos + 3);
             doc.setTextColor(0, 0, 0);
-            doc.setFont(undefined, 'normal');
-            xPos += colWidths[4];
 
-            // Célula: Nº AI
-            doc.rect(xPos, yPos, colWidths[5], rowHeight);
+            yPos += cellLineHeight;
+
+            // Nº AI
             const numeroAI = autosPorDeterminacao[det.id];
-            if (numeroAI) {
-                doc.text(numeroAI, xPos + 0.5, cellStartY, { maxWidth: colWidths[5] - 1 });
-            } else if (resposta?.status === 'nao_atendida') {
-                doc.text('Gerar', xPos + 0.5, cellStartY, { maxWidth: colWidths[5] - 1 });
-            } else {
-                doc.text('NÃO SE APLICA', xPos + 0.5, cellStartY, { maxWidth: colWidths[5] - 1 });
-            }
+            const textoAI = numeroAI ? numeroAI : (resposta?.status === 'nao_atendida' ? 'Gerar' : 'NÃO SE APLICA');
+            
+            doc.setFillColor(240, 240, 240);
+            doc.rect(colLeft, yPos, 35, cellLineHeight, 'F');
+            doc.setFont(undefined, 'bold');
+            doc.setFontSize(8);
+            doc.text('Nº AI:', colLeft + 1, yPos + 3);
 
-            yPos += rowHeight;
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(0, 0, 0);
+            doc.text(textoAI, colLeft + 37, yPos + 3);
+
+            yPos += cellLineHeight + 5;
         });
 
         doc.save(`${numeroAM}.pdf`);
