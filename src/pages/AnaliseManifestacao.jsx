@@ -666,27 +666,15 @@ export default function AnaliseManifestacao() {
                                                      </Link>
                                                  )}
                                                  {stats.total > 0 && termo.numero_am && todasDeterminacoesAnalisadas(termo) && (
-                                                     <div className="flex gap-2">
-                                                         <Button 
-                                                             size="sm" 
-                                                             className="bg-blue-600 hover:bg-blue-700"
-                                                             onClick={() => baixarAnaliseManifestacao(termo)}
-                                                         >
-                                                             <Download className="h-4 w-4 mr-1" />
-                                                             Baixar AM PDF
-                                                         </Button>
-                                                         <Button 
-                                                             size="sm" 
-                                                             variant="outline"
-                                                             onClick={async () => {
-                                                                 await base44.entities.TermoNotificacao.update(termo.id, { numero_am: null });
-                                                                 refetchTermos();
-                                                             }}
-                                                         >
-                                                             Editar AM
-                                                         </Button>
-                                                     </div>
-                                                 )}
+                                                      <Button 
+                                                          size="sm" 
+                                                          className="bg-blue-600 hover:bg-blue-700"
+                                                          onClick={() => baixarAnaliseManifestacao(termo)}
+                                                      >
+                                                          <Download className="h-4 w-4 mr-1" />
+                                                          Baixar AM PDF
+                                                      </Button>
+                                                  )}
                                                 </div>
                                         </div>
                                     </CardContent>
