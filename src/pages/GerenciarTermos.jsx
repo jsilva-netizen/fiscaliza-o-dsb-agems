@@ -561,17 +561,81 @@ export default function GerenciarTermos() {
 
                                 {termoDetalhes.data_maxima_resposta && (
                                     <div className="border-t pt-4">
-                                        <h3 className="font-semibold mb-3">Arquivos de Resposta</h3>
+                                        <h3 className="font-semibold mb-3">Arquivo de Resposta do Prestador</h3>
                                         <div className="space-y-2">
+                                            <div>
+                                                <Label className="text-sm">Data de Recebimento da Resposta *</Label>
+                                                <Input type="date" id="data-resposta-detalhe" defaultValue={termoDetalhes.data_recebimento_resposta || ''} />
+                                            </div>
+                                            <Input
+                                                type="file"
+                                                accept=".pdf"
+                                                onChange={async (e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        setUploadingResposta(true);
+                                                        try {
+                                                            const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                                                            setProtocoloTemp(file_url);
+                                                        } catch (error) {
+                                                            alert('Erro ao enviar arquivo');
+                                                        } finally {
+                                                            setUploadingResposta(false);
+                                                        }
+                                                    }
+                                                }}
+                                                disabled={uploadingResposta}
+                                            />
+                                            {uploadingResposta && <p className="text-xs text-gray-500">Enviando arquivo...</p>}
+                                            {protocoNoTemp && !uploadingResposta && (
+                                                <p className="text-xs text-green-600">✓ Arquivo carregado</p>
+                                            )}
+                                            {protocoNoTemp && (
+                                                <Button onClick={async () => {
+                                                    const dataResposta = document.getElementById('data-resposta-detalhe').value;
+                                                    if (!dataResposta) {
+                                                        alert('Informe a data de recebimento');
+                                                        return;
+                                                    }
+
+                                                    try {
+                                                        const novoArquivo = {
+                                                            url: protocoNoTemp,
+                                                            nome: 'Resposta do Prestador',
+                                                            data_upload: new Date().toISOString()
+                                                        };
+
+                                                        const arquivosAtuais = termoDetalhes.arquivos_resposta || [];
+                                                        const dataMax = new Date(termoDetalhes.data_maxima_resposta + 'T00:00:00');
+                                                        const dataReceb = new Date(dataResposta + 'T00:00:00');
+
+                                                        await base44.entities.TermoNotificacao.update(termoDetalhes.id, {
+                                                            data_recebimento_resposta: dataResposta,
+                                                            arquivos_resposta: [...arquivosAtuais, novoArquivo],
+                                                            recebida_no_prazo: dataReceb <= dataMax,
+                                                            status: 'respondido'
+                                                        });
+
+                                                        queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                        setTermoDetalhes({ ...termoDetalhes, data_recebimento_resposta: dataResposta, arquivos_resposta: [...arquivosAtuais, novoArquivo] });
+                                                        setProtocoloTemp(null);
+                                                        alert('Resposta registrada com sucesso!');
+                                                    } catch (error) {
+                                                        alert('Erro ao salvar');
+                                                    }
+                                                }} className="w-full" size="sm">
+                                                    Salvar
+                                                </Button>
+                                            )}
                                             {termoDetalhes.arquivos_resposta && termoDetalhes.arquivos_resposta.length > 0 && (
-                                                <div className="space-y-1">
+                                                <>
                                                     {termoDetalhes.arquivos_resposta.map((arquivo, idx) => (
                                                         <Button key={idx} variant="outline" onClick={() => window.open(arquivo.url)} className="w-full" size="sm">
                                                             <Download className="h-4 w-4 mr-2" />
-                                                            Baixar Resposta ({idx + 1})
+                                                            Baixar Arquivo de Resposta
                                                         </Button>
                                                     ))}
-                                                </div>
+                                                </>
                                             )}
                                         </div>
                                     </div>
