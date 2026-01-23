@@ -301,11 +301,13 @@ export default function AnaliseManifestacao() {
                                             </div>
                                             <div className="flex flex-col gap-2 items-end">
                                                 <Badge className={statusInfo.color}>{statusInfo.label}</Badge>
-                                                <Link to={createPageUrl('AnalisarResposta') + `?termo=${termo.id}`}>
-                                                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                                                        Analisar Determinações
-                                                    </Button>
-                                                </Link>
+                                                {stats.total > 0 && (
+                                                    <Link to={createPageUrl('AnalisarResposta') + `?termo=${termo.id}`}>
+                                                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                                                            Analisar Determinações
+                                                        </Button>
+                                                    </Link>
+                                                )}
                                             </div>
                                         </div>
                                     </CardContent>
