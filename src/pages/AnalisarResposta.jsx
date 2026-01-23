@@ -362,7 +362,7 @@ export default function AnalisarResposta() {
                                                         agent_name: 'analise_resposta_determinacao'
                                                     });
                                                     
-                                                    const prompt = `DETERMINAÇÃO:\n${detalheDeterminacao.descricao}\n\nMANIFESTAÇÃO DO PRESTADOR:\n${analiseForm.manifestacao_prestador}\n\nAnalise se a manifestação do prestador atende ou não a determinação. Seja objetivo e técnico.`;
+                                                    const prompt = `DETERMINAÇÃO (${detalheDeterminacao.numero_determinacao}):\n${detalheDeterminacao.descricao}\n\nMANIFESTAÇÃO DO PRESTADOR:\n${analiseForm.manifestacao_prestador}\n\nAnalise se a manifestação do prestador atende ou não a determinação ${detalheDeterminacao.numero_determinacao}. Seja objetivo e técnico.`;
                                                     
                                                     await base44.agents.addMessage(conversacao, {
                                                         role: 'user',
