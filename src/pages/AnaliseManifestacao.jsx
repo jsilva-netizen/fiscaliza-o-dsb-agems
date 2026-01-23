@@ -129,6 +129,116 @@ export default function AnaliseManifestacao() {
         }
     };
 
+    const todasDeterminacoesAnalisadas = (termo) => {
+        const stats = contarStatusDeterminacoes(termo);
+        if (stats.total === 0) return false;
+        return stats.atendidas + stats.naoAtendidas === stats.total;
+    };
+
+    const gerarAnaliseManifestacao = async (termo) => {
+        const dets = getDeterminacoesPorTermo(termo);
+        const resp = respostasDeterminacao.filter(r => 
+            dets.map(d => d.id).includes(r.determinacao_id)
+        );
+        
+        // Contar AMs existentes do mesmo tipo
+        const amsExistentes = (await base44.entities.AnaliseManifestaçao?.list?.()) || [];
+        const ano = new Date().getFullYear();
+        const camaraTecnica = termo.camara_tecnica;
+        
+        const amsDA = amsExistentes.filter(a => {
+            if (!a.numero_am) return false;
+            const match = a.numero_am.match(/AM\s*(\d+)\/\d+\/DSB\/(\w+)/);
+            return match && match[2] === camaraTecnica;
+        });
+        const proximoNumero = amsDA.length + 1;
+        const numeroAM = `AM ${String(proximoNumero).padStart(3, '0')}/${ano}/DSB/${camaraTecnica}`;
+
+        const doc = new jsPDF('l', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 10;
+
+        // Título
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text(numeroAM, margin, 15);
+
+        // Informações do TN
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        const fisc = fiscalizacoes.find(f => f.id === termo.fiscalizacao_id);
+        doc.text(`TN: ${termo.numero_termo_notificacao}`, margin, 22);
+        doc.text(`Município: ${getMunicipioNome(termo.municipio_id)} | Prestador: ${getPrestadorNome(termo.prestador_servico_id)}`, margin, 28);
+
+        // Tabela
+        const tableTop = 35;
+        const colWidths = [15, 30, 35, 40, 25, 20];
+        const headers = ['Determinação', 'Base Legal', 'Manifestação Apresentada', 'Análise', 'Resultado', 'Nº AI'];
+        
+        doc.setFont(undefined, 'bold');
+        doc.setFillColor(200, 200, 255);
+        let xPos = margin;
+        headers.forEach((header, i) => {
+            doc.rect(xPos, tableTop, colWidths[i], 8, 'F');
+            doc.text(header, xPos + 1, tableTop + 6, { maxWidth: colWidths[i] - 2 });
+            xPos += colWidths[i];
+        });
+
+        // Dados das determinações
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(8);
+        let yPos = tableTop + 8;
+
+        dets.forEach(det => {
+            const resposta = resp.find(r => r.determinacao_id === det.id);
+            const naoConformidade = determinacoes.find(d => d.id === det.nao_conformidade_id);
+
+            xPos = margin;
+            const rowHeight = 15;
+
+            // Determinação
+            doc.text(det.numero_determinacao, xPos + 1, yPos + 4, { maxWidth: colWidths[0] - 2 });
+            xPos += colWidths[0];
+
+            // Base Legal
+            doc.text('Portaria AGEMS nº 233/2022', xPos + 1, yPos + 4, { maxWidth: colWidths[1] - 2 });
+            xPos += colWidths[1];
+
+            // Manifestação
+            doc.text(resposta?.manifestacao_prestador || '', xPos + 1, yPos + 4, { maxWidth: colWidths[2] - 2 });
+            xPos += colWidths[2];
+
+            // Análise
+            doc.text(resposta?.descricao_atendimento || '', xPos + 1, yPos + 4, { maxWidth: colWidths[3] - 2 });
+            xPos += colWidths[3];
+
+            // Resultado
+            const resultado = resposta?.status === 'atendida' ? 'ACATADA' : 'NÃO ACATADA';
+            doc.setFont(undefined, resposta?.status === 'atendida' ? 'bold' : 'bold');
+            doc.setTextColor(resposta?.status === 'atendida' ? 0, 128, 0 : 255, 0, 0);
+            doc.text(resultado, xPos + 1, yPos + 4, { maxWidth: colWidths[4] - 2 });
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'normal');
+            xPos += colWidths[4];
+
+            // Nº AI
+            if (resposta?.status === 'nao_atendida') {
+                doc.text('Gerar', xPos + 1, yPos + 4, { maxWidth: colWidths[5] - 2 });
+            }
+
+            doc.rect(margin, yPos, pageWidth - 2 * margin, rowHeight);
+            yPos += rowHeight;
+
+            if (yPos > pageHeight - 20) {
+                doc.addPage();
+                yPos = 15;
+            }
+        });
+
+        doc.save(`${numeroAM}.pdf`);
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 p-6">
             <div className="max-w-6xl mx-auto">
