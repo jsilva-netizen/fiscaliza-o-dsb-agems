@@ -464,9 +464,7 @@ export default function AnaliseManifestacao() {
                                         <div className="flex justify-between items-start">
                                             <div className="flex-1">
                                                 <h3 className="font-semibold text-lg mb-2">
-                                                    {todasDeterminacoesAnalisadas(termo) && termo.numero_termo_notificacao?.startsWith('AM ') 
-                                                        ? termo.numero_termo_notificacao 
-                                                        : `TN ${termo.numero_termo_notificacao}`}
+                                                    {termo.numero_termo_notificacao}
                                                 </h3>
                                                 <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-3">
                                                     <div>
