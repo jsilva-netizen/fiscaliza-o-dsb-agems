@@ -680,14 +680,26 @@ export default function AnaliseManifestacao() {
                                                                 Gerar Análise
                                                             </Button>
                                                         ) : (
-                                                            <Button 
-                                                                size="sm" 
-                                                                className="bg-blue-600 hover:bg-blue-700"
-                                                                onClick={() => baixarAnaliseManifestacao(termo)}
-                                                            >
-                                                                <Download className="h-4 w-4 mr-1" />
-                                                                Baixar AM PDF
-                                                            </Button>
+                                                            <div className="flex gap-2">
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    className="bg-blue-600 hover:bg-blue-700"
+                                                                    onClick={() => baixarAnaliseManifestacao(termo)}
+                                                                >
+                                                                    <Download className="h-4 w-4 mr-1" />
+                                                                    Baixar AM PDF
+                                                                </Button>
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="outline"
+                                                                    onClick={async () => {
+                                                                        await base44.entities.TermoNotificacao.update(termo.id, { numero_am: null });
+                                                                        queryClient.invalidateQueries({ queryKey: ['termos-notificacao'] });
+                                                                    }}
+                                                                >
+                                                                    Editar AM
+                                                                </Button>
+                                                            </div>
                                                         )}
                                                         </div>
                                                         )}
