@@ -77,17 +77,31 @@ export default function GestaoAutos() {
     });
 
     const enviarAutoMutation = useMutation({
-        mutationFn: async (id) => {
-            return base44.entities.AutoInfracao.update(id, {
-                status: 'enviado',
-                data_envio: new Date().toISOString()
-            });
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['autos-infracao'] });
-            alert('Auto enviado!');
-        }
-    });
+         mutationFn: async (id) => {
+             return base44.entities.AutoInfracao.update(id, {
+                 status: 'enviado',
+                 data_envio: new Date().toISOString()
+             });
+         },
+         onSuccess: () => {
+             queryClient.invalidateQueries({ queryKey: ['autos-infracao'] });
+             alert('Auto enviado!');
+         }
+     });
+
+     const salvarPenaBaseMutation = useMutation({
+         mutationFn: async ({ autoId, penaUferms, penaRs }) => {
+             return base44.entities.AutoInfracao.update(autoId, {
+                 pena_base_uferms: parseInt(penaUferms) || 0,
+                 pena_base_rs: parseFloat(penaRs.replace('R$', '').replace(',', '.').trim()) || 0
+             });
+         },
+         onSuccess: () => {
+             queryClient.invalidateQueries({ queryKey: ['autos-infracao'] });
+             alert('Pena base salva com sucesso!');
+             setPenaBase({});
+         }
+     });
 
     const handleUploadAuto = async (autoId, e) => {
         const file = e.target.files?.[0];
