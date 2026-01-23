@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, FileText, AlertCircle, CheckCircle, Clock, Download, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileText, AlertCircle, CheckCircle, Clock, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import jsPDF from 'jspdf';
@@ -680,27 +680,26 @@ export default function AnaliseManifestacao() {
                                                                 Gerar Análise
                                                             </Button>
                                                         ) : (
-                                                            <Button 
-                                                                size="sm" 
-                                                                className="bg-blue-600 hover:bg-blue-700"
-                                                                onClick={() => baixarAnaliseManifestacao(termo)}
-                                                            >
-                                                                <Download className="h-4 w-4 mr-1" />
-                                                                Baixar AM PDF
-                                                            </Button>
+                                                            <div className="flex gap-2">
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    className="bg-blue-600 hover:bg-blue-700"
+                                                                    onClick={() => baixarAnaliseManifestacao(termo)}
+                                                                >
+                                                                    <Download className="h-4 w-4 mr-1" />
+                                                                    Baixar AM PDF
+                                                                </Button>
+                                                                <Link to={createPageUrl('AnalisarResposta') + `?termo=${termo.id}`}>
+                                                                    <Button 
+                                                                        size="sm" 
+                                                                        variant="outline"
+                                                                        className="border-orange-300 text-orange-600 hover:bg-orange-50"
+                                                                    >
+                                                                        Editar Análises
+                                                                    </Button>
+                                                                </Link>
+                                                            </div>
                                                         )}
-                                                        <Button
-                                                            size="sm"
-                                                            variant="destructive"
-                                                            onClick={() => {
-                                                                setTermoExcluindo(termo);
-                                                                setConfirmarExclusao(false);
-                                                            }}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
                                     </CardContent>
