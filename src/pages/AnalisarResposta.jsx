@@ -24,7 +24,6 @@ export default function AnalisarResposta() {
         dentro_prazo: true
     });
     const [confirmDialog, setConfirmDialog] = useState({ open: false, determinacao: null });
-    const [pdfViewer, setPdfViewer] = useState({ open: false, url: '' });
     const [analisandoIA, setAnalisandoIA] = useState(false);
 
     const { data: termo } = useQuery({
@@ -243,7 +242,7 @@ export default function AnalisarResposta() {
                                         key={idx}
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => setPdfViewer({ open: true, url: arquivo.url })}
+                                        onClick={() => window.open(`https://docs.google.com/viewer?url=${encodeURIComponent(arquivo.url)}&embedded=true`, '_blank')}
                                         className="mr-2"
                                     >
                                         <Download className="h-4 w-4 mr-2" />
@@ -467,21 +466,7 @@ export default function AnalisarResposta() {
                     </AlertDialogContent>
                 </AlertDialog>
 
-                {/* Visualizador de PDF */}
-                <Dialog open={pdfViewer.open} onOpenChange={(open) => setPdfViewer({ open, url: '' })}>
-                    <DialogContent className="max-w-[90vw] max-h-[90vh] p-0">
-                        <DialogHeader className="p-4 pb-0">
-                            <DialogTitle>Visualizador de PDF</DialogTitle>
-                        </DialogHeader>
-                        <div className="w-full h-[80vh]">
-                            <iframe
-                                src={`https://docs.google.com/viewer?url=${encodeURIComponent(pdfViewer.url)}&embedded=true`}
-                                className="w-full h-full border-0"
-                                title="PDF Viewer"
-                            />
-                        </div>
-                    </DialogContent>
-                </Dialog>
+
             </div>
         </div>
     );
