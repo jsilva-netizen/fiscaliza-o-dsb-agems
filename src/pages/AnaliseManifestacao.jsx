@@ -700,7 +700,8 @@ export default function AnaliseManifestacao() {
                                                                 </Link>
                                                             </div>
                                                         )}
-                                            </div>
+                                                        </div>
+                                                        </div>
                                         </div>
                                     </CardContent>
                                 </Card>
