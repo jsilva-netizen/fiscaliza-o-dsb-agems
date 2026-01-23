@@ -827,7 +827,10 @@ export default function GerenciarTermos() {
                                                      {termo.data_recebimento_resposta && (
                                                          <>
                                                              <div>
-                                                                 <span className="font-medium">Resposta em:</span> {new Date(termo.data_recebimento_resposta).toLocaleDateString('pt-BR')}
+                                                                 <span className="font-medium">Resposta em:</span> {(() => {
+                                                                     const [a, m, d] = termo.data_recebimento_resposta.split('-');
+                                                                     return `${d}/${m}/${a}`;
+                                                                 })()}
                                                              </div>
                                                              <div>
                                                                  <Badge className={termo.recebida_no_prazo ? 'bg-green-600' : 'bg-red-600'}>
