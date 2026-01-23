@@ -162,6 +162,9 @@ export default function AnaliseManifestacao() {
         
         // Salvar número da AM no termo
         await base44.entities.TermoNotificacao.update(termo.id, { numero_termo_notificacao: numeroAM });
+        
+        // Atualizar lista de termos
+        refetchTermos();
 
         const doc = new jsPDF('l', 'mm', 'a4');
         const pageWidth = doc.internal.pageSize.getWidth();
