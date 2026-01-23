@@ -137,13 +137,13 @@ export default function AnaliseManifestacao() {
     const calcularNumeroAM = async (termo) => {
         const ano = new Date().getFullYear();
         const camaraTecnica = termo.camara_tecnica;
-        const todosOsAIs = await base44.entities.AutoInfracao.list();
-        const aisDoAno = todosOsAIs.filter(ai => {
-            if (!ai.numero_auto) return false;
-            const match = ai.numero_auto.match(/AI\s*nº\s*(\d+)\/(\d{4})\/DSB\/(\w+)/);
+        const todosOsTermos = await base44.entities.TermoNotificacao.list();
+        const amsDoAno = todosOsTermos.filter(t => {
+            if (!t.numero_termo_notificacao) return false;
+            const match = t.numero_termo_notificacao.match(/AM\s*(\d+)\/(\d{4})\/DSB\/(\w+)/);
             return match && parseInt(match[2]) === ano && match[3] === camaraTecnica;
         });
-        const proximoNumeroAM = aisDoAno.length + 1;
+        const proximoNumeroAM = amsDoAno.length + 1;
         return `AM ${String(proximoNumeroAM).padStart(3, '0')}/${ano}/DSB/${camaraTecnica}`;
     };
 
