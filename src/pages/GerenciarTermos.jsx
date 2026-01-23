@@ -1007,7 +1007,7 @@ export default function GerenciarTermos() {
                                                           <span className="font-medium">Câmara:</span> {termo.camara_tecnica || 'N/A'}
                                                       </div>
                                                      <div>
-                                                         <span className="font-medium">Protocolo:</span> {termo.data_protocolo ? (() => {
+                                                         <span className="font-medium">Protocolado em:</span> {termo.data_protocolo ? (() => {
                                                              const [a, m, d] = termo.data_protocolo.split('-');
                                                              return `${d}/${m}/${a}`;
                                                          })() : 'N/A'}
@@ -1016,7 +1016,7 @@ export default function GerenciarTermos() {
                                                          <span className="font-medium">Prazo:</span> {termo.prazo_resposta_dias || 30} dias
                                                      </div>
                                                      <div>
-                                                         <span className="font-medium">Prazo para resposta:</span> {termo.data_maxima_resposta ? (() => {
+                                                         <span className="font-medium">Prazo para Manifestação do Prestador:</span> {termo.data_maxima_resposta ? (() => {
                                                              const [a, m, d] = termo.data_maxima_resposta.split('-');
                                                              return `${d}/${m}/${a}`;
                                                          })() : 'N/A'}
@@ -1029,7 +1029,7 @@ export default function GerenciarTermos() {
                                                      {termo.data_recebimento_resposta && (
                                                          <>
                                                              <div>
-                                                                 <span className="font-medium">Resposta em:</span> {(() => {
+                                                                 <span className="font-medium">Manifestação do Prestador em:</span> {(() => {
                                                                      const [a, m, d] = termo.data_recebimento_resposta.split('-');
                                                                      return `${d}/${m}/${a}`;
                                                                  })()}
