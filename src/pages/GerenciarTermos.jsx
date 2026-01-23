@@ -695,7 +695,7 @@ export default function GerenciarTermos() {
                                                      )}
                                                  </div>
                                              </div>
-                                             <div className="flex flex-col gap-2 items-end">
+                                             <div className="flex flex-col gap-3 items-end">
                                                      <Badge className={getStatusBadge(getStatusFluxo(termo)).color}>
                                                          {getStatusBadge(getStatusFluxo(termo)).label}
                                                      </Badge>
