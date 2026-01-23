@@ -23,7 +23,7 @@ export default function TiposUnidade() {
     const [deleteConfirmation, setDeleteConfirmation] = useState({ open: false, tipoId: null, step: 1, inputValue: '' });
     const [formData, setFormData] = useState({
         nome: '',
-        descricao: '',
+        tipo_unidade_codigo: '',
         servicos_aplicaveis: [],
         ativo: true
     });
