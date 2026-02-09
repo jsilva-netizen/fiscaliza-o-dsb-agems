@@ -3,9 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { DataService } from '@/components/offline/DataService';
-import { useSyncManager } from '@/components/offline/useSyncManager';
-import { WifiOff, Wifi } from 'lucide-react';
+import DataService from '@/functions/dataService';
+import OfflineSyncButton from '@/components/offline/OfflineSyncButton';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,7 +32,6 @@ export default function ExecutarFiscalizacao() {
     const navigate = useNavigate();
     const urlParams = new URLSearchParams(window.location.search);
     const fiscalizacaoId = urlParams.get('id');
-    const syncStatus = useSyncManager();
     const [unidadeParaExcluir, setUnidadeParaExcluir] = useState(null);
     const [mostrarConfirmacaoFinalizacao, setMostrarConfirmacaoFinalizacao] = useState(false);
     const [user, setUser] = useState(null);
@@ -194,19 +192,10 @@ export default function ExecutarFiscalizacao() {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            {syncStatus.hasPending && (
-                                <div className="text-xs bg-blue-800 px-2 py-1 rounded">
-                                    {syncStatus.pendingCount} pendente
-                                </div>
-                            )}
-                            {navigator.onLine ? (
-                                <Wifi className="h-4 w-4 text-green-300" />
-                            ) : (
-                                <WifiOff className="h-4 w-4 text-yellow-300" />
-                            )}
                             <Badge className={fiscalizacao.status === 'finalizada' ? 'bg-green-500' : 'bg-yellow-500'}>
                                 {fiscalizacao.status === 'finalizada' ? 'Finalizada' : 'Em andamento'}
                             </Badge>
+                            <OfflineSyncButton />
                         </div>
                     </div>
                 </div>
