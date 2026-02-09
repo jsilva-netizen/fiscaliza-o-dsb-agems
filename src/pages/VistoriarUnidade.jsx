@@ -355,6 +355,20 @@ export default function VistoriarUnidade() {
             return { itemId, data };
         },
         onSuccess: ({ itemId, data }) => {
+            // Atualizar estado local imediatamente para feedback instantâneo
+            const respostaAtual = respostasExistentes.find(r => r.item_checklist_id === itemId);
+            if (respostaAtual) {
+                setRespostas(prev => ({
+                    ...prev,
+                    [itemId]: { 
+                        ...respostaAtual, 
+                        resposta: data.resposta, 
+                        observacao: data.observacao,
+                        pergunta: data.pergunta
+                    }
+                }));
+            }
+            
             // Invalidar queries - React Query faz refetch automaticamente
             queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
             queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
