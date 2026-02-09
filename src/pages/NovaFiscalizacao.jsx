@@ -120,7 +120,7 @@ export default function NovaFiscalizacao() {
             alert('Preencha todos os campos obrigatórios');
             return;
         }
-        createMutation.mutate(formData);
+        handleCreateFiscalizacao(formData);
     };
 
     const municipioSelecionado = municipios.find(m => m.id === formData.municipio_id);
