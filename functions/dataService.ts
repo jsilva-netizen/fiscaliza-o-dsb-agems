@@ -1,5 +1,5 @@
 import { base44 } from '@/api/base44Client';
-import db from '../functions/offlineDb.js';
+import db from '@/functions/offlineDb';
 
 /**
  * DataService - Fachada centralizada para todas as operações de dados
