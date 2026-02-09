@@ -44,15 +44,39 @@ Deno.serve(async (req) => {
             }, { status: 403 });
         }
 
-        // 1. Excluir todos os registros relacionados à unidade
-        await Promise.all([
-            base44.asServiceRole.entities.RespostaChecklist.delete({ unidade_fiscalizada_id: unidade_id }),
-            base44.asServiceRole.entities.ConstatacaoManual.delete({ unidade_fiscalizada_id: unidade_id }),
-            base44.asServiceRole.entities.NaoConformidade.delete({ unidade_fiscalizada_id: unidade_id }),
-            base44.asServiceRole.entities.Determinacao.delete({ unidade_fiscalizada_id: unidade_id }),
-            base44.asServiceRole.entities.Recomendacao.delete({ unidade_fiscalizada_id: unidade_id }),
-            base44.asServiceRole.entities.FotoEvidencia.delete({ unidade_fiscalizada_id: unidade_id })
+        // 1. Buscar e excluir todos os registros relacionados à unidade
+        const [respostas, constatacoesManuais, ncs, determinacoes, recomendacoes, fotos] = await Promise.all([
+            base44.asServiceRole.entities.RespostaChecklist.filter({ unidade_fiscalizada_id: unidade_id }),
+            base44.asServiceRole.entities.ConstatacaoManual.filter({ unidade_fiscalizada_id: unidade_id }),
+            base44.asServiceRole.entities.NaoConformidade.filter({ unidade_fiscalizada_id: unidade_id }),
+            base44.asServiceRole.entities.Determinacao.filter({ unidade_fiscalizada_id: unidade_id }),
+            base44.asServiceRole.entities.Recomendacao.filter({ unidade_fiscalizada_id: unidade_id }),
+            base44.asServiceRole.entities.FotoEvidencia.filter({ unidade_fiscalizada_id: unidade_id })
         ]);
+
+        // Excluir todos os registros encontrados
+        const deletePromises = [];
+        
+        for (const resposta of respostas) {
+            deletePromises.push(base44.asServiceRole.entities.RespostaChecklist.delete(resposta.id));
+        }
+        for (const constatacao of constatacoesManuais) {
+            deletePromises.push(base44.asServiceRole.entities.ConstatacaoManual.delete(constatacao.id));
+        }
+        for (const nc of ncs) {
+            deletePromises.push(base44.asServiceRole.entities.NaoConformidade.delete(nc.id));
+        }
+        for (const det of determinacoes) {
+            deletePromises.push(base44.asServiceRole.entities.Determinacao.delete(det.id));
+        }
+        for (const rec of recomendacoes) {
+            deletePromises.push(base44.asServiceRole.entities.Recomendacao.delete(rec.id));
+        }
+        for (const foto of fotos) {
+            deletePromises.push(base44.asServiceRole.entities.FotoEvidencia.delete(foto.id));
+        }
+
+        await Promise.all(deletePromises);
 
         // 2. Excluir a unidade
         await base44.asServiceRole.entities.UnidadeFiscalizada.delete(unidade_id);
