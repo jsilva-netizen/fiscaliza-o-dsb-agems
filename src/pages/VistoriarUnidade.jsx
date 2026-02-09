@@ -934,7 +934,13 @@ export default function VistoriarUnidade() {
                     {/* Constatações Tab */}
                     <TabsContent value="constatacoes" className="mt-4 space-y-4">
                         {(fiscalizacao?.status !== 'finalizada' || modoEdicao) && (
-                            <Button onClick={() => setShowAddConstatacao(true)} className="w-full">
+                            <Button 
+                                onClick={() => {
+                                    setConstatacaoParaEditar(null);
+                                    setShowAddConstatacao(true);
+                                }}
+                                className="w-full"
+                            >
                                 <Plus className="h-4 w-4 mr-2" />
                                 Adicionar Constatação Manual
                             </Button>
