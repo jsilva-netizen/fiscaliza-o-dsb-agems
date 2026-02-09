@@ -232,57 +232,91 @@ class DataServiceClass {
       throw new Error('Sem conexao de internet. Nao e possivel baixar dados.');
     }
 
+    var results = {
+      success: [],
+      failed: [],
+    };
+
+    // Download Municipios
     try {
-      var referenceEntities = [
-        { name: 'Municipio', sort: 'nome', limit: 500 },
-        { name: 'PrestadorServico', sort: 'nome', limit: 500 },
-        { name: 'TipoUnidade', sort: 'nome', limit: 500 },
-        { name: 'ItemChecklist', sort: 'ordem', limit: 1000 },
-      ];
-
-      var results = {
-        success: [],
-        failed: [],
-      };
-
-      for (var i = 0; i < referenceEntities.length; i++) {
-        var entityConfig = referenceEntities[i];
-        try {
-          var entityName = entityConfig.name;
-          console.log('[DownloadRef] Iniciando download de ' + entityName + '...');
-
-          var data = await base44.entities[entityName].list(entityConfig.sort, entityConfig.limit);
-
-          if (!data || data.length === 0) {
-            console.warn('[DownloadRef] ' + entityName + ' retornou vazio do servidor');
-          }
-
-          var mapping = this.entityMappings[entityName];
-          await db[mapping.table].clear();
-
-          if (data && data.length > 0) {
-            await db[mapping.table].bulkPut(data);
-          }
-
-          console.log('[DownloadRef] OK ' + entityName + ': ' + (data ? data.length : 0) + ' registros');
-          results.success.push(entityName);
-        } catch (error) {
-          console.error('[DownloadRef] Erro ao baixar ' + entityConfig.name + ':', error);
-          results.failed.push({
-            entity: entityConfig.name,
-            error: error.message || 'Erro desconhecido'
-          });
-        }
+      console.log('[DownloadRef] Iniciando download de Municipio...');
+      var municipios = await base44.entities.Municipio.list();
+      var mapping = this.entityMappings['Municipio'];
+      await db[mapping.table].clear();
+      if (municipios && municipios.length > 0) {
+        await db[mapping.table].bulkPut(municipios);
       }
-
-      window.dispatchEvent(
-        new CustomEvent('data-service:download-complete', { detail: results })
-      );
-      return results;
+      console.log('[DownloadRef] OK Municipio: ' + (municipios ? municipios.length : 0) + ' registros');
+      results.success.push('Municipio');
     } catch (error) {
-      console.error('Erro no download de dados de referencia:', error);
-      throw error;
+      console.error('[DownloadRef] Erro ao baixar Municipio:', error);
+      results.failed.push({
+        entity: 'Municipio',
+        error: error.message || 'Erro desconhecido'
+      });
     }
+
+    // Download PrestadorServico
+    try {
+      console.log('[DownloadRef] Iniciando download de PrestadorServico...');
+      var prestadores = await base44.entities.PrestadorServico.filter({ ativo: true });
+      var mapping = this.entityMappings['PrestadorServico'];
+      await db[mapping.table].clear();
+      if (prestadores && prestadores.length > 0) {
+        await db[mapping.table].bulkPut(prestadores);
+      }
+      console.log('[DownloadRef] OK PrestadorServico: ' + (prestadores ? prestadores.length : 0) + ' registros');
+      results.success.push('PrestadorServico');
+    } catch (error) {
+      console.error('[DownloadRef] Erro ao baixar PrestadorServico:', error);
+      results.failed.push({
+        entity: 'PrestadorServico',
+        error: error.message || 'Erro desconhecido'
+      });
+    }
+
+    // Download TipoUnidade
+    try {
+      console.log('[DownloadRef] Iniciando download de TipoUnidade...');
+      var tipos = await base44.entities.TipoUnidade.list();
+      var mapping = this.entityMappings['TipoUnidade'];
+      await db[mapping.table].clear();
+      if (tipos && tipos.length > 0) {
+        await db[mapping.table].bulkPut(tipos);
+      }
+      console.log('[DownloadRef] OK TipoUnidade: ' + (tipos ? tipos.length : 0) + ' registros');
+      results.success.push('TipoUnidade');
+    } catch (error) {
+      console.error('[DownloadRef] Erro ao baixar TipoUnidade:', error);
+      results.failed.push({
+        entity: 'TipoUnidade',
+        error: error.message || 'Erro desconhecido'
+      });
+    }
+
+    // Download ItemChecklist
+    try {
+      console.log('[DownloadRef] Iniciando download de ItemChecklist...');
+      var itens = await base44.entities.ItemChecklist.list();
+      var mapping = this.entityMappings['ItemChecklist'];
+      await db[mapping.table].clear();
+      if (itens && itens.length > 0) {
+        await db[mapping.table].bulkPut(itens);
+      }
+      console.log('[DownloadRef] OK ItemChecklist: ' + (itens ? itens.length : 0) + ' registros');
+      results.success.push('ItemChecklist');
+    } catch (error) {
+      console.error('[DownloadRef] Erro ao baixar ItemChecklist:', error);
+      results.failed.push({
+        entity: 'ItemChecklist',
+        error: error.message || 'Erro desconhecido'
+      });
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('data-service:download-complete', { detail: results })
+    );
+    return results;
   }
 
   async uploadPendingData() {
