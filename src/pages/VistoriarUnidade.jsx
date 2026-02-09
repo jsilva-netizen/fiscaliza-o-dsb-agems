@@ -248,11 +248,13 @@ export default function VistoriarUnidade() {
                         observacao: data.observacao
                     });
                     
-                    // Incrementar apenas o contador de constatações (a partir da 2ª resposta)
-                    setContadores(prev => ({
-                        ...prev,
-                        C: prev.C + 1
-                    }));
+                    // Incrementar apenas o contador de constatações se não for N/A
+                    if (data.resposta === 'SIM' || data.resposta === 'NAO') {
+                        setContadores(prev => ({
+                            ...prev,
+                            C: prev.C + 1
+                        }));
+                    }
                 }
             }
             
