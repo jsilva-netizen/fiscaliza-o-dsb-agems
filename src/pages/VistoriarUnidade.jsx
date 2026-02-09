@@ -343,6 +343,7 @@ export default function VistoriarUnidade() {
 
                     // Forçar recarregamento dos dados após renumeração
                     await queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
+                    await queryClient.invalidateQueries({ queryKey: ['constatacoes-manuais', unidadeId] });
                     await queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
                     await queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
                     await queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
