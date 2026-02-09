@@ -233,12 +233,18 @@ export default function VistoriarUnidade() {
                         await base44.entities.Recomendacao.delete(rec.id);
                     }
 
-                    // 4. Renumerar constatações e recriar NCs/Ds/Rs
+                    // 4. Buscar constatações manuais para incluir na renumeração
+                    const constatacoesManuaisParaRenumerar = await base44.entities.ConstatacaoManual.filter({
+                        unidade_fiscalizada_id: unidadeId
+                    }, 'ordem', 100);
+
+                    // 5. Renumerar constatações e recriar NCs/Ds/Rs
                     let contadorC = 1;
                     let contadorNC = 1;
                     let contadorD = 1;
                     let contadorR = 1;
 
+                    // Primeiro, renumerar respostas do checklist
                     for (const resp of todasRespostas) {
                         const itemResp = todosItens.find(it => it.id === resp.item_checklist_id);
                         
@@ -258,6 +264,8 @@ export default function VistoriarUnidade() {
                             await base44.entities.RespostaChecklist.update(resp.id, {
                                 numero_constatacao: numeroConstatacao
                             });
+
+                            contadorC++;
 
                             // Se gera NC e resposta é NÃO, criar NC e Determinação
                             if (itemResp?.gera_nc && resp.resposta === 'NAO') {
