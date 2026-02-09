@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { NotificationService } from '@/components/offline/NotificationService.js';
+import { NotificationService } from '@/components/offline/NotificationService';
 
 /**
  * Hook para gerenciar notificações push do app
