@@ -495,9 +495,9 @@ export default function VistoriarUnidade() {
                     <PhotoGrid
                     fotos={fotos}
                     minFotos={2}
-                    onAddFoto={unidade?.status === 'finalizada' ? handleAddFoto : null}
-                    onRemoveFoto={unidade?.status === 'finalizada' ? handleRemoveFoto : null}
-                    onUpdateLegenda={unidade?.status === 'finalizada' ? handleUpdateLegenda : null}
+                    onAddFoto={handleAddFoto}
+                    onRemoveFoto={handleRemoveFoto}
+                    onUpdateLegenda={handleUpdateLegenda}
                     titulo="Fotos da Unidade"
                     fiscalizacaoId={unidade?.fiscalizacao_id}
                     unidadeId={unidadeId}
