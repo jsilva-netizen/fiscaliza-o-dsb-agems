@@ -165,20 +165,113 @@ export default function VistoriarUnidade() {
 
     const salvarRespostaMutation = useMutation({
         mutationFn: async ({ itemId, data }) => {
-            if (fiscalizacao?.status === 'finalizada') {
+            if (fiscalizacao?.status === 'finalizada' && !modoEdicao) {
                 throw new Error('Não é possível modificar uma fiscalização finalizada');
             }
             const item = itensChecklist.find(i => i.id === itemId);
             if (!item) return;
 
             const resposta = respostasExistentes.find(r => r.item_checklist_id === itemId);
+            const respostaAnterior = resposta?.resposta;
 
             if (resposta?.id) {
-                // Atualizar resposta existente
-                await base44.entities.RespostaChecklist.update(resposta.id, {
-                    resposta: data.resposta,
-                    observacao: data.observacao
-                });
+                // Se está mudando a resposta, precisa tratar NC/D
+                if (respostaAnterior !== data.resposta) {
+                    // Se tinha NC (era NÃO e gerava NC), remover NC/D relacionadas
+                    if (respostaAnterior === 'NAO' && item.gera_nc) {
+                        const ncsRelacionadas = await base44.entities.NaoConformidade.filter({
+                            unidade_fiscalizada_id: unidadeId
+                        });
+                        
+                        // Encontrar NC criada por esta resposta
+                        const ncDaResposta = ncsRelacionadas.find(nc => {
+                            // A NC tem o mesmo numero_constatacao que a resposta
+                            return resposta.numero_constatacao && 
+                                   nc.descricao?.includes(item.texto_nc);
+                        });
+
+                        if (ncDaResposta) {
+                            // Remover determinações relacionadas
+                            const detsRelacionadas = await base44.entities.Determinacao.filter({
+                                nao_conformidade_id: ncDaResposta.id
+                            });
+                            for (const det of detsRelacionadas) {
+                                await base44.entities.Determinacao.delete(det.id);
+                            }
+                            // Remover NC
+                            await base44.entities.NaoConformidade.delete(ncDaResposta.id);
+                        }
+                    }
+
+                    // Definir novo texto da constatação
+                    let textoConstatacao = data.resposta === 'SIM' 
+                        ? item.texto_constatacao_sim 
+                        : data.resposta === 'NAO' 
+                            ? item.texto_constatacao_nao 
+                            : item.pergunta;
+                    
+                    if (textoConstatacao && !textoConstatacao.trim().endsWith(';')) {
+                        textoConstatacao = textoConstatacao.trim() + ';';
+                    }
+
+                    // Se a nova resposta é NÃO e gera NC, criar NC/D
+                    if (data.resposta === 'NAO' && item.gera_nc) {
+                        // Carregar contadores
+                        let contadoresAtuais = contadores;
+                        if (!contadoresCarregados || !contadoresAtuais) {
+                            const contadoresCalc = await calcularProximaNumeracao(unidade.fiscalizacao_id, unidadeId, base44);
+                            contadoresAtuais = contadoresCalc;
+                            setContadores(contadoresCalc);
+                            setContadoresCarregados(true);
+                        }
+
+                        const numeroNC = gerarNumeroNC(contadoresAtuais);
+                        const numeroDeterminacao = gerarNumeroDeterminacao(contadoresAtuais);
+                        const numeroRecomendacao = gerarNumeroRecomendacao(contadoresAtuais);
+
+                        // Incrementar contadores
+                        const novoContadores = {
+                            ...contadoresAtuais,
+                            NC: contadoresAtuais.NC + 1,
+                            D: contadoresAtuais.D + 1,
+                            R: contadoresAtuais.R + 1
+                        };
+                        setContadores(novoContadores);
+
+                        // Criar NC
+                        const nc = await base44.entities.NaoConformidade.create({
+                            unidade_fiscalizada_id: unidadeId,
+                            numero_nc: numeroNC,
+                            artigo_portaria: item.artigo_portaria,
+                            descricao: item.texto_nc,
+                            fotos: []
+                        });
+
+                        // Criar Determinação
+                        const textoFinalDeterminacao = `Para sanar a ${numeroNC} ${item.texto_determinacao}. Prazo: 30 dias.`;
+                        await base44.entities.Determinacao.create({
+                            unidade_fiscalizada_id: unidadeId,
+                            nao_conformidade_id: nc.id,
+                            numero_determinacao: numeroDeterminacao,
+                            descricao: textoFinalDeterminacao,
+                            prazo_dias: 30,
+                            status: 'pendente'
+                        });
+                    }
+
+                    // Atualizar resposta com novo texto
+                    await base44.entities.RespostaChecklist.update(resposta.id, {
+                        resposta: data.resposta,
+                        observacao: data.observacao,
+                        pergunta: textoConstatacao
+                    });
+                } else {
+                    // Apenas atualizando observação, sem mudar resposta
+                    await base44.entities.RespostaChecklist.update(resposta.id, {
+                        resposta: data.resposta,
+                        observacao: data.observacao
+                    });
+                }
             } else {
                 // Carregar contadores globais na primeira resposta (se não carregou)
                 let contadoresAtuais = contadores;
@@ -294,7 +387,7 @@ export default function VistoriarUnidade() {
 
     const adicionarRecomendacaoMutation = useMutation({
         mutationFn: async (texto) => {
-            if (fiscalizacao?.status === 'finalizada') {
+            if (fiscalizacao?.status === 'finalizada' && !modoEdicao) {
                 throw new Error('Não é possível modificar uma fiscalização finalizada');
             }
             // Recarregar recomendações atuais da unidade para calcular o próximo número
@@ -322,7 +415,7 @@ export default function VistoriarUnidade() {
 
     const adicionarConstatacaoManualMutation = useMutation({
         mutationFn: async (data) => {
-            if (fiscalizacao?.status === 'finalizada') {
+            if (fiscalizacao?.status === 'finalizada' && !modoEdicao) {
                 throw new Error('Não é possível modificar uma fiscalização finalizada');
             }
 
