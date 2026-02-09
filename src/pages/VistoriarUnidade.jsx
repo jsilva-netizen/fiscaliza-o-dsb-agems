@@ -642,6 +642,15 @@ export default function VistoriarUnidade() {
         mutationFn: async (data) => {
             if (!constatacaoParaNC || !numerosParaNC) return;
 
+            // Atualizar o texto da constatação manual
+            let textoConstatacaoFinal = data.texto_constatacao;
+            if (textoConstatacaoFinal && !textoConstatacaoFinal.trim().endsWith(';')) {
+                textoConstatacaoFinal = textoConstatacaoFinal.trim() + ';';
+            }
+            await base44.entities.ConstatacaoManual.update(constatacaoParaNC.id, {
+                descricao: textoConstatacaoFinal
+            });
+
             let nc;
             // Se tem NC existente, atualizar; senão criar
             if (data.nc_id) {
@@ -718,6 +727,7 @@ export default function VistoriarUnidade() {
             }
         },
         onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['constatacoes-manuais', unidadeId] });
             queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
             queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
             queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });

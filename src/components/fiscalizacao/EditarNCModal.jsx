@@ -27,10 +27,14 @@ export default function EditarNCModal({
     const [geraRecomendacao, setGeraRecomendacao] = useState(false);
     const [textoDeterminacao, setTextoDeterminacao] = useState('');
     const [textoRecomendacao, setTextoRecomendacao] = useState('');
+    const [textoConstatacao, setTextoConstatacao] = useState('');
 
     // Inicializar com valores existentes ou padrão quando abre o modal
     useEffect(() => {
         if (open && numeroConstatacao) {
+            // Inicializar texto da constatação
+            setTextoConstatacao(constatacaoTexto || '');
+
             // Se tem NC existente, usar seus dados
             if (ncExistente) {
                 setArtigoPortaria(ncExistente.artigo_portaria || '');
@@ -70,15 +74,17 @@ export default function EditarNCModal({
                 setTextoRecomendacao('');
             }
         }
-    }, [open, numeroConstatacao, ncExistente, determinacaoExistente, recomendacaoExistente, numeroNC]);
+    }, [open, numeroConstatacao, ncExistente, determinacaoExistente, recomendacaoExistente, numeroNC, constatacaoTexto]);
 
     const handleSave = () => {
+        if (!textoConstatacao.trim()) return;
         if (!textoNC.trim()) return;
         if (geraDeterminacao && !textoDeterminacao.trim()) return;
         if (geraRecomendacao && !textoRecomendacao.trim()) return;
         if (!geraDeterminacao && !geraRecomendacao) return;
         
         onSave({
+            texto_constatacao: textoConstatacao.trim(),
             artigo_portaria: artigoPortaria.trim(),
             texto_nc: textoNC.trim(),
             gera_determinacao: geraDeterminacao,
@@ -104,14 +110,25 @@ export default function EditarNCModal({
                         Editar Não Conformidade - {numeroNC}
                     </DialogTitle>
                     <DialogDescription>
-                        Complete os detalhes da Não Conformidade e Determinação baseada na constatação:
-                        <span className="block mt-2 text-sm font-medium text-gray-700">
-                            {numeroConstatacao}: {constatacaoTexto}
-                        </span>
+                        Complete os detalhes da Constatação, Não Conformidade e Determinação
                     </DialogDescription>
                 </DialogHeader>
                 
                 <div className="space-y-4">
+                    <div>
+                        <Label htmlFor="texto_constatacao">
+                            Texto da Constatação ({numeroConstatacao}) *
+                        </Label>
+                        <Textarea
+                            id="texto_constatacao"
+                            placeholder="Descreva a constatação..."
+                            value={textoConstatacao}
+                            onChange={(e) => setTextoConstatacao(e.target.value)}
+                            rows={3}
+                            className="mt-1"
+                        />
+                    </div>
+
                     <div>
                         <Label htmlFor="artigo">
                             Artigo/Inciso/Parágrafo da Portaria AGEMS *
