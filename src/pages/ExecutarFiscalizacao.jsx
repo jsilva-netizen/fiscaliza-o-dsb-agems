@@ -3,6 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { DataService } from '@/components/offline/DataService';
+import { useSyncManager } from '@/components/offline/useSyncManager';
+import { WifiOff, Wifi } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +33,7 @@ export default function ExecutarFiscalizacao() {
     const navigate = useNavigate();
     const urlParams = new URLSearchParams(window.location.search);
     const fiscalizacaoId = urlParams.get('id');
+    const syncStatus = useSyncManager();
     const [unidadeParaExcluir, setUnidadeParaExcluir] = useState(null);
     const [mostrarConfirmacaoFinalizacao, setMostrarConfirmacaoFinalizacao] = useState(false);
     const [user, setUser] = useState(null);
@@ -41,7 +45,7 @@ export default function ExecutarFiscalizacao() {
 
     const { data: fiscalizacao, isLoading: loadingFiscalizacao } = useQuery({
         queryKey: ['fiscalizacao', fiscalizacaoId],
-        queryFn: () => base44.entities.Fiscalizacao.filter({ id: fiscalizacaoId }).then(r => r[0]),
+        queryFn: () => DataService.read('Fiscalizacao', { id: fiscalizacaoId }).then(r => r[0]),
         enabled: !!fiscalizacaoId,
         staleTime: 60000,
         gcTime: 300000
@@ -49,7 +53,7 @@ export default function ExecutarFiscalizacao() {
 
     const { data: unidades = [], isLoading: loadingUnidades } = useQuery({
         queryKey: ['unidades-fiscalizacao', fiscalizacaoId],
-        queryFn: () => base44.entities.UnidadeFiscalizada.filter({ fiscalizacao_id: fiscalizacaoId }, '-created_date', 50),
+        queryFn: () => DataService.read('UnidadeFiscalizada', { fiscalizacao_id: fiscalizacaoId }, '-created_date', 50),
         enabled: !!fiscalizacaoId,
         staleTime: 30000,
         gcTime: 300000
@@ -57,7 +61,7 @@ export default function ExecutarFiscalizacao() {
 
     const { data: tipos = [] } = useQuery({
         queryKey: ['tipos-unidade'],
-        queryFn: () => base44.entities.TipoUnidade.list('nome', 100),
+        queryFn: () => DataService.read('TipoUnidade', {}, 'nome', 100),
         staleTime: 3600000,
         gcTime: 86400000
     });
@@ -81,9 +85,7 @@ export default function ExecutarFiscalizacao() {
             const ano = dataFim.getFullYear();
             
             // Buscar fiscalizações finalizadas no mesmo ano
-            const fiscalizacoesDoAno = await base44.entities.Fiscalizacao.filter({
-                status: 'finalizada'
-            }, '-data_fim', 1000);
+            const fiscalizacoesDoAno = await DataService.read('Fiscalizacao', { status: 'finalizada' }, '-data_fim', 1000);
             
             const fiscalizacoesAnoAtual = fiscalizacoesDoAno.filter(f => {
                 if (!f.data_fim) return false;
@@ -94,7 +96,7 @@ export default function ExecutarFiscalizacao() {
             const proximoNumero = fiscalizacoesAnoAtual.length + 1;
             const numeroTermo = `${String(proximoNumero).padStart(3, '0')}/${ano}`;
             
-            return base44.entities.Fiscalizacao.update(fiscalizacaoId, {
+            return DataService.update('Fiscalizacao', fiscalizacaoId, {
                 status: 'finalizada',
                 data_fim: dataFim.toISOString(),
                 numero_termo: numeroTermo
@@ -180,7 +182,7 @@ export default function ExecutarFiscalizacao() {
                                     <ArrowLeft className="h-5 w-5" />
                                 </Button>
                             </Link>
-                            <div>
+                            <div className="flex-1">
                                 <h1 className="font-bold">{fiscalizacao.municipio_nome}</h1>
                                 <div className="flex items-center gap-2 text-sm text-blue-200">
                                     <Badge variant="secondary" className="text-xs">
@@ -191,9 +193,21 @@ export default function ExecutarFiscalizacao() {
                                 </div>
                             </div>
                         </div>
-                        <Badge className={fiscalizacao.status === 'finalizada' ? 'bg-green-500' : 'bg-yellow-500'}>
-                            {fiscalizacao.status === 'finalizada' ? 'Finalizada' : 'Em andamento'}
-                        </Badge>
+                        <div className="flex items-center gap-3">
+                            {syncStatus.hasPending && (
+                                <div className="text-xs bg-blue-800 px-2 py-1 rounded">
+                                    {syncStatus.pendingCount} pendente
+                                </div>
+                            )}
+                            {navigator.onLine ? (
+                                <Wifi className="h-4 w-4 text-green-300" />
+                            ) : (
+                                <WifiOff className="h-4 w-4 text-yellow-300" />
+                            )}
+                            <Badge className={fiscalizacao.status === 'finalizada' ? 'bg-green-500' : 'bg-yellow-500'}>
+                                {fiscalizacao.status === 'finalizada' ? 'Finalizada' : 'Em andamento'}
+                            </Badge>
+                        </div>
                     </div>
                 </div>
             </div>
