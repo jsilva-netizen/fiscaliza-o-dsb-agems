@@ -550,23 +550,41 @@ export default function VistoriarUnidade() {
                 fotos: []
             });
 
-            // Criar Determinação
-            const textoFinalDeterminacao = `Para sanar a ${numerosParaNC.numeroNC} ${data.texto_determinacao}. Prazo: 30 dias.`;
-            
-            await base44.entities.Determinacao.create({
-                unidade_fiscalizada_id: unidadeId,
-                nao_conformidade_id: nc.id,
-                numero_determinacao: numerosParaNC.numeroDeterminacao,
-                descricao: textoFinalDeterminacao,
-                prazo_dias: 30,
-                status: 'pendente'
-            });
+            let incrementoD = 0;
+            let incrementoR = 0;
+
+            // Criar Determinação se selecionado
+            if (data.gera_determinacao && data.texto_determinacao) {
+                const textoFinalDeterminacao = `Para sanar a ${numerosParaNC.numeroNC} ${data.texto_determinacao}. Prazo: 30 dias.`;
+                
+                await base44.entities.Determinacao.create({
+                    unidade_fiscalizada_id: unidadeId,
+                    nao_conformidade_id: nc.id,
+                    numero_determinacao: numerosParaNC.numeroDeterminacao,
+                    descricao: textoFinalDeterminacao,
+                    prazo_dias: 30,
+                    status: 'pendente'
+                });
+                incrementoD = 1;
+            }
+
+            // Criar Recomendação se selecionado
+            if (data.gera_recomendacao && data.texto_recomendacao) {
+                await base44.entities.Recomendacao.create({
+                    unidade_fiscalizada_id: unidadeId,
+                    numero_recomendacao: numerosParaNC.numeroRecomendacao,
+                    descricao: data.texto_recomendacao,
+                    origem: 'manual'
+                });
+                incrementoR = 1;
+            }
 
             // Incrementar contadores
             setContadores(prev => ({
                 ...prev,
                 NC: prev.NC + 1,
-                D: prev.D + 1
+                D: prev.D + incrementoD,
+                R: prev.R + incrementoR
             }));
         },
         onSuccess: () => {
