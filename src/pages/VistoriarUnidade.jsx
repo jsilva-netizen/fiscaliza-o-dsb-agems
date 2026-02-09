@@ -354,6 +354,10 @@ export default function VistoriarUnidade() {
                     unidade_fiscalizada_id: unidadeId
                 }, 'created_date', 200);
                 
+                const constatacoesManuaisExistentesAgora = await base44.entities.ConstatacaoManual.filter({
+                    unidade_fiscalizada_id: unidadeId
+                }, 'ordem', 100);
+                
                 const ncsExistentesAgora = await base44.entities.NaoConformidade.filter({
                     unidade_fiscalizada_id: unidadeId
                 });
@@ -362,12 +366,12 @@ export default function VistoriarUnidade() {
                     unidade_fiscalizada_id: unidadeId
                 });
 
-                // Contar apenas respostas SIM/NÃO que tenham texto configurado
+                // Contar apenas respostas SIM/NÃO que tenham texto configurado + constatações manuais
                 const contadorC = respostasExistentesAgora.filter(r => {
                     if (r.resposta !== 'SIM' && r.resposta !== 'NAO') return false;
                     // Verificar se tem texto na pergunta (que é onde salvamos o texto da constatação)
                     return r.pergunta && r.pergunta.trim();
-                }).length + 1;
+                }).length + constatacoesManuaisExistentesAgora.length + 1;
                 
                 const contadorNC = ncsExistentesAgora.length + 1;
                 const contadorD = determinacoesExistentesAgora.length + 1;
