@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { DataService } from '@/functions/dataService';
+import DataService from '@/functions/dataService';
 import { useOnlineStatus } from './useOnlineStatus';
 
 /**
@@ -14,7 +14,7 @@ export function useInitializeReferenceData() {
 
     const loadReferenceData = async () => {
       try {
-        console.log('Carregando dados de referência...');
+        console.log('[useInitializeReferenceData] Carregando dados de referência...');
         
         // Carrega cada tabela de referência
         await Promise.all([
@@ -24,9 +24,9 @@ export function useInitializeReferenceData() {
           DataService.read('ItemChecklist'),
         ]);
 
-        console.log('Dados de referência carregados com sucesso');
+        console.log('[useInitializeReferenceData] Dados de referência carregados com sucesso');
       } catch (error) {
-        console.error('Erro ao carregar dados de referência:', error);
+        console.error('[useInitializeReferenceData] Erro ao carregar dados de referência:', error);
       }
     };
 
