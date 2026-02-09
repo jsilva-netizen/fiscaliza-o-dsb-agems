@@ -642,55 +642,85 @@ export default function VistoriarUnidade() {
         mutationFn: async (data) => {
             if (!constatacaoParaNC || !numerosParaNC) return;
 
-            // Criar NC
-            const nc = await base44.entities.NaoConformidade.create({
-                unidade_fiscalizada_id: unidadeId,
-                numero_nc: numerosParaNC.numeroNC,
-                artigo_portaria: data.artigo_portaria,
-                descricao: data.texto_nc,
-                fotos: []
-            });
+            let nc;
+            // Se tem NC existente, atualizar; senão criar
+            if (data.nc_id) {
+                await base44.entities.NaoConformidade.update(data.nc_id, {
+                    artigo_portaria: data.artigo_portaria,
+                    descricao: data.texto_nc
+                });
+                nc = { id: data.nc_id };
+            } else {
+                nc = await base44.entities.NaoConformidade.create({
+                    unidade_fiscalizada_id: unidadeId,
+                    numero_nc: numerosParaNC.numeroNC,
+                    artigo_portaria: data.artigo_portaria,
+                    descricao: data.texto_nc,
+                    fotos: []
+                });
+            }
 
             let incrementoD = 0;
             let incrementoR = 0;
 
-            // Criar Determinação se selecionado
+            // Determinação: atualizar, criar ou deletar
             if (data.gera_determinacao && data.texto_determinacao) {
                 const textoFinalDeterminacao = `Para sanar a ${numerosParaNC.numeroNC} ${data.texto_determinacao}. Prazo: 30 dias.`;
                 
-                await base44.entities.Determinacao.create({
-                    unidade_fiscalizada_id: unidadeId,
-                    nao_conformidade_id: nc.id,
-                    numero_determinacao: numerosParaNC.numeroDeterminacao,
-                    descricao: textoFinalDeterminacao,
-                    prazo_dias: 30,
-                    status: 'pendente'
-                });
-                incrementoD = 1;
+                if (data.determinacao_id) {
+                    await base44.entities.Determinacao.update(data.determinacao_id, {
+                        descricao: textoFinalDeterminacao
+                    });
+                } else {
+                    await base44.entities.Determinacao.create({
+                        unidade_fiscalizada_id: unidadeId,
+                        nao_conformidade_id: nc.id,
+                        numero_determinacao: numerosParaNC.numeroDeterminacao,
+                        descricao: textoFinalDeterminacao,
+                        prazo_dias: 30,
+                        status: 'pendente'
+                    });
+                    incrementoD = 1;
+                }
+            } else if (data.determinacao_id && !data.gera_determinacao) {
+                // Se tinha determinação mas agora não gera mais, deletar
+                await base44.entities.Determinacao.delete(data.determinacao_id);
             }
 
-            // Criar Recomendação se selecionado
+            // Recomendação: atualizar, criar ou deletar
             if (data.gera_recomendacao && data.texto_recomendacao) {
-                await base44.entities.Recomendacao.create({
-                    unidade_fiscalizada_id: unidadeId,
-                    numero_recomendacao: numerosParaNC.numeroRecomendacao,
-                    descricao: data.texto_recomendacao,
-                    origem: 'manual'
-                });
-                incrementoR = 1;
+                if (data.recomendacao_id) {
+                    await base44.entities.Recomendacao.update(data.recomendacao_id, {
+                        descricao: data.texto_recomendacao
+                    });
+                } else {
+                    await base44.entities.Recomendacao.create({
+                        unidade_fiscalizada_id: unidadeId,
+                        numero_recomendacao: numerosParaNC.numeroRecomendacao,
+                        descricao: data.texto_recomendacao,
+                        origem: 'manual'
+                    });
+                    incrementoR = 1;
+                }
+            } else if (data.recomendacao_id && !data.gera_recomendacao) {
+                // Se tinha recomendação mas agora não gera mais, deletar
+                await base44.entities.Recomendacao.delete(data.recomendacao_id);
             }
 
-            // Incrementar contadores
-            setContadores(prev => ({
-                ...prev,
-                NC: prev.NC + 1,
-                D: prev.D + incrementoD,
-                R: prev.R + incrementoR
-            }));
+            // Incrementar contadores apenas se criou novos
+            if (incrementoD > 0 || incrementoR > 0) {
+                setContadores(prev => ({
+                    ...prev,
+                    NC: data.nc_id ? prev.NC : prev.NC + 1,
+                    D: prev.D + incrementoD,
+                    R: prev.R + incrementoR
+                }));
+            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
             queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
+            queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
             setShowEditarNC(false);
             setConstatacaoParaNC(null);
             setNumerosParaNC(null);
@@ -919,9 +949,58 @@ export default function VistoriarUnidade() {
                                                 <Button
                                                     size="sm"
                                                     variant="ghost"
-                                                    onClick={() => {
+                                                    onClick={async () => {
                                                         setConstatacaoParaEditar(constatacao);
-                                                        setShowAddConstatacao(true);
+                                                        
+                                                        // Se gera NC, buscar dados relacionados para permitir edição completa
+                                                        if (constatacao.gera_nc) {
+                                                            // Buscar NC associada
+                                                            const ncsAssociadas = await base44.entities.NaoConformidade.filter({
+                                                                unidade_fiscalizada_id: unidadeId
+                                                            });
+                                                            const ncAssociada = ncsAssociadas.find(nc => 
+                                                                nc.descricao && nc.descricao.includes(constatacao.numero_constatacao)
+                                                            );
+
+                                                            if (ncAssociada) {
+                                                                // Buscar Determinação associada
+                                                                const detsAssociadas = await base44.entities.Determinacao.filter({
+                                                                    nao_conformidade_id: ncAssociada.id
+                                                                });
+                                                                const detAssociada = detsAssociadas[0] || null;
+
+                                                                // Buscar Recomendações manuais (origem: manual) criadas após esta NC
+                                                                const recsAssociadas = await base44.entities.Recomendacao.filter({
+                                                                    unidade_fiscalizada_id: unidadeId,
+                                                                    origem: 'manual'
+                                                                });
+                                                                // Associar recomendação se existir na mesma sequência
+                                                                const recAssociada = recsAssociadas.find(rec => {
+                                                                    const numNC = parseInt(ncAssociada.numero_nc.replace('NC', ''));
+                                                                    const numRec = parseInt(rec.numero_recomendacao.replace('R', ''));
+                                                                    return numRec === numNC;
+                                                                }) || null;
+
+                                                                // Abrir modal de NC com dados existentes
+                                                                setConstatacaoParaNC(constatacao);
+                                                                setNumerosParaNC({
+                                                                    numeroNC: ncAssociada.numero_nc,
+                                                                    numeroDeterminacao: detAssociada?.numero_determinacao || `D${determinacoesExistentes.length + 1}`,
+                                                                    numeroRecomendacao: recAssociada?.numero_recomendacao || `R${recomendacoesExistentes.length + 1}`,
+                                                                    numeroConstatacao: constatacao.numero_constatacao,
+                                                                    ncExistente: ncAssociada,
+                                                                    determinacaoExistente: detAssociada,
+                                                                    recomendacaoExistente: recAssociada
+                                                                });
+                                                                setShowEditarNC(true);
+                                                            } else {
+                                                                // Se não tem NC criada ainda, abrir form de constatação
+                                                                setShowAddConstatacao(true);
+                                                            }
+                                                        } else {
+                                                            // Se não gera NC, apenas abrir form de constatação
+                                                            setShowAddConstatacao(true);
+                                                        }
                                                     }}
                                                 >
                                                     <Pencil className="h-4 w-4" />
@@ -1195,6 +1274,9 @@ export default function VistoriarUnidade() {
                 numeroRecomendacao={numerosParaNC?.numeroRecomendacao}
                 numeroConstatacao={numerosParaNC?.numeroConstatacao}
                 constatacaoTexto={constatacaoParaNC?.descricao}
+                ncExistente={numerosParaNC?.ncExistente}
+                determinacaoExistente={numerosParaNC?.determinacaoExistente}
+                recomendacaoExistente={numerosParaNC?.recomendacaoExistente}
             />
 
             {/* Dialog Confirmação Exclusão Constatação */}

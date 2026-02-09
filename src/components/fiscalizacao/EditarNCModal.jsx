@@ -16,7 +16,10 @@ export default function EditarNCModal({
     numeroDeterminacao,
     numeroRecomendacao,
     numeroConstatacao,
-    constatacaoTexto 
+    constatacaoTexto,
+    ncExistente,
+    determinacaoExistente,
+    recomendacaoExistente
 }) {
     const [artigoPortaria, setArtigoPortaria] = useState('');
     const [textoNC, setTextoNC] = useState('');
@@ -25,22 +28,49 @@ export default function EditarNCModal({
     const [textoDeterminacao, setTextoDeterminacao] = useState('');
     const [textoRecomendacao, setTextoRecomendacao] = useState('');
 
-    // Inicializar com valores padrão quando abre o modal
+    // Inicializar com valores existentes ou padrão quando abre o modal
     useEffect(() => {
         if (open && numeroConstatacao) {
-            const artigoPadrao = 'Art. XX, inciso XX da Portaria AGEMS nº XX/xx';
-            const ncPadrao = `A Constatação ${numeroConstatacao} não cumpre o disposto no ${artigoPadrao};`;
-            const detPadrao = 'Regularizar a situação conforme normas vigentes.';
-            const recPadrao = '';
-            
-            setArtigoPortaria(artigoPadrao);
-            setTextoNC(ncPadrao);
-            setGeraDeterminacao(true);
-            setGeraRecomendacao(false);
-            setTextoDeterminacao(detPadrao);
-            setTextoRecomendacao(recPadrao);
+            // Se tem NC existente, usar seus dados
+            if (ncExistente) {
+                setArtigoPortaria(ncExistente.artigo_portaria || '');
+                setTextoNC(ncExistente.descricao || '');
+            } else {
+                const artigoPadrao = 'Art. XX, inciso XX da Portaria AGEMS nº XX/xx';
+                const ncPadrao = `A Constatação ${numeroConstatacao} não cumpre o disposto no ${artigoPadrao};`;
+                setArtigoPortaria(artigoPadrao);
+                setTextoNC(ncPadrao);
+            }
+
+            // Se tem Determinação existente, usar seus dados
+            if (determinacaoExistente) {
+                setGeraDeterminacao(true);
+                // Extrair o texto removendo o prefixo e sufixo padrão
+                let textoLimpo = determinacaoExistente.descricao || '';
+                const prefixo = `Para sanar a ${numeroNC} `;
+                const sufixo = '. Prazo: 30 dias.';
+                if (textoLimpo.startsWith(prefixo)) {
+                    textoLimpo = textoLimpo.substring(prefixo.length);
+                }
+                if (textoLimpo.endsWith(sufixo)) {
+                    textoLimpo = textoLimpo.substring(0, textoLimpo.length - sufixo.length);
+                }
+                setTextoDeterminacao(textoLimpo);
+            } else {
+                setGeraDeterminacao(true);
+                setTextoDeterminacao('Regularizar a situação conforme normas vigentes.');
+            }
+
+            // Se tem Recomendação existente, usar seus dados
+            if (recomendacaoExistente) {
+                setGeraRecomendacao(true);
+                setTextoRecomendacao(recomendacaoExistente.descricao || '');
+            } else {
+                setGeraRecomendacao(false);
+                setTextoRecomendacao('');
+            }
         }
-    }, [open, numeroConstatacao]);
+    }, [open, numeroConstatacao, ncExistente, determinacaoExistente, recomendacaoExistente, numeroNC]);
 
     const handleSave = () => {
         if (!textoNC.trim()) return;
@@ -54,7 +84,10 @@ export default function EditarNCModal({
             gera_determinacao: geraDeterminacao,
             gera_recomendacao: geraRecomendacao,
             texto_determinacao: geraDeterminacao ? textoDeterminacao.trim() : null,
-            texto_recomendacao: geraRecomendacao ? textoRecomendacao.trim() : null
+            texto_recomendacao: geraRecomendacao ? textoRecomendacao.trim() : null,
+            nc_id: ncExistente?.id || null,
+            determinacao_id: determinacaoExistente?.id || null,
+            recomendacao_id: recomendacaoExistente?.id || null
         });
     };
 
