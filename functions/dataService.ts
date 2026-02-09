@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
 import { base44 } from '@/api/base44Client';
 import db from '@/functions/offlineDb';
 
@@ -138,7 +137,7 @@ class DataServiceClass {
     if (!mapping) throw new Error(`Entity ${entityName} não mapeada`);
 
     const { table } = mapping;
-    const localId = uuidv4();
+    const localId = crypto.randomUUID();
 
     const record = {
       id: localId,
@@ -155,7 +154,7 @@ class DataServiceClass {
 
       // 2. Adiciona à fila de sync
       await db.syncQueue.add({
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         operation: 'create',
         entityName,
         localId,
@@ -236,7 +235,7 @@ class DataServiceClass {
 
       // 2. Adiciona à fila de sync
       await db.syncQueue.add({
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         operation: 'delete',
         entityName,
         localId: isLocal ? id : current?._localId || id,
