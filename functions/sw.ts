@@ -146,21 +146,32 @@ self.addEventListener('sync', (event) => {
 
 async function handleBackgroundSync() {
   try {
-    // Notificar que sincronização começou
-    self.registration.showNotification('Sincronizando...', {
-      body: 'Enviando dados offline para o banco',
-      icon: '/icons/icon-192x192.png',
-      tag: 'sync-progress',
-      silent: true
-    });
-
     // Notificar cliente de que sync começou
     const clients = await self.clients.matchAll();
     clients.forEach(client => {
       client.postMessage({ type: 'sync-started' });
     });
+
+    // Aguardar um pouco antes de mostrar notificação (deixa a sync começar)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    self.registration.showNotification('Sincronizando dados...', {
+      body: 'Enviando alterações para o servidor',
+      icon: '/icons/icon-192x192.png',
+      tag: 'sync-notification',
+      silent: true
+    });
   } catch (error) {
     console.error('Background sync error:', error);
+    
+    // Notificar cliente de erro
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+      client.postMessage({ 
+        type: 'sync-error',
+        data: { message: error.message }
+      });
+    });
   }
 }
 
@@ -207,7 +218,21 @@ self.addEventListener('notificationclick', (event) => {
   let targetUrl = '/';
 
   if (action === 'retry-sync') {
-    event.waitUntil(self.registration.sync.register('sync-fiscalizacao-data'));
+    // Tentar sincronizar novamente
+    event.waitUntil(
+      handleBackgroundSync().then(() => {
+        self.registration.sync.register('sync-fiscalizacao-data').catch(() => {});
+      })
+    );
+    return;
+  }
+
+  if (action === 'sync-now') {
+    event.waitUntil(handleBackgroundSync());
+    return;
+  }
+
+  if (action === 'dismiss') {
     return;
   }
 
