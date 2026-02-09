@@ -30,9 +30,8 @@ export default function AdicionarUnidade() {
     const { data: fiscalizacao } = useQuery({
         queryKey: ['fiscalizacao', fiscalizacaoId],
         queryFn: async () => {
-            if (!db.isOpen()) await db.open();
-            const result = await DataService.read('Fiscalizacao', { id: fiscalizacaoId });
-            return Array.isArray(result) ? result[0] : null;
+            const result = await db.table('fiscalizacoes').get(fiscalizacaoId);
+            return result || null;
         },
         enabled: !!fiscalizacaoId
     });
@@ -40,8 +39,7 @@ export default function AdicionarUnidade() {
     const { data: tipos = [] } = useQuery({
         queryKey: ['tipos-unidade'],
         queryFn: async () => {
-            if (!db.isOpen()) await db.open();
-            const result = await DataService.read('TipoUnidade', {});
+            const result = await db.table('tipos_unidade').toArray();
             return Array.isArray(result) ? result : [];
         }
     });
@@ -49,8 +47,7 @@ export default function AdicionarUnidade() {
     const { data: unidadesExistentes = [] } = useQuery({
         queryKey: ['unidades-existentes', fiscalizacaoId],
         queryFn: async () => {
-            if (!db.isOpen()) await db.open();
-            const result = await DataService.read('UnidadeFiscalizada', { fiscalizacao_id: fiscalizacaoId });
+            const result = await db.table('unidades_fiscalizadas').where('fiscalizacao_id').equals(fiscalizacaoId).toArray();
             return Array.isArray(result) ? result : [];
         },
         enabled: !!fiscalizacaoId

@@ -49,9 +49,8 @@ export default function VistoriarUnidade() {
     const { data: unidade, isLoading: loadingUnidade } = useQuery({
         queryKey: ['unidade', unidadeId],
         queryFn: async () => {
-            if (!db.isOpen()) await db.open();
-            const result = await DataService.read('UnidadeFiscalizada', { id: unidadeId });
-            return Array.isArray(result) ? result[0] : null;
+            const result = await db.table('unidades_fiscalizadas').get(unidadeId);
+            return result || null;
         },
         enabled: !!unidadeId,
         staleTime: 5000,
@@ -60,9 +59,8 @@ export default function VistoriarUnidade() {
     const { data: fiscalizacao } = useQuery({
         queryKey: ['fiscalizacao', unidade?.fiscalizacao_id],
         queryFn: async () => {
-            if (!db.isOpen()) await db.open();
-            const result = await DataService.read('Fiscalizacao', { id: unidade?.fiscalizacao_id });
-            return Array.isArray(result) ? result[0] : null;
+            const result = await db.table('fiscalizacoes').get(unidade?.fiscalizacao_id);
+            return result || null;
         },
         enabled: !!unidade?.fiscalizacao_id,
         staleTime: 5000,
@@ -71,8 +69,7 @@ export default function VistoriarUnidade() {
     const { data: itensChecklist = [] } = useQuery({
         queryKey: ['itensChecklist', unidade?.tipo_unidade_id],
         queryFn: async () => {
-            if (!db.isOpen()) await db.open();
-            const result = await DataService.read('ItemChecklist', { tipo_unidade_id: unidade?.tipo_unidade_id });
+            const result = await db.table('item_checklist').where('tipo_unidade_id').equals(unidade?.tipo_unidade_id).toArray();
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidade?.tipo_unidade_id,
@@ -82,8 +79,7 @@ export default function VistoriarUnidade() {
     const { data: respostasExistentes = [] } = useQuery({
         queryKey: ['respostas', unidadeId],
         queryFn: async () => {
-            if (!db.isOpen()) await db.open();
-            const result = await DataService.read('RespostaChecklist', { unidade_fiscalizada_id: unidadeId });
+            const result = await db.table('respostas_checklist').where('unidade_fiscalizada_id').equals(unidadeId).toArray();
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
@@ -93,8 +89,7 @@ export default function VistoriarUnidade() {
     const { data: ncsExistentes = [] } = useQuery({
         queryKey: ['ncs', unidadeId],
         queryFn: async () => {
-            if (!db.isOpen()) await db.open();
-            const result = await DataService.read('NaoConformidade', { unidade_fiscalizada_id: unidadeId });
+            const result = await db.table('nao_conformidades').where('unidade_fiscalizada_id').equals(unidadeId).toArray();
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
@@ -104,8 +99,7 @@ export default function VistoriarUnidade() {
     const { data: determinacoesExistentes = [] } = useQuery({
         queryKey: ['determinacoes', unidadeId],
         queryFn: async () => {
-            if (!db.isOpen()) await db.open();
-            const result = await DataService.read('Determinacao', { unidade_fiscalizada_id: unidadeId });
+            const result = await db.table('determinacoes').where('unidade_fiscalizada_id').equals(unidadeId).toArray();
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
@@ -115,8 +109,7 @@ export default function VistoriarUnidade() {
     const { data: recomendacoesExistentes = [] } = useQuery({
         queryKey: ['recomendacoes', unidadeId],
         queryFn: async () => {
-            if (!db.isOpen()) await db.open();
-            const result = await DataService.read('Recomendacao', { unidade_fiscalizada_id: unidadeId });
+            const result = await db.table('recomendacoes').where('unidade_fiscalizada_id').equals(unidadeId).toArray();
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
@@ -126,8 +119,7 @@ export default function VistoriarUnidade() {
     const { data: constatacoesManuais = [] } = useQuery({
         queryKey: ['constatacoes-manuais', unidadeId],
         queryFn: async () => {
-            if (!db.isOpen()) await db.open();
-            const result = await DataService.read('ConstatacaoManual', { unidade_fiscalizada_id: unidadeId });
+            const result = await db.table('constatacoes_manuais').where('unidade_fiscalizada_id').equals(unidadeId).toArray();
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
