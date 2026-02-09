@@ -21,8 +21,10 @@ export default function OfflineSyncButton() {
     // Atualiza contagem de pendentes
     const updatePendingCount = async () => {
       try {
-        const status = await DataService.getSyncStatus();
-        setPendingCount(status.pendingCount);
+        if (DataService && typeof DataService.getSyncStatus === 'function') {
+          const status = await DataService.getSyncStatus();
+          setPendingCount(status.pendingCount);
+        }
       } catch (error) {
         console.error('Erro ao contar pendentes:', error);
       }
