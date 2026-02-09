@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { DataService } from '@/components/offline/DataService';
+import { useOnlineStatus } from '@/components/hooks/useOnlineStatus';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +17,7 @@ const SERVICOS = ['Abastecimento de Água', 'Esgotamento Sanitário', 'Manejo de
 
 export default function NovaFiscalizacao() {
     const navigate = useNavigate();
+    const { isOnline } = useOnlineStatus();
     const [formData, setFormData] = useState({
         municipio_id: '',
         servicos: [],
@@ -27,12 +30,12 @@ export default function NovaFiscalizacao() {
 
     const { data: municipios = [], isLoading: loadingMunicipios } = useQuery({
         queryKey: ['municipios'],
-        queryFn: () => base44.entities.Municipio.list('nome', 100)
+        queryFn: () => DataService.read('Municipio', {}, '-nome', 100)
     });
 
     const { data: prestadores = [] } = useQuery({
         queryKey: ['prestadores'],
-        queryFn: () => base44.entities.PrestadorServico.filter({ ativo: true }, 'nome', 200)
+        queryFn: () => DataService.read('PrestadorServico', { ativo: true }, 'nome', 200)
     });
 
     useEffect(() => {
@@ -89,7 +92,7 @@ export default function NovaFiscalizacao() {
                 status: 'em_andamento'
             };
 
-            return base44.entities.Fiscalizacao.create(fiscalizacaoData);
+            return DataService.create('Fiscalizacao', fiscalizacaoData);
         },
         onSuccess: (result) => {
             navigate(createPageUrl('ExecutarFiscalizacao') + `?id=${result.id}`);
@@ -127,9 +130,12 @@ export default function NovaFiscalizacao() {
                                 <ArrowLeft className="h-5 w-5" />
                             </Button>
                         </Link>
-                        <div>
+                        <div className="flex-1">
                             <h1 className="text-xl font-bold">Nova Fiscalização</h1>
                             <p className="text-green-100 text-sm">Configure os dados iniciais</p>
+                        </div>
+                        <div className="text-xs text-green-100">
+                            {isOnline ? '🟢 Online' : '🟡 Offline'}
                         </div>
                     </div>
                 </div>
