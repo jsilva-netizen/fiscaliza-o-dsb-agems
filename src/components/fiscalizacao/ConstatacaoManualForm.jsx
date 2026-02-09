@@ -10,24 +10,18 @@ import { Loader2 } from 'lucide-react';
 export default function ConstatacaoManualForm({ open, onOpenChange, onSave, isSaving }) {
     const [descricao, setDescricao] = useState('');
     const [geraNc, setGeraNc] = useState(false);
-    const [artigoPortaria, setArtigoPortaria] = useState('');
-    const [textoDeterminacao, setTextoDeterminacao] = useState('');
 
     const handleSave = () => {
         if (!descricao.trim()) return;
         
         onSave({
             descricao: descricao.trim(),
-            gera_nc: geraNc,
-            artigo_portaria: artigoPortaria.trim() || null,
-            texto_determinacao: textoDeterminacao.trim() || null
+            gera_nc: geraNc
         });
         
         // Limpar formulário
         setDescricao('');
         setGeraNc(false);
-        setArtigoPortaria('');
-        setTextoDeterminacao('');
     };
 
     return (
@@ -62,36 +56,11 @@ export default function ConstatacaoManualForm({ open, onOpenChange, onSave, isSa
                     </div>
 
                     {geraNc && (
-                        <>
-                            <div>
-                                <Label htmlFor="artigo">
-                                    Artigo/Inciso/Parágrafo da Portaria AGEMS
-                                    <span className="text-gray-500 text-xs ml-2">(Opcional - deixe em branco para editar no relatório)</span>
-                                </Label>
-                                <Input
-                                    id="artigo"
-                                    placeholder="Ex: Art. 10, Inciso II da Portaria AGEMS nº 001/2025"
-                                    value={artigoPortaria}
-                                    onChange={(e) => setArtigoPortaria(e.target.value)}
-                                    className="mt-1"
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="determinacao">
-                                    Texto da Determinação
-                                    <span className="text-gray-500 text-xs ml-2">(Opcional - deixe em branco para editar no relatório)</span>
-                                </Label>
-                                <Textarea
-                                    id="determinacao"
-                                    placeholder="Ex: Regularizar a situação conforme normas vigentes..."
-                                    value={textoDeterminacao}
-                                    onChange={(e) => setTextoDeterminacao(e.target.value)}
-                                    rows={3}
-                                    className="mt-1"
-                                />
-                            </div>
-                        </>
+                        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                            <p className="text-sm text-blue-700">
+                                ℹ️ Após salvar a constatação, você poderá editar os detalhes da NC e Determinação na próxima tela.
+                            </p>
+                        </div>
                     )}
 
                     <div className="flex gap-2 pt-4">

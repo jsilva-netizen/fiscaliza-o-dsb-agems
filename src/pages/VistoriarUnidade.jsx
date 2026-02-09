@@ -17,6 +17,7 @@ import {
 import ChecklistItem from '@/components/fiscalizacao/ChecklistItem';
 import PhotoGrid from '@/components/fiscalizacao/PhotoGrid';
 import ConstatacaoManualForm from '@/components/fiscalizacao/ConstatacaoManualForm';
+import EditarNCModal from '@/components/fiscalizacao/EditarNCModal';
 import { calcularProximaNumeracao, gerarNumeroConstatacao, gerarNumeroNC, gerarNumeroDeterminacao, gerarNumeroRecomendacao } from '@/components/utils/numerationHelper';
 
 export default function VistoriarUnidade() {
@@ -36,6 +37,9 @@ export default function VistoriarUnidade() {
     const [contadores, setContadores] = useState(null);
     const [contadoresCarregados, setContadoresCarregados] = useState(false);
     const [showAddConstatacao, setShowAddConstatacao] = useState(false);
+    const [showEditarNC, setShowEditarNC] = useState(false);
+    const [constatacaoParaNC, setConstatacaoParaNC] = useState(null);
+    const [numerosParaNC, setNumerosParaNC] = useState(null);
 
     // Queries
     const { data: unidade, isLoading: loadingUnidade } = useQuery({
@@ -341,8 +345,6 @@ export default function VistoriarUnidade() {
                 numero_constatacao: numeroConstatacao,
                 descricao: descricaoFinal,
                 gera_nc: data.gera_nc,
-                artigo_portaria: data.artigo_portaria,
-                texto_determinacao: data.texto_determinacao,
                 ordem: Date.now()
             });
 
@@ -352,50 +354,71 @@ export default function VistoriarUnidade() {
                 C: contadoresAtuais.C + 1
             };
 
-            // Se gera NC, criar NC e Determinação
-            if (data.gera_nc) {
+            setContadores(novosContadores);
+
+            return { constatacao, novosContadores, numeroConstatacao };
+        },
+        onSuccess: ({ constatacao, novosContadores, numeroConstatacao }) => {
+            queryClient.invalidateQueries({ queryKey: ['constatacoes-manuais', unidadeId] });
+            setShowAddConstatacao(false);
+
+            // Se gera NC, abrir modal de edição
+            if (constatacao.gera_nc) {
                 const numeroNC = gerarNumeroNC(novosContadores);
                 const numeroDeterminacao = gerarNumeroDeterminacao(novosContadores);
-
-                // Texto da NC com placeholder se artigo não fornecido
-                const artigoTexto = data.artigo_portaria || '[Art. XX, inciso XX da Portaria AGEMS nº XX/xx]';
-                const textoNC = `A Constatação ${numeroConstatacao} não cumpre o disposto no ${artigoTexto};`;
-
-                // Criar NC
-                const nc = await base44.entities.NaoConformidade.create({
-                    unidade_fiscalizada_id: unidadeId,
-                    numero_nc: numeroNC,
-                    artigo_portaria: data.artigo_portaria || '[Artigo a definir]',
-                    descricao: textoNC,
-                    fotos: []
+                
+                setConstatacaoParaNC(constatacao);
+                setNumerosParaNC({
+                    numeroNC,
+                    numeroDeterminacao,
+                    numeroConstatacao
                 });
-
-                // Texto da Determinação com placeholder se não fornecido
-                const textoDet = data.texto_determinacao || '[DETERMINAR AÇÃO CORRETIVA]';
-                const textoFinalDeterminacao = `Para sanar a ${numeroNC} ${textoDet}.`;
-
-                // Criar Determinação
-                await base44.entities.Determinacao.create({
-                    unidade_fiscalizada_id: unidadeId,
-                    nao_conformidade_id: nc.id,
-                    numero_determinacao: numeroDeterminacao,
-                    descricao: textoFinalDeterminacao,
-                    prazo_dias: 30,
-                    status: 'pendente'
-                });
-
-                // Incrementar contadores de NC e D
-                novosContadores.NC = novosContadores.NC + 1;
-                novosContadores.D = novosContadores.D + 1;
+                setShowEditarNC(true);
             }
+        },
+        onError: (err) => {
+            alert(err.message);
+        }
+    });
 
-            setContadores(novosContadores);
+    const salvarNCMutation = useMutation({
+        mutationFn: async (data) => {
+            if (!constatacaoParaNC || !numerosParaNC) return;
+
+            // Criar NC
+            const nc = await base44.entities.NaoConformidade.create({
+                unidade_fiscalizada_id: unidadeId,
+                numero_nc: numerosParaNC.numeroNC,
+                artigo_portaria: data.artigo_portaria,
+                descricao: data.texto_nc,
+                fotos: []
+            });
+
+            // Criar Determinação
+            const textoFinalDeterminacao = `Para sanar a ${numerosParaNC.numeroNC} ${data.texto_determinacao}. Prazo: 30 dias.`;
+            
+            await base44.entities.Determinacao.create({
+                unidade_fiscalizada_id: unidadeId,
+                nao_conformidade_id: nc.id,
+                numero_determinacao: numerosParaNC.numeroDeterminacao,
+                descricao: textoFinalDeterminacao,
+                prazo_dias: 30,
+                status: 'pendente'
+            });
+
+            // Incrementar contadores
+            setContadores(prev => ({
+                ...prev,
+                NC: prev.NC + 1,
+                D: prev.D + 1
+            }));
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['constatacoes-manuais', unidadeId] });
             queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
             queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
-            setShowAddConstatacao(false);
+            setShowEditarNC(false);
+            setConstatacaoParaNC(null);
+            setNumerosParaNC(null);
         },
         onError: (err) => {
             alert(err.message);
@@ -797,6 +820,18 @@ export default function VistoriarUnidade() {
                 onOpenChange={setShowAddConstatacao}
                 onSave={(data) => adicionarConstatacaoManualMutation.mutate(data)}
                 isSaving={adicionarConstatacaoManualMutation.isPending}
+            />
+
+            {/* Dialog Editar NC */}
+            <EditarNCModal
+                open={showEditarNC}
+                onOpenChange={setShowEditarNC}
+                onSave={(data) => salvarNCMutation.mutate(data)}
+                isSaving={salvarNCMutation.isPending}
+                numeroNC={numerosParaNC?.numeroNC}
+                numeroDeterminacao={numerosParaNC?.numeroDeterminacao}
+                numeroConstatacao={numerosParaNC?.numeroConstatacao}
+                constatacaoTexto={constatacaoParaNC?.descricao}
             />
 
             {/* Dialog Confirmação Sem Fotos */}
