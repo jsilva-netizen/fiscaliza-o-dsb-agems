@@ -3,8 +3,10 @@ import OfflineStatusBar from '@/components/offline/OfflineStatusBar';
 import OfflineSyncButton from '@/components/offline/OfflineSyncButton';
 import PushNotificationInitializer from '@/components/offline/PushNotificationInitializer';
 import NotificationListener from '@/components/offline/NotificationListener';
+import { useInitializeReferenceData } from '@/components/hooks/useInitializeReferenceData';
 
 export default function Layout({ children, currentPageName }) {
+    useInitializeReferenceData();
     // Páginas que não precisam de layout (fullscreen)
     const fullscreenPages = [
         'Home', 
