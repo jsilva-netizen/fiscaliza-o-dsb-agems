@@ -273,12 +273,17 @@ export default function VistoriarUnidade() {
                                 const numeroDet = `D${contadorD}`;
                                 const numeroRec = `R${contadorR}`;
 
-                                // Criar NC
+                                // Criar NC com texto tratado
+                                let ncDescricao = itemResp.texto_nc;
+                                if (!ncDescricao || !ncDescricao.trim()) {
+                                    ncDescricao = `A constatação ${numeroConstatacao} não cumpre o disposto no ${itemResp.artigo_portaria || 'artigo não especificado'}.`;
+                                }
+
                                 const nc = await base44.entities.NaoConformidade.create({
                                     unidade_fiscalizada_id: unidadeId,
                                     numero_nc: numeroNC,
                                     artigo_portaria: itemResp.artigo_portaria || '',
-                                    descricao: itemResp.texto_nc || '',
+                                    descricao: ncDescricao,
                                     fotos: []
                                 });
 
