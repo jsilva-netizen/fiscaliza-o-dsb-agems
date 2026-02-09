@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import ChecklistItem from '@/components/fiscalizacao/ChecklistItem';
 import PhotoGrid from '@/components/fiscalizacao/PhotoGrid';
+import ConstatacaoManualForm from '@/components/fiscalizacao/ConstatacaoManualForm';
 import { calcularProximaNumeracao, gerarNumeroConstatacao, gerarNumeroNC, gerarNumeroDeterminacao, gerarNumeroRecomendacao } from '@/components/utils/numerationHelper';
 
 export default function VistoriarUnidade() {
@@ -34,6 +35,7 @@ export default function VistoriarUnidade() {
     const [showConfirmaSemFotos, setShowConfirmaSemFotos] = useState(false);
     const [contadores, setContadores] = useState(null);
     const [contadoresCarregados, setContadoresCarregados] = useState(false);
+    const [showAddConstatacao, setShowAddConstatacao] = useState(false);
 
     // Queries
     const { data: unidade, isLoading: loadingUnidade } = useQuery({
@@ -99,6 +101,17 @@ export default function VistoriarUnidade() {
         queryKey: ['recomendacoes', unidadeId],
         queryFn: async () => {
             const result = await base44.entities.Recomendacao.filter({ unidade_fiscalizada_id: unidadeId });
+            return Array.isArray(result) ? result : [];
+        },
+        enabled: !!unidadeId,
+        staleTime: 30000,
+        gcTime: 300000
+    });
+
+    const { data: constatacoesManuais = [] } = useQuery({
+        queryKey: ['constatacoes-manuais', unidadeId],
+        queryFn: async () => {
+            const result = await base44.entities.ConstatacaoManual.filter({ unidade_fiscalizada_id: unidadeId }, 'ordem', 100);
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
@@ -298,6 +311,97 @@ export default function VistoriarUnidade() {
         }
     });
 
+    const adicionarConstatacaoManualMutation = useMutation({
+        mutationFn: async (data) => {
+            if (fiscalizacao?.status === 'finalizada') {
+                throw new Error('Não é possível modificar uma fiscalização finalizada');
+            }
+
+            // Carregar contadores se necessário
+            let contadoresAtuais = contadores;
+            if (!contadoresCarregados || !contadoresAtuais) {
+                const contadoresCalc = await calcularProximaNumeracao(unidade.fiscalizacao_id, unidadeId, base44);
+                contadoresAtuais = contadoresCalc;
+                setContadores(contadoresCalc);
+                setContadoresCarregados(true);
+            }
+
+            // Gerar número da constatação
+            const numeroConstatacao = gerarNumeroConstatacao(contadoresAtuais);
+
+            // Adicionar ';' ao final se não existir
+            let descricaoFinal = data.descricao;
+            if (descricaoFinal && !descricaoFinal.trim().endsWith(';')) {
+                descricaoFinal = descricaoFinal.trim() + ';';
+            }
+
+            // Criar a constatação manual
+            const constatacao = await base44.entities.ConstatacaoManual.create({
+                unidade_fiscalizada_id: unidadeId,
+                numero_constatacao: numeroConstatacao,
+                descricao: descricaoFinal,
+                gera_nc: data.gera_nc,
+                artigo_portaria: data.artigo_portaria,
+                texto_determinacao: data.texto_determinacao,
+                ordem: Date.now()
+            });
+
+            // Incrementar contador de constatações
+            const novosContadores = {
+                ...contadoresAtuais,
+                C: contadoresAtuais.C + 1
+            };
+
+            // Se gera NC, criar NC e Determinação
+            if (data.gera_nc) {
+                const numeroNC = gerarNumeroNC(novosContadores);
+                const numeroDeterminacao = gerarNumeroDeterminacao(novosContadores);
+
+                // Texto da NC com placeholder se artigo não fornecido
+                const artigoTexto = data.artigo_portaria || '[Art. XX, inciso XX da Portaria AGEMS nº XX/xx]';
+                const textoNC = `A Constatação ${numeroConstatacao} não cumpre o disposto no ${artigoTexto};`;
+
+                // Criar NC
+                const nc = await base44.entities.NaoConformidade.create({
+                    unidade_fiscalizada_id: unidadeId,
+                    numero_nc: numeroNC,
+                    artigo_portaria: data.artigo_portaria || '[Artigo a definir]',
+                    descricao: textoNC,
+                    fotos: []
+                });
+
+                // Texto da Determinação com placeholder se não fornecido
+                const textoDet = data.texto_determinacao || '[DETERMINAR AÇÃO CORRETIVA]';
+                const textoFinalDeterminacao = `Para sanar a ${numeroNC} ${textoDet}.`;
+
+                // Criar Determinação
+                await base44.entities.Determinacao.create({
+                    unidade_fiscalizada_id: unidadeId,
+                    nao_conformidade_id: nc.id,
+                    numero_determinacao: numeroDeterminacao,
+                    descricao: textoFinalDeterminacao,
+                    prazo_dias: 30,
+                    status: 'pendente'
+                });
+
+                // Incrementar contadores de NC e D
+                novosContadores.NC = novosContadores.NC + 1;
+                novosContadores.D = novosContadores.D + 1;
+            }
+
+            setContadores(novosContadores);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['constatacoes-manuais', unidadeId] });
+            queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
+            queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
+            setShowAddConstatacao(false);
+        },
+        onError: (err) => {
+            alert(err.message);
+        }
+    });
+
     const finalizarUnidadeMutation = useMutation({
     mutationFn: async () => {
          // Recarregar dados do banco para contagens precisas
@@ -427,10 +531,14 @@ export default function VistoriarUnidade() {
             {/* Tabs */}
             <div className="max-w-4xl mx-auto px-4 py-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="w-full grid grid-cols-4">
+                    <TabsList className="w-full grid grid-cols-5">
                         <TabsTrigger value="checklist" className="text-xs">
                             <ClipboardCheck className="h-4 w-4 mr-1" />
                             Checklist
+                        </TabsTrigger>
+                        <TabsTrigger value="constatacoes" className="text-xs">
+                            <FileText className="h-4 w-4 mr-1" />
+                            Const
                         </TabsTrigger>
                         <TabsTrigger value="fotos" className="text-xs">
                             <Camera className="h-4 w-4 mr-1" />
@@ -446,6 +554,62 @@ export default function VistoriarUnidade() {
                             Rec ({recomendacoesExistentes.length})
                         </TabsTrigger>
                     </TabsList>
+
+                    {/* Constatações Tab */}
+                    <TabsContent value="constatacoes" className="mt-4 space-y-4">
+                        {fiscalizacao?.status !== 'finalizada' && (
+                            <Button onClick={() => setShowAddConstatacao(true)} className="w-full">
+                                <Plus className="h-4 w-4 mr-2" />
+                                Adicionar Constatação Manual
+                            </Button>
+                        )}
+
+                        {/* Constatações Manuais (primeiro) */}
+                        {constatacoesManuais.map(const => (
+                            <Card key={const.id} className="border-blue-200 bg-blue-50">
+                                <CardContent className="p-4">
+                                    <div className="flex items-start gap-3">
+                                        <Badge className="bg-blue-600">{const.numero_constatacao}</Badge>
+                                        <div className="flex-1">
+                                            <p className="text-sm">{const.descricao}</p>
+                                            {const.gera_nc && (
+                                                <Badge variant="outline" className="mt-2 text-xs">
+                                                    Gera NC
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+
+                        {/* Constatações do Checklist (depois) */}
+                        {respostasExistentes
+                            .filter(r => r.resposta === 'SIM' || r.resposta === 'NAO')
+                            .map(resp => (
+                                <Card key={resp.id}>
+                                    <CardContent className="p-4">
+                                        <div className="flex items-start gap-3">
+                                            <Badge variant="secondary">{resp.numero_constatacao}</Badge>
+                                            <div className="flex-1">
+                                                <p className="text-sm">{resp.pergunta}</p>
+                                                {resp.gera_nc && resp.resposta === 'NAO' && (
+                                                    <Badge variant="outline" className="mt-2 text-xs text-red-600 border-red-300">
+                                                        Gera NC
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+
+                        {constatacoesManuais.length === 0 && respostasExistentes.filter(r => r.resposta === 'SIM' || r.resposta === 'NAO').length === 0 && (
+                            <p className="text-center text-gray-500 text-sm py-4">
+                                Nenhuma constatação registrada ainda.
+                            </p>
+                        )}
+                    </TabsContent>
 
                     {/* Checklist Tab */}
                     <TabsContent value="checklist" className="mt-4 space-y-3">
@@ -626,6 +790,14 @@ export default function VistoriarUnidade() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Dialog Constatação Manual */}
+            <ConstatacaoManualForm
+                open={showAddConstatacao}
+                onOpenChange={setShowAddConstatacao}
+                onSave={(data) => adicionarConstatacaoManualMutation.mutate(data)}
+                isSaving={adicionarConstatacaoManualMutation.isPending}
+            />
 
             {/* Dialog Confirmação Sem Fotos */}
             <Dialog open={showConfirmaSemFotos} onOpenChange={setShowConfirmaSemFotos}>
