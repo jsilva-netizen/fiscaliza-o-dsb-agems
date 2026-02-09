@@ -31,20 +31,30 @@ export default function EditarNCModal({
             const artigoPadrao = 'Art. XX, inciso XX da Portaria AGEMS nº XX/xx';
             const ncPadrao = `A Constatação ${numeroConstatacao} não cumpre o disposto no ${artigoPadrao};`;
             const detPadrao = 'Regularizar a situação conforme normas vigentes.';
+            const recPadrao = '';
             
             setArtigoPortaria(artigoPadrao);
             setTextoNC(ncPadrao);
+            setGeraDeterminacao(true);
+            setGeraRecomendacao(false);
             setTextoDeterminacao(detPadrao);
+            setTextoRecomendacao(recPadrao);
         }
     }, [open, numeroConstatacao]);
 
     const handleSave = () => {
-        if (!textoNC.trim() || !textoDeterminacao.trim()) return;
+        if (!textoNC.trim()) return;
+        if (geraDeterminacao && !textoDeterminacao.trim()) return;
+        if (geraRecomendacao && !textoRecomendacao.trim()) return;
+        if (!geraDeterminacao && !geraRecomendacao) return;
         
         onSave({
             artigo_portaria: artigoPortaria.trim(),
             texto_nc: textoNC.trim(),
-            texto_determinacao: textoDeterminacao.trim()
+            gera_determinacao: geraDeterminacao,
+            gera_recomendacao: geraRecomendacao,
+            texto_determinacao: geraDeterminacao ? textoDeterminacao.trim() : null,
+            texto_recomendacao: geraRecomendacao ? textoRecomendacao.trim() : null
         });
     };
 
