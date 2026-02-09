@@ -72,51 +72,54 @@ class DataServiceClass {
   }
 
   /**
-   * Lê dados de tabela de referência com fallback ao servidor
-   */
-  async readReferenceData(entityName, tableName, filter = {}) {
-    try {
-      let results = [];
-      
-      console.log(`[DataService] Lendo ${entityName} de ${tableName}`);
+    * Lê dados de tabela de referência com fallback ao servidor
+    */
+   async readReferenceData(entityName, tableName, filter = {}) {
+     try {
+       let results = [];
 
-      // Se online, sempre tenta buscar do servidor primeiro
-      if (this.isConnected()) {
-        try {
-          console.log(`[DataService] Online - buscando ${entityName} do servidor`);
-          const serverData = await base44.entities[entityName].list();
-          console.log(`[DataService] Servidor retornou:`, serverData?.length || 0, 'registros');
-          
-          if (serverData && serverData.length > 0) {
-            // Atualiza cache com dados do servidor
-            await db[tableName].clear();
-            await db[tableName].bulkPut(serverData);
-            results = serverData;
-          } else {
-            // Se servidor retornar vazio, usa cache
-            results = await db[tableName].toArray();
-            console.log(`[DataService] Servidor vazio, retornando cache:`, results.length, 'registros');
-          }
-          return this.applyFilter(results, filter);
-        } catch (serverError) {
-          console.error(`[DataService] Erro ao buscar ${entityName} do servidor:`, serverError);
-          // Se falhar no servidor, usa cache
-          results = await db[tableName].toArray();
-          console.log(`[DataService] Usando cache após erro:`, results.length, 'registros');
-          return this.applyFilter(results, filter);
-        }
-      } else {
-        // Se offline, usa cache
-        console.log(`[DataService] Offline - usando cache`);
-        results = await db[tableName].toArray();
-        console.log(`[DataService] Cache retornou:`, results.length, 'registros');
-        return this.applyFilter(results, filter);
-      }
-    } catch (error) {
-      console.error(`[DataService] Erro ao ler ${tableName}:`, error);
-      return [];
-    }
-  }
+       console.log(`[DataService] Lendo ${entityName} de ${tableName}`);
+
+       // Se online, SEMPRE busca do servidor (até mesmo se houver cache)
+       if (this.isConnected()) {
+         try {
+           console.log(`[DataService] ✓ Online - buscando ${entityName} do servidor...`);
+
+           // Chama com parâmetros corretos (sort, limit)
+           const serverData = await base44.entities[entityName].list('nome', 500);
+           console.log(`[DataService] ✓ Servidor retornou: ${serverData?.length || 0} registros de ${entityName}`);
+
+           if (serverData && serverData.length > 0) {
+             // Atualiza cache com dados do servidor
+             await db[tableName].clear();
+             await db[tableName].bulkPut(serverData);
+             console.log(`[DataService] ✓ ${entityName} salvo no cache (${serverData.length} itens)`);
+             results = serverData;
+           } else {
+             // Se servidor retornar vazio, usa cache
+             results = await db[tableName].toArray();
+             console.log(`[DataService] ⚠ Servidor vazio para ${entityName}, usando ${results.length} do cache`);
+           }
+           return this.applyFilter(results, filter);
+         } catch (serverError) {
+           console.error(`[DataService] ✗ Erro ao buscar ${entityName} do servidor:`, serverError.message);
+           // Se falhar no servidor, usa cache
+           results = await db[tableName].toArray();
+           console.log(`[DataService] ⚠ Usando cache após erro: ${results.length} itens de ${entityName}`);
+           return this.applyFilter(results, filter);
+         }
+       } else {
+         // Se offline, usa cache
+         console.log(`[DataService] 🔴 Offline - usando cache para ${entityName}`);
+         results = await db[tableName].toArray();
+         console.log(`[DataService] 🔴 Cache retornou: ${results.length} itens de ${entityName}`);
+         return this.applyFilter(results, filter);
+       }
+     } catch (error) {
+       console.error(`[DataService] ✗ Erro crítico ao ler ${tableName}:`, error);
+       return [];
+     }
+   }
 
   /**
    * Lê dados locais (transacionais) - sempre retorna do Dexie
