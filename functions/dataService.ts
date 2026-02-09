@@ -447,6 +447,16 @@ class DataServiceClass {
    */
   async getSyncStatus() {
     try {
+      if (!db || !db.syncQueue) {
+        return {
+          isOnline: this.isConnected(),
+          pendingCount: 0,
+          failedCount: 0,
+          hasPending: false,
+          hasFailed: false,
+        };
+      }
+      
       const pending = await db.syncQueue.where('status').equals('pending').toArray();
       const failed = await db.syncQueue.where('status').equals('failed').toArray();
 
