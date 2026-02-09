@@ -525,7 +525,7 @@ export default function VistoriarUnidade() {
                   }
                   return { url: f.url, legenda: f.legenda || '' };
               });
-              await base44.entities.UnidadeFiscalizada.update(unidadeId, {
+              await DataService.update('UnidadeFiscalizada', unidadeId, {
                   fotos_unidade: fotosCompletas
               });
           },
@@ -541,7 +541,7 @@ export default function VistoriarUnidade() {
                 throw new Error('Não é possível modificar uma fiscalização finalizada');
             }
             // Recarregar recomendações atuais da unidade para calcular o próximo número
-            const recsUnidade = await base44.entities.Recomendacao.filter({ 
+            const recsUnidade = await DataService.read('Recomendacao', { 
                 unidade_fiscalizada_id: unidadeId 
             });
 
@@ -549,7 +549,7 @@ export default function VistoriarUnidade() {
             const proximoNumero = contadores.R + recsUnidade.length + 1;
             const numeroRecomendacao = `R${proximoNumero}`;
 
-            await base44.entities.Recomendacao.create({
+            await DataService.create('Recomendacao', {
                 unidade_fiscalizada_id: unidadeId,
                 numero_recomendacao: numeroRecomendacao,
                 descricao: texto,
@@ -936,6 +936,11 @@ export default function VistoriarUnidade() {
                                 <p className="text-blue-200 text-sm">{unidade.nome_unidade}</p>
                             )}
                         </div>
+                        {syncStatus.hasPending && (
+                            <div className="text-xs bg-blue-800 px-2 py-1 rounded">
+                                {syncStatus.pendingCount} pendente
+                            </div>
+                        )}
                     </div>
                     
                     {/* Progress */}
