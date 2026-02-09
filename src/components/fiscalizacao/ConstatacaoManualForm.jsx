@@ -11,14 +11,16 @@ export default function ConstatacaoManualForm({ open, onOpenChange, onSave, isSa
     const [descricao, setDescricao] = useState('');
     const [geraNc, setGeraNc] = useState(false);
 
-    // Preencher form quando for edição
+    // Preencher form quando for edição ou limpar quando for nova
     React.useEffect(() => {
-        if (constatacaoParaEditar) {
-            setDescricao(constatacaoParaEditar.descricao || '');
-            setGeraNc(constatacaoParaEditar.gera_nc || false);
-        } else {
-            setDescricao('');
-            setGeraNc(false);
+        if (open) {
+            if (constatacaoParaEditar) {
+                setDescricao(constatacaoParaEditar.descricao || '');
+                setGeraNc(constatacaoParaEditar.gera_nc || false);
+            } else {
+                setDescricao('');
+                setGeraNc(false);
+            }
         }
     }, [constatacaoParaEditar, open]);
 
