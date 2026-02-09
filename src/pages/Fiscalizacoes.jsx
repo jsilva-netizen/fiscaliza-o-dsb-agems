@@ -215,7 +215,7 @@ export default function Fiscalizacoes() {
                 ) : (
                     <div className="space-y-3">
                         {filtered.map((fisc) => {
-                            const podeDeleter = user?.email === fisc.created_by;
+                            const podeDeleter = user?.role === 'admin' || user?.email === fisc.created_by;
                             
                             return (
                                 <Card key={fisc.id} className="hover:shadow-md transition-shadow">
