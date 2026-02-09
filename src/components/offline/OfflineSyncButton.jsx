@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Cloud, CloudOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import db from '@/functions/offlineDb';
+import DataService from '@/functions/dataService';
 import SyncPanel from './SyncPanel';
 
 export default function OfflineSyncButton() {
@@ -21,8 +21,8 @@ export default function OfflineSyncButton() {
     // Atualiza contagem de pendentes
     const updatePendingCount = async () => {
       try {
-        const pending = await db.syncQueue.where('status').equals('pending').toArray();
-        setPendingCount(pending.length);
+        const status = await DataService.getSyncStatus();
+        setPendingCount(status.pendingCount);
       } catch (error) {
         console.error('Erro ao contar pendentes:', error);
       }
