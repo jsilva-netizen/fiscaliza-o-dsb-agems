@@ -523,15 +523,11 @@ export default function VistoriarUnidade() {
                 ordem: Date.now()
             });
 
-            // Incrementar contador de constatações
-            const novosContadores = {
-                ...contadoresAtuais,
-                C: contadoresAtuais.C + 1
-            };
+            // Recalcular contadores após criação
+            const contadoresAtualizados = await calcularProximaNumeracao(unidade.fiscalizacao_id, unidadeId, base44);
+            setContadores(contadoresAtualizados);
 
-            setContadores(novosContadores);
-
-            return { constatacao, novosContadores, numeroConstatacao };
+            return { constatacao, novosContadores: contadoresAtualizados, numeroConstatacao };
         },
         onSuccess: ({ constatacao, novosContadores, numeroConstatacao }) => {
             queryClient.invalidateQueries({ queryKey: ['constatacoes-manuais', unidadeId] });
