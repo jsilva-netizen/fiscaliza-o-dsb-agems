@@ -4,11 +4,11 @@ import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { DataService } from '@/functions/dataService';
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { 
@@ -19,7 +19,6 @@ import ChecklistItem from '@/components/fiscalizacao/ChecklistItem';
 import PhotoGrid from '@/components/fiscalizacao/PhotoGrid';
 import ConstatacaoManualForm from '@/components/fiscalizacao/ConstatacaoManualForm';
 import EditarNCModal from '@/components/fiscalizacao/EditarNCModal';
-import { calcularProximaNumeracao, gerarNumeroConstatacao, gerarNumeroNC, gerarNumeroDeterminacao, gerarNumeroRecomendacao } from '@/components/utils/numerationHelper';
 
 export default function VistoriarUnidade() {
     const navigate = useNavigate();
@@ -33,7 +32,6 @@ export default function VistoriarUnidade() {
     const [fotosParaSalvar, setFotosParaSalvar] = useState([]);
     const [showAddRecomendacao, setShowAddRecomendacao] = useState(false);
     const [novaRecomendacao, setNovaRecomendacao] = useState('');
-    const [recomendacoesCache, setRecomendacoesCache] = useState(null);
     const [showConfirmaSemFotos, setShowConfirmaSemFotos] = useState(false);
     const [contadores, setContadores] = useState(null);
     const [contadoresCarregados, setContadoresCarregados] = useState(false);
@@ -44,8 +42,9 @@ export default function VistoriarUnidade() {
     const [constatacaoParaEditar, setConstatacaoParaEditar] = useState(null);
     const [showConfirmaExclusao, setShowConfirmaExclusao] = useState(false);
     const [constatacaoParaExcluir, setConstatacaoParaExcluir] = useState(null);
+    const [isSavingResposta, setIsSavingResposta] = useState(false);
 
-    // Queries - Carregamento de dados localmente (offline-first)
+    // Queries - Carregamento offline-first
     const { data: unidade, isLoading: loadingUnidade } = useQuery({
         queryKey: ['unidade', unidadeId],
         queryFn: () => DataService.read('UnidadeFiscalizada', { id: unidadeId }).then(r => r[0]),
@@ -117,6 +116,7 @@ export default function VistoriarUnidade() {
         staleTime: 1000,
     });
 
+    // Load fotos from unidade
     useEffect(() => {
         if (unidade?.fotos_unidade) {
             const fotosCarregadas = unidade.fotos_unidade.map(foto => 
@@ -126,20 +126,18 @@ export default function VistoriarUnidade() {
         }
     }, [unidade?.fotos_unidade]);
 
-    // Carregar contadores apenas uma vez na montagem
+    // Load contadores once
     useEffect(() => {
         const carregarContadores = async () => {
             if (contadoresCarregados || !unidadeId) return;
-            
             const contadoresCalc = await DataService.calcularProximaNumeracao(unidadeId);
             setContadores(contadoresCalc);
             setContadoresCarregados(true);
         };
-        
         carregarContadores();
     }, [unidadeId, contadoresCarregados]);
 
-    // Carregar respostas apenas uma vez
+    // Load respostas map
     useEffect(() => {
         if (respostasExistentes.length > 0) {
             const respostasMap = {};
@@ -150,315 +148,76 @@ export default function VistoriarUnidade() {
         }
     }, [respostasExistentes.length]);
 
-    // Salvar resposta de forma instantânea (offline-first)
+    // Salvar resposta instantaneamente (offline-first)
     const handleSalvarResposta = async (itemId, data) => {
+        try {
             if (fiscalizacao?.status === 'finalizada' && !modoEdicao) {
-                throw new Error('Não é possível modificar uma fiscalização finalizada');
+                alert('Não é possível modificar uma fiscalização finalizada');
+                return;
             }
+            
+            setIsSavingResposta(true);
             const item = itensChecklist.find(i => i.id === itemId);
             if (!item) return;
 
             const resposta = respostasExistentes.find(r => r.item_checklist_id === itemId);
-            // Usar DataService para todas as operações
-            const respostaAnterior = resposta?.resposta;
-            const mudouResposta = respostaAnterior !== data.resposta;
-
+            
             if (resposta?.id) {
-                // Definir novo texto da constatação
+                // Atualizar resposta existente
                 let textoConstatacao = data.resposta === 'SIM' 
                     ? item.texto_constatacao_sim 
                     : data.resposta === 'NAO' 
                         ? item.texto_constatacao_nao 
                         : null;
                 
-                // Se não houver texto configurado para a resposta, não gera constatação
                 if (!textoConstatacao || !textoConstatacao.trim()) {
                     textoConstatacao = null;
                 } else if (!textoConstatacao.trim().endsWith(';')) {
                     textoConstatacao = textoConstatacao.trim() + ';';
                 }
 
-                // Atualizar a resposta
                 await DataService.update('RespostaChecklist', resposta.id, {
                    resposta: data.resposta,
                    observacao: data.observacao || '',
                    pergunta: textoConstatacao || ''
                 });
-
-                // Se mudou a resposta, renumerar tudo
-                if (mudouResposta) {
-                    // 1. Buscar todas as respostas da unidade (incluindo a que acabamos de atualizar)
-                    const todasRespostas = await DataService.read('RespostaChecklist', {
-                        unidade_fiscalizada_id: unidadeId
-                    }, 'created_date', 200);
-
-                    // 2. Buscar todos os itens do checklist para saber quais geram NC
-                    const todosItens = await DataService.read('ItemChecklist', {
-                        tipo_unidade_id: unidade.tipo_unidade_id
-                    }, 'ordem', 100);
-
-                    // 3. Deletar APENAS as NCs, Determinações e Recomendações do CHECKLIST (não manuais)
-                    // Buscar respostas antigas para saber quais NCs foram geradas pelo checklist
-                    const ncsGeradasPorChecklist = await base44.entities.NaoConformidade.filter({
-                        unidade_fiscalizada_id: unidadeId
-                    });
-
-                    // Filtrar apenas as NCs que foram geradas por respostas do checklist (associadas a resposta_checklist_id)
-                    const ncsDoChecklist = ncsGeradasPorChecklist.filter(nc => nc.resposta_checklist_id);
-
-                    // Deletar apenas NCs do checklist e suas determinações
-                    for (const nc of ncsDoChecklist) {
-                        const dets = await base44.entities.Determinacao.filter({
-                            nao_conformidade_id: nc.id
-                        });
-                        for (const det of dets) {
-                            await base44.entities.Determinacao.delete(det.id);
-                        }
-                        await base44.entities.NaoConformidade.delete(nc.id);
-                    }
-
-                    // Deletar apenas as Recomendações do checklist (origem: checklist)
-                    const recsExistentes = await base44.entities.Recomendacao.filter({
-                        unidade_fiscalizada_id: unidadeId,
-                        origem: 'checklist'
-                    });
-                    for (const rec of recsExistentes) {
-                        await base44.entities.Recomendacao.delete(rec.id);
-                    }
-
-                    // 4. Buscar constatações manuais para incluir na renumeração
-                    const constatacoesManuaisParaRenumerar = await base44.entities.ConstatacaoManual.filter({
-                        unidade_fiscalizada_id: unidadeId
-                    }, 'ordem', 100);
-
-                    // 5. Renumerar constatações e recriar NCs/Ds/Rs
-                    let contadorC = 1;
-                    let contadorNC = 1;
-                    let contadorD = 1;
-                    let contadorR = 1;
-
-                    // Primeiro, renumerar respostas do checklist
-                    for (const resp of todasRespostas) {
-                        const itemResp = todosItens.find(it => it.id === resp.item_checklist_id);
-                        
-                        // Verificar se tem texto configurado para a resposta
-                        let temTextoConstatacao = false;
-                        if (resp.resposta === 'SIM' && itemResp?.texto_constatacao_sim?.trim()) {
-                            temTextoConstatacao = true;
-                        } else if (resp.resposta === 'NAO' && itemResp?.texto_constatacao_nao?.trim()) {
-                            temTextoConstatacao = true;
-                        }
-                        
-                        // Só numerar se for SIM ou NÃO E tiver texto configurado
-                        if ((resp.resposta === 'SIM' || resp.resposta === 'NAO') && temTextoConstatacao) {
-                            const numeroConstatacao = `C${contadorC}`;
-                            
-                            // Atualizar número da constatação
-                            await base44.entities.RespostaChecklist.update(resp.id, {
-                                numero_constatacao: numeroConstatacao
-                            });
-
-                            contadorC++;
-
-                            // Se gera NC e resposta é NÃO, criar NC e Determinação
-                            if (itemResp?.gera_nc && resp.resposta === 'NAO') {
-                                const numeroNC = `NC${contadorNC}`;
-                                const numeroDet = `D${contadorD}`;
-                                const numeroRec = `R${contadorR}`;
-
-                                // Criar NC com texto tratado
-                                let ncDescricao = itemResp.texto_nc;
-                                if (!ncDescricao || !ncDescricao.trim()) {
-                                    ncDescricao = `A constatação ${numeroConstatacao} não cumpre o disposto no ${itemResp.artigo_portaria || 'artigo não especificado'}.`;
-                                }
-
-                                const nc = await base44.entities.NaoConformidade.create({
-                                    unidade_fiscalizada_id: unidadeId,
-                                    numero_nc: numeroNC,
-                                    artigo_portaria: itemResp.artigo_portaria || '',
-                                    descricao: ncDescricao,
-                                    fotos: []
-                                });
-
-                                // Criar Determinação
-                                const textoDet = itemResp.texto_determinacao || 'regularizar a situação identificada';
-                                const textoFinalDet = `Para sanar a ${numeroNC} ${textoDet}. Prazo: 30 dias.`;
-                                await base44.entities.Determinacao.create({
-                                    unidade_fiscalizada_id: unidadeId,
-                                    nao_conformidade_id: nc.id,
-                                    numero_determinacao: numeroDet,
-                                    descricao: textoFinalDet || '',
-                                    prazo_dias: 30,
-                                    status: 'pendente'
-                                });
-
-                                // Criar Recomendação se houver texto
-                                if (itemResp.texto_recomendacao) {
-                                    await base44.entities.Recomendacao.create({
-                                        unidade_fiscalizada_id: unidadeId,
-                                        numero_recomendacao: numeroRec,
-                                        descricao: itemResp.texto_recomendacao,
-                                        origem: 'checklist'
-                                    });
-                                    contadorR++;
-                                }
-
-                                contadorNC++;
-                                contadorD++;
-                            }
-                        }
-                    }
-
-                    // Depois, renumerar constatações manuais E suas NCs/Ds associadas
-                    for (const constManual of constatacoesManuaisParaRenumerar) {
-                        const numeroConstatacao = `C${contadorC}`;
-                        
-                        // Atualizar número da constatação manual
-                        await base44.entities.ConstatacaoManual.update(constManual.id, {
-                            numero_constatacao: numeroConstatacao
-                        });
-                        
-                        // Se gera NC, procurar e renumerar a NC/D associada
-                        if (constManual.gera_nc) {
-                            // Buscar NC associada à constatação manual
-                            const ncsAssociadas = await base44.entities.NaoConformidade.filter({
-                                unidade_fiscalizada_id: unidadeId
-                            });
-                            
-                            // Encontrar NC da constatação manual (não tem resposta_checklist_id)
-                            const ncManual = ncsAssociadas.find(nc => 
-                                !nc.resposta_checklist_id && 
-                                nc.descricao && 
-                                nc.descricao.includes(constManual.numero_constatacao)
-                            );
-                            
-                            if (ncManual) {
-                                const numeroNC = `NC${contadorNC}`;
-                                const numeroDet = `D${contadorD}`;
-                                
-                                // Atualizar NC
-                                await base44.entities.NaoConformidade.update(ncManual.id, {
-                                    numero_nc: numeroNC
-                                });
-                                
-                                // Buscar e atualizar Determinação associada
-                                const detsAssociadas = await base44.entities.Determinacao.filter({
-                                    nao_conformidade_id: ncManual.id
-                                });
-                                
-                                if (detsAssociadas.length > 0) {
-                                    await base44.entities.Determinacao.update(detsAssociadas[0].id, {
-                                        numero_determinacao: numeroDet
-                                    });
-                                }
-                                
-                                contadorNC++;
-                                contadorD++;
-                            }
-                        }
-                        
-                        contadorC++;
-                    }
-
-                    // Renumerar recomendações manuais (se existirem)
-                    const recsManuais = await base44.entities.Recomendacao.filter({
-                        unidade_fiscalizada_id: unidadeId,
-                        origem: 'manual'
-                    }, 'created_date', 100);
-                    
-                    for (const recManual of recsManuais) {
-                        await base44.entities.Recomendacao.update(recManual.id, {
-                            numero_recomendacao: `R${contadorR}`
-                        });
-                        contadorR++;
-                    }
-
-                    // Atualizar contadores locais
-                    setContadores({
-                        C: contadorC,
-                        NC: contadorNC,
-                        D: contadorD,
-                        R: contadorR
-                    });
-
-                    // Forçar recarregamento dos dados após renumeração
-                    await queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
-                    await queryClient.invalidateQueries({ queryKey: ['constatacoes-manuais', unidadeId] });
-                    await queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
-                    await queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
-                    await queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
-                }
             } else {
-                // Buscar contagem REAL do banco para garantir numeração correta
-                const respostasExistentesAgora = await base44.entities.RespostaChecklist.filter({
-                    unidade_fiscalizada_id: unidadeId
-                }, 'created_date', 200);
-                
-                const constatacoesManuaisExistentesAgora = await base44.entities.ConstatacaoManual.filter({
-                    unidade_fiscalizada_id: unidadeId
-                }, 'ordem', 100);
-                
-                const ncsExistentesAgora = await base44.entities.NaoConformidade.filter({
-                    unidade_fiscalizada_id: unidadeId
-                });
-                
-                const determinacoesExistentesAgora = await base44.entities.Determinacao.filter({
-                    unidade_fiscalizada_id: unidadeId
-                });
+                // Nova resposta
+                const proximaNumeracao = await DataService.calcularProximaNumeracao(unidadeId);
 
-                // Contar apenas respostas SIM/NÃO que tenham texto configurado + constatações manuais
-                const contadorC = respostasExistentesAgora.filter(r => {
-                    if (r.resposta !== 'SIM' && r.resposta !== 'NAO') return false;
-                    // Verificar se tem texto na pergunta (que é onde salvamos o texto da constatação)
-                    return r.pergunta && r.pergunta.trim();
-                }).length + constatacoesManuaisExistentesAgora.length + 1;
-                
-                const contadorNC = ncsExistentesAgora.length + 1;
-                const contadorD = determinacoesExistentesAgora.length + 1;
-
-                // Definir texto da constatação baseado na resposta
                 let textoConstatacao = data.resposta === 'SIM' 
                     ? item.texto_constatacao_sim 
                     : data.resposta === 'NAO' 
                         ? item.texto_constatacao_nao 
                         : null;
                 
-                // Verificar se tem texto configurado
                 const temTextoConstatacao = textoConstatacao && textoConstatacao.trim();
                 
-                // Adicionar ';' ao final se existir texto
                 if (temTextoConstatacao && !textoConstatacao.trim().endsWith(';')) {
                     textoConstatacao = textoConstatacao.trim() + ';';
                 } else if (!temTextoConstatacao) {
                     textoConstatacao = null;
                 }
 
-                // Só gerar número de constatação se tiver texto configurado
-                const numeroConstatacao = temTextoConstatacao ? `C${contadorC}` : null;
+                const numeroConstatacao = temTextoConstatacao ? `C${proximaNumeracao.C}` : null;
 
                 if (item.gera_nc && data.resposta === 'NAO') {
-                    const numeroNC = `NC${contadorNC}`;
-                    const numeroDeterminacao = `D${contadorD}`;
-                    const numeroRecomendacao = `R${contadorNC}`; // Usa mesmo contador que NC
-                    
-                    // Usar backend function para criar Resposta + NC + D/R atomicamente
-                    await base44.functions.invoke('criarNcComDeterminacao', {
-                        unidade_fiscalizada_id: unidadeId,
-                        item_checklist_id: itemId,
-                        pergunta: textoConstatacao,
-                        numero_constatacao: numeroConstatacao,
-                        numero_nc: numeroNC,
-                        numero_determinacao: numeroDeterminacao,
-                        numero_recomendacao: numeroRecomendacao,
-                        artigo_portaria: item.artigo_portaria,
-                        texto_nc: item.texto_nc,
-                        texto_determinacao: item.texto_determinacao,
-                        texto_recomendacao: item.texto_recomendacao,
-                        prazo_dias: item.prazo_dias || 30
-                    });
+                    await DataService.createRespostaComNCeDeterminacao(
+                        unidadeId,
+                        itemId,
+                        item,
+                        {
+                            resposta: data.resposta,
+                            textoConstatacao,
+                            numeroConstatacao,
+                            numeroNC: `NC${proximaNumeracao.NC}`,
+                            numeroDeterminacao: `D${proximaNumeracao.D}`,
+                            numeroRecomendacao: `R${proximaNumeracao.R}`,
+                            observacao: data.observacao
+                        }
+                    );
                 } else {
-                    // Criar apenas a resposta se não gerar NC
-                    await base44.entities.RespostaChecklist.create({
+                    await DataService.create('RespostaChecklist', {
                         unidade_fiscalizada_id: unidadeId,
                         item_checklist_id: itemId,
                         pergunta: textoConstatacao,
@@ -470,393 +229,17 @@ export default function VistoriarUnidade() {
                 }
             }
             
-            return { itemId, data };
-        },
-        onSuccess: ({ itemId, data }) => {
-            // Atualizar estado local imediatamente para feedback instantâneo
-            const respostaAtual = respostasExistentes.find(r => r.item_checklist_id === itemId);
-            if (respostaAtual) {
-                setRespostas(prev => ({
-                    ...prev,
-                    [itemId]: { 
-                        ...respostaAtual, 
-                        resposta: data.resposta, 
-                        observacao: data.observacao,
-                        pergunta: data.pergunta
-                    }
-                }));
-            }
-            
-            // Invalidar queries - React Query faz refetch automaticamente
-            queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
-        },
-        onError: (err) => {
-            alert(err.message);
+            // Update UI locally
+            setRespostas(prev => ({
+                ...prev,
+                [itemId]: data
+            }));
+        } catch (error) {
+            console.error('Erro ao salvar resposta:', error);
+            alert('Erro ao salvar resposta: ' + error.message);
+        } finally {
+            setIsSavingResposta(false);
         }
-    });
-
-     const salvarFotosMutation = useMutation({
-         mutationFn: async (fotosData) => {
-              // Salvar objetos completos com url e legenda
-              const fotosCompletas = fotosData.map(f => {
-                  if (typeof f === 'string') {
-                      return { url: f, legenda: '' };
-                  }
-                  return { url: f.url, legenda: f.legenda || '' };
-              });
-              await DataService.update('UnidadeFiscalizada', unidadeId, {
-                  fotos_unidade: fotosCompletas
-              });
-          },
-          onSuccess: () => {
-              queryClient.invalidateQueries({ queryKey: ['unidade', unidadeId] });
-              setFotosParaSalvar([]);
-          }
-      });
-
-    const adicionarRecomendacaoMutation = useMutation({
-        mutationFn: async (texto) => {
-            if (fiscalizacao?.status === 'finalizada' && !modoEdicao) {
-                throw new Error('Não é possível modificar uma fiscalização finalizada');
-            }
-            // Recarregar recomendações atuais da unidade para calcular o próximo número
-            const recsUnidade = await DataService.read('Recomendacao', { 
-                unidade_fiscalizada_id: unidadeId 
-            });
-
-            // Calcular próximo número baseado em recomendações anteriores + recomendações desta unidade
-            const proximoNumero = contadores.R + recsUnidade.length + 1;
-            const numeroRecomendacao = `R${proximoNumero}`;
-
-            await DataService.create('Recomendacao', {
-                unidade_fiscalizada_id: unidadeId,
-                numero_recomendacao: numeroRecomendacao,
-                descricao: texto,
-                origem: 'manual'
-            });
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
-            setNovaRecomendacao('');
-            setShowAddRecomendacao(false);
-        }
-    });
-
-    const adicionarConstatacaoManualMutation = useMutation({
-        mutationFn: async (data) => {
-            if (fiscalizacao?.status === 'finalizada' && !modoEdicao) {
-                throw new Error('Não é possível modificar uma fiscalização finalizada');
-            }
-
-            // Se for edição, atualizar
-            if (constatacaoParaEditar) {
-                let descricaoFinal = data.descricao;
-                if (descricaoFinal && !descricaoFinal.trim().endsWith(';')) {
-                    descricaoFinal = descricaoFinal.trim() + ';';
-                }
-
-                await base44.entities.ConstatacaoManual.update(constatacaoParaEditar.id, {
-                    descricao: descricaoFinal,
-                    gera_nc: data.gera_nc
-                });
-
-                return { constatacao: { ...constatacaoParaEditar, descricao: descricaoFinal, gera_nc: data.gera_nc }, numeroConstatacao: constatacaoParaEditar.numero_constatacao };
-            }
-
-            // Se for nova constatação, criar
-            const respostasComConstatacao = await base44.entities.RespostaChecklist.filter({
-                unidade_fiscalizada_id: unidadeId
-            }, 'created_date', 200);
-            
-            const constatacoesManuaisExistentes = await base44.entities.ConstatacaoManual.filter({
-                unidade_fiscalizada_id: unidadeId
-            }, 'ordem', 100);
-
-            const totalConstatacoes = respostasComConstatacao.filter(r => 
-                r.pergunta && r.pergunta.trim()
-            ).length + constatacoesManuaisExistentes.length;
-
-            const numeroConstatacao = `C${totalConstatacoes + 1}`;
-
-            let descricaoFinal = data.descricao;
-            if (descricaoFinal && !descricaoFinal.trim().endsWith(';')) {
-                descricaoFinal = descricaoFinal.trim() + ';';
-            }
-
-            const constatacao = await base44.entities.ConstatacaoManual.create({
-                unidade_fiscalizada_id: unidadeId,
-                numero_constatacao: numeroConstatacao,
-                descricao: descricaoFinal,
-                gera_nc: data.gera_nc,
-                ordem: Date.now()
-            });
-
-            const contadoresAtualizados = await calcularProximaNumeracao(unidade.fiscalizacao_id, unidadeId, base44);
-            setContadores(contadoresAtualizados);
-
-            return { constatacao, novosContadores: contadoresAtualizados, numeroConstatacao };
-        },
-        onSuccess: async ({ constatacao, novosContadores, numeroConstatacao }) => {
-            queryClient.invalidateQueries({ queryKey: ['constatacoes-manuais', unidadeId] });
-            setShowAddConstatacao(false);
-            setConstatacaoParaEditar(null);
-
-            // Se for edição, não abrir modal de NC
-            if (constatacaoParaEditar) {
-                return;
-            }
-
-            // Se gera NC e é nova constatação, abrir modal de edição
-            if (constatacao.gera_nc) {
-                // Buscar contagem REAL de NCs e Determinações do banco
-                const ncsExistentesAgora = await base44.entities.NaoConformidade.filter({
-                    unidade_fiscalizada_id: unidadeId
-                });
-                
-                const determinacoesExistentesAgora = await base44.entities.Determinacao.filter({
-                    unidade_fiscalizada_id: unidadeId
-                });
-
-                const recomendacoesExistentesAgora = await base44.entities.Recomendacao.filter({
-                    unidade_fiscalizada_id: unidadeId
-                });
-
-                const numeroNC = `NC${ncsExistentesAgora.length + 1}`;
-                const numeroDeterminacao = `D${determinacoesExistentesAgora.length + 1}`;
-                const numeroRecomendacao = `R${recomendacoesExistentesAgora.length + 1}`;
-                
-                setConstatacaoParaNC(constatacao);
-                setNumerosParaNC({
-                    numeroNC,
-                    numeroDeterminacao,
-                    numeroRecomendacao,
-                    numeroConstatacao
-                });
-                setShowEditarNC(true);
-            }
-        },
-        onError: (err) => {
-            alert(err.message);
-        }
-    });
-
-    const excluirConstatacaoManualMutation = useMutation({
-        mutationFn: async (constatacaoId) => {
-            if (fiscalizacao?.status === 'finalizada' && !modoEdicao) {
-                throw new Error('Não é possível modificar uma fiscalização finalizada');
-            }
-
-            const response = await base44.functions.invoke('deleteConstatacaoManualComCascade', {
-                constatacao_manual_id: constatacaoId,
-                unidade_fiscalizada_id: unidadeId
-            });
-
-            return response.data;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['constatacoes-manuais', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
-            setShowConfirmaExclusao(false);
-            setConstatacaoParaExcluir(null);
-        },
-        onError: (err) => {
-            alert(err.message);
-        }
-    });
-
-    const salvarNCMutation = useMutation({
-        mutationFn: async (data) => {
-            if (!constatacaoParaNC || !numerosParaNC) return;
-
-            // Atualizar o texto da constatação manual
-            let textoConstatacaoFinal = data.texto_constatacao;
-            if (textoConstatacaoFinal && !textoConstatacaoFinal.trim().endsWith(';')) {
-                textoConstatacaoFinal = textoConstatacaoFinal.trim() + ';';
-            }
-            await base44.entities.ConstatacaoManual.update(constatacaoParaNC.id, {
-                descricao: textoConstatacaoFinal
-            });
-
-            let nc;
-            // Se tem NC existente, atualizar; senão criar
-            if (data.nc_id) {
-                await base44.entities.NaoConformidade.update(data.nc_id, {
-                    artigo_portaria: data.artigo_portaria,
-                    descricao: data.texto_nc
-                });
-                nc = { id: data.nc_id };
-            } else {
-                nc = await base44.entities.NaoConformidade.create({
-                    unidade_fiscalizada_id: unidadeId,
-                    numero_nc: numerosParaNC.numeroNC,
-                    artigo_portaria: data.artigo_portaria,
-                    descricao: data.texto_nc,
-                    fotos: []
-                });
-            }
-
-            let incrementoD = 0;
-            let incrementoR = 0;
-
-            // Determinação: atualizar, criar ou deletar
-            if (data.gera_determinacao && data.texto_determinacao) {
-                const textoFinalDeterminacao = `Para sanar a ${numerosParaNC.numeroNC} ${data.texto_determinacao}. Prazo: 30 dias.`;
-                
-                if (data.determinacao_id) {
-                    await base44.entities.Determinacao.update(data.determinacao_id, {
-                        descricao: textoFinalDeterminacao
-                    });
-                } else {
-                    await base44.entities.Determinacao.create({
-                        unidade_fiscalizada_id: unidadeId,
-                        nao_conformidade_id: nc.id,
-                        numero_determinacao: numerosParaNC.numeroDeterminacao,
-                        descricao: textoFinalDeterminacao,
-                        prazo_dias: 30,
-                        status: 'pendente'
-                    });
-                    incrementoD = 1;
-                }
-            } else if (data.determinacao_id && !data.gera_determinacao) {
-                // Se tinha determinação mas agora não gera mais, deletar
-                await base44.entities.Determinacao.delete(data.determinacao_id);
-            }
-
-            // Recomendação: atualizar, criar ou deletar
-            if (data.gera_recomendacao && data.texto_recomendacao) {
-                if (data.recomendacao_id) {
-                    await base44.entities.Recomendacao.update(data.recomendacao_id, {
-                        descricao: data.texto_recomendacao
-                    });
-                } else {
-                    await base44.entities.Recomendacao.create({
-                        unidade_fiscalizada_id: unidadeId,
-                        numero_recomendacao: numerosParaNC.numeroRecomendacao,
-                        descricao: data.texto_recomendacao,
-                        origem: 'manual'
-                    });
-                    incrementoR = 1;
-                }
-            } else if (data.recomendacao_id && !data.gera_recomendacao) {
-                // Se tinha recomendação mas agora não gera mais, deletar
-                await base44.entities.Recomendacao.delete(data.recomendacao_id);
-            }
-
-            // Incrementar contadores apenas se criou novos
-            if (incrementoD > 0 || incrementoR > 0) {
-                setContadores(prev => ({
-                    ...prev,
-                    NC: data.nc_id ? prev.NC : prev.NC + 1,
-                    D: prev.D + incrementoD,
-                    R: prev.R + incrementoR
-                }));
-            }
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['constatacoes-manuais', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
-            setShowEditarNC(false);
-            setConstatacaoParaNC(null);
-            setNumerosParaNC(null);
-        },
-        onError: (err) => {
-            alert(err.message);
-        }
-    });
-
-    const finalizarUnidadeMutation = useMutation({
-    mutationFn: async () => {
-         // Recarregar dados do banco para contagens precisas
-         const respostasAtuais = await base44.entities.RespostaChecklist.filter({ 
-             unidade_fiscalizada_id: unidadeId 
-         });
-         const ncsAtuais = await base44.entities.NaoConformidade.filter({ 
-             unidade_fiscalizada_id: unidadeId 
-         });
-
-         const totalConstatacoes = respostasAtuais.filter(r => 
-             r.resposta === 'SIM' || r.resposta === 'NAO'
-         ).length;
-
-         // Salvar objetos completos com url e legenda
-         const fotosCompletas = fotos.map(f => {
-             if (typeof f === 'string') {
-                 return { url: f, legenda: '' };
-             }
-             return { url: f.url, legenda: f.legenda || '' };
-         });
-         await base44.entities.UnidadeFiscalizada.update(unidadeId, {
-             status: 'finalizada',
-             fotos_unidade: fotosCompletas,
-             total_constatacoes: totalConstatacoes,
-             total_ncs: ncsAtuais.length
-         });
-         },
-        onSuccess: () => {
-             queryClient.invalidateQueries({ queryKey: ['unidades-fiscalizacao'] });
-             navigate(createPageUrl('ExecutarFiscalizacao') + `?id=${unidade.fiscalizacao_id}`);
-         },
-         onError: (err) => {
-             alert(err.message);
-         }
-     });
-
-    const salvarAlteracoesMutation = useMutation({
-        mutationFn: async () => {
-            // Recarregar dados do banco para contagens precisas
-            const respostasAtuais = await base44.entities.RespostaChecklist.filter({ 
-                unidade_fiscalizada_id: unidadeId 
-            });
-            const ncsAtuais = await base44.entities.NaoConformidade.filter({ 
-                unidade_fiscalizada_id: unidadeId 
-            });
-
-            const totalConstatacoes = respostasAtuais.filter(r => 
-                r.resposta === 'SIM' || r.resposta === 'NAO'
-            ).length;
-
-            // Salvar objetos completos com url e legenda
-            const fotosCompletas = fotos.map(f => {
-                if (typeof f === 'string') {
-                    return { url: f, legenda: '' };
-                }
-                return { url: f.url, legenda: f.legenda || '' };
-            });
-            
-            await base44.entities.UnidadeFiscalizada.update(unidadeId, {
-                fotos_unidade: fotosCompletas,
-                total_constatacoes: totalConstatacoes,
-                total_ncs: ncsAtuais.length
-            });
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['unidades-fiscalizacao'] });
-            queryClient.invalidateQueries({ queryKey: ['unidade', unidadeId] });
-            navigate(createPageUrl('ExecutarFiscalizacao') + `?id=${unidade.fiscalizacao_id}`);
-        },
-        onError: (err) => {
-            alert(err.message);
-        }
-    });
-
-    const handleFinalizarClick = () => {
-        if (fotos.length === 0) {
-            setShowConfirmaSemFotos(true);
-        } else {
-            finalizarUnidadeMutation.mutate();
-        }
-    };
-
-    const handleResponder = (itemId, data) => {
-        salvarRespostaMutation.mutate({ itemId, data });
     };
 
     const handleAddFoto = async (fotoData) => {
@@ -867,26 +250,66 @@ export default function VistoriarUnidade() {
     const handleRemoveFoto = async (index) => {
         const novasFotos = fotos.filter((_, i) => i !== index);
         setFotos(novasFotos);
-        await salvarFotosMutation.mutateAsync(novasFotos);
+        const fotosCompletas = novasFotos.map(f => {
+            if (typeof f === 'string') return { url: f, legenda: '' };
+            return { url: f.url, legenda: f.legenda || '' };
+        });
+        await DataService.update('UnidadeFiscalizada', unidadeId, {
+            fotos_unidade: fotosCompletas
+        });
     };
 
     const handleUpdateLegenda = async (index, legenda) => {
         const novasFotos = [...fotos];
         novasFotos[index] = { ...novasFotos[index], legenda };
         setFotos(novasFotos);
-        await salvarFotosMutation.mutateAsync(novasFotos);
+        const fotosCompletas = novasFotos.map(f => {
+            if (typeof f === 'string') return { url: f, legenda: '' };
+            return { url: f.url, legenda: f.legenda || '' };
+        });
+        await DataService.update('UnidadeFiscalizada', unidadeId, {
+            fotos_unidade: fotosCompletas
+        });
     };
 
-    // Debounce para salvar fotos após 2 segundos sem adicionar mais
-    React.useEffect(() => {
-        if (fotosParaSalvar.length === 0) return;
+    const handleResponder = (itemId, data) => {
+        handleSalvarResposta(itemId, data);
+    };
 
-        const timer = setTimeout(() => {
-            salvarFotosMutation.mutate(fotos);
-        }, 2000);
+    const handleFinalizarClick = async () => {
+        if (fotos.length === 0) {
+            setShowConfirmaSemFotos(true);
+        } else {
+            await handleFinalizar();
+        }
+    };
 
-        return () => clearTimeout(timer);
-    }, [fotosParaSalvar]);
+    const handleFinalizar = async () => {
+        try {
+            const respostasAtuais = await DataService.read('RespostaChecklist', { unidade_fiscalizada_id: unidadeId });
+            const ncsAtuais = await DataService.read('NaoConformidade', { unidade_fiscalizada_id: unidadeId });
+
+            const totalConstatacoes = respostasAtuais.filter(r => 
+                r.resposta === 'SIM' || r.resposta === 'NAO'
+            ).length;
+
+            const fotosCompletas = fotos.map(f => {
+                if (typeof f === 'string') return { url: f, legenda: '' };
+                return { url: f.url, legenda: f.legenda || '' };
+            });
+            
+            await DataService.update('UnidadeFiscalizada', unidadeId, {
+                status: 'finalizada',
+                fotos_unidade: fotosCompletas,
+                total_constatacoes: totalConstatacoes,
+                total_ncs: ncsAtuais.length
+            });
+
+            navigate(createPageUrl('ExecutarFiscalizacao') + `?id=${unidade.fiscalizacao_id}`);
+        } catch (error) {
+            alert('Erro ao finalizar vistoria: ' + error.message);
+        }
+    };
 
     if (loadingUnidade) {
         return (
@@ -902,7 +325,6 @@ export default function VistoriarUnidade() {
 
     return (
         <div className="min-h-screen bg-gray-100 pb-24">
-            
             {/* Header */}
             <div className="bg-blue-900 text-white sticky top-0 z-40">
                 <div className="max-w-4xl mx-auto px-4 py-3">
@@ -918,11 +340,6 @@ export default function VistoriarUnidade() {
                                 <p className="text-blue-200 text-sm">{unidade.nome_unidade}</p>
                             )}
                         </div>
-                        {syncStatus.hasPending && (
-                            <div className="text-xs bg-blue-800 px-2 py-1 rounded">
-                                {syncStatus.pendingCount} pendente
-                            </div>
-                        )}
                     </div>
                     
                     {/* Progress */}
@@ -983,7 +400,6 @@ export default function VistoriarUnidade() {
                             </Button>
                         )}
 
-                        {/* Constatações Manuais (primeiro) */}
                         {constatacoesManuais.map(constatacao => (
                             <Card key={constatacao.id} className="border-blue-200 bg-blue-50">
                                 <CardContent className="p-4">
@@ -997,86 +413,11 @@ export default function VistoriarUnidade() {
                                                 </Badge>
                                             )}
                                         </div>
-                                        {(fiscalizacao?.status !== 'finalizada' || modoEdicao) && (
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={async () => {
-                                                        setConstatacaoParaEditar(constatacao);
-                                                        
-                                                        // Se gera NC, buscar dados relacionados para permitir edição completa
-                                                        if (constatacao.gera_nc) {
-                                                            // Buscar NC associada
-                                                            const ncsAssociadas = await base44.entities.NaoConformidade.filter({
-                                                                unidade_fiscalizada_id: unidadeId
-                                                            });
-                                                            const ncAssociada = ncsAssociadas.find(nc => 
-                                                                nc.descricao && nc.descricao.includes(constatacao.numero_constatacao)
-                                                            );
-
-                                                            if (ncAssociada) {
-                                                                // Buscar Determinação associada
-                                                                const detsAssociadas = await base44.entities.Determinacao.filter({
-                                                                    nao_conformidade_id: ncAssociada.id
-                                                                });
-                                                                const detAssociada = detsAssociadas[0] || null;
-
-                                                                // Buscar Recomendações manuais (origem: manual) criadas após esta NC
-                                                                const recsAssociadas = await base44.entities.Recomendacao.filter({
-                                                                    unidade_fiscalizada_id: unidadeId,
-                                                                    origem: 'manual'
-                                                                });
-                                                                // Associar recomendação se existir na mesma sequência
-                                                                const recAssociada = recsAssociadas.find(rec => {
-                                                                    const numNC = parseInt(ncAssociada.numero_nc.replace('NC', ''));
-                                                                    const numRec = parseInt(rec.numero_recomendacao.replace('R', ''));
-                                                                    return numRec === numNC;
-                                                                }) || null;
-
-                                                                // Abrir modal de NC com dados existentes
-                                                                setConstatacaoParaNC(constatacao);
-                                                                setNumerosParaNC({
-                                                                    numeroNC: ncAssociada.numero_nc,
-                                                                    numeroDeterminacao: detAssociada?.numero_determinacao || `D${determinacoesExistentes.length + 1}`,
-                                                                    numeroRecomendacao: recAssociada?.numero_recomendacao || `R${recomendacoesExistentes.length + 1}`,
-                                                                    numeroConstatacao: constatacao.numero_constatacao,
-                                                                    ncExistente: ncAssociada,
-                                                                    determinacaoExistente: detAssociada,
-                                                                    recomendacaoExistente: recAssociada
-                                                                });
-                                                                setShowEditarNC(true);
-                                                            } else {
-                                                                // Se não tem NC criada ainda, abrir form de constatação
-                                                                setShowAddConstatacao(true);
-                                                            }
-                                                        } else {
-                                                            // Se não gera NC, apenas abrir form de constatação
-                                                            setShowAddConstatacao(true);
-                                                        }
-                                                    }}
-                                                >
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={() => {
-                                                        setConstatacaoParaExcluir(constatacao);
-                                                        setShowConfirmaExclusao(true);
-                                                    }}
-                                                    className="text-red-600 hover:text-red-700"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
                         ))}
 
-                        {/* Constatações do Checklist (depois) */}
                         {respostasExistentes
                             .filter(r => (r.resposta === 'SIM' || r.resposta === 'NAO') && r.pergunta && r.pergunta.trim())
                             .map(resp => (
@@ -1086,11 +427,6 @@ export default function VistoriarUnidade() {
                                             <Badge variant="secondary">{resp.numero_constatacao}</Badge>
                                             <div className="flex-1">
                                                 <p className="text-sm">{resp.pergunta}</p>
-                                                {resp.gera_nc && resp.resposta === 'NAO' && (
-                                                    <Badge variant="outline" className="mt-2 text-xs text-red-600 border-red-300">
-                                                        Gera NC
-                                                    </Badge>
-                                                )}
                                             </div>
                                         </div>
                                     </CardContent>
@@ -1110,18 +446,14 @@ export default function VistoriarUnidade() {
                             <Card>
                                 <CardContent className="p-6 text-center text-gray-500">
                                     <ClipboardCheck className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                                    <p>Nenhum item de checklist configurado para este tipo de unidade.</p>
-                                    <Link to={createPageUrl('Checklists') + `?tipo=${unidade?.tipo_unidade_id}`}>
-                                        <Button variant="link">Configurar checklist</Button>
-                                    </Link>
+                                    <p>Nenhum item de checklist configurado.</p>
                                 </CardContent>
                             </Card>
                         ) : (
                             itensChecklist.map((item, index) => {
-                                // Verificar se é o primeiro item OU se o item anterior já foi respondido
                                 const itemAnterior = index > 0 ? itensChecklist[index - 1] : null;
                                 const itemAnteriorRespondido = !itemAnterior || respostas[itemAnterior.id]?.resposta;
-                                const liberado = itemAnteriorRespondido && !salvarRespostaMutation.isPending;
+                                const liberado = itemAnteriorRespondido && !isSavingResposta;
                                 
                                 return (
                                     <ChecklistItem
@@ -1130,7 +462,7 @@ export default function VistoriarUnidade() {
                                         resposta={respostas[item.id]}
                                         onResponder={(data) => handleResponder(item.id, data)}
                                         numero={index + 1}
-                                        desabilitado={(unidade?.status === 'finalizada' && !modoEdicao) || !liberado || salvarRespostaMutation.isPending}
+                                        desabilitado={(unidade?.status === 'finalizada' && !modoEdicao) || !liberado || isSavingResposta}
                                     />
                                 );
                             })
@@ -1139,30 +471,16 @@ export default function VistoriarUnidade() {
 
                     {/* Fotos Tab */}
                     <TabsContent value="fotos" className="mt-4">
-                    <PhotoGrid
-                    fotos={fotos}
-                    minFotos={2}
-                    onAddFoto={handleAddFoto}
-                    onRemoveFoto={handleRemoveFoto}
-                    onUpdateLegenda={handleUpdateLegenda}
-                    titulo="Fotos da Unidade"
-                    fiscalizacaoId={unidade?.fiscalizacao_id}
-                    unidadeId={unidadeId}
-                    />
-                    {unidade?.status === 'finalizada' && (fotos.length > 0 || fotosParaSalvar.length > 0) && (
-                    <Button
-                    className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
-                    onClick={() => salvarFotosMutation.mutate(fotos)}
-                    disabled={salvarFotosMutation.isPending}
-                    >
-                    {salvarFotosMutation.isPending ? (
-                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                     <Save className="h-4 w-4 mr-2" />
-                    )}
-                    Salvar Alterações
-                    </Button>
-                    )}
+                        <PhotoGrid
+                            fotos={fotos}
+                            minFotos={2}
+                            onAddFoto={handleAddFoto}
+                            onRemoveFoto={handleRemoveFoto}
+                            onUpdateLegenda={handleUpdateLegenda}
+                            titulo="Fotos da Unidade"
+                            fiscalizacaoId={unidade?.fiscalizacao_id}
+                            unidadeId={unidadeId}
+                        />
                     </TabsContent>
 
                     {/* NCs Tab */}
@@ -1172,11 +490,10 @@ export default function VistoriarUnidade() {
                                 <CardContent className="p-6 text-center text-gray-500">
                                     <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-green-500 opacity-50" />
                                     <p>Nenhuma Não Conformidade identificada.</p>
-                                    <p className="text-xs mt-2">NCs são geradas automaticamente ao responder "NÃO" em itens do checklist.</p>
                                 </CardContent>
                             </Card>
                         ) : (
-                            ncsExistentes.map((nc, index) => (
+                            ncsExistentes.map((nc) => (
                                 <Card key={nc.id} className="border-red-200 bg-red-50">
                                     <CardHeader className="pb-2">
                                         <CardTitle className="text-lg flex items-center gap-2 text-red-700">
@@ -1189,8 +506,6 @@ export default function VistoriarUnidade() {
                                         {nc.artigo_portaria && (
                                             <Badge variant="outline">{nc.artigo_portaria}</Badge>
                                         )}
-
-                                        {/* Determinação relacionada */}
                                         {determinacoesExistentes.filter(d => d.nao_conformidade_id === nc.id).map(det => (
                                             <div key={det.id} className="bg-white p-3 rounded border">
                                                 <p className="text-xs font-medium text-blue-700">{det.numero_determinacao}</p>
@@ -1198,8 +513,6 @@ export default function VistoriarUnidade() {
                                                 <p className="text-xs text-gray-500 mt-1">Prazo: {det.prazo_dias} dias</p>
                                             </div>
                                         ))}
-
-
                                     </CardContent>
                                 </Card>
                             ))
@@ -1242,34 +555,9 @@ export default function VistoriarUnidade() {
                         <Button 
                             className="w-full h-12 bg-green-600 hover:bg-green-700"
                             onClick={handleFinalizarClick}
-                            disabled={finalizarUnidadeMutation.isPending}
                         >
-                            {finalizarUnidadeMutation.isPending ? (
-                                <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                            ) : (
-                                <Save className="h-5 w-5 mr-2" />
-                            )}
+                            <Save className="h-5 w-5 mr-2" />
                             Finalizar Vistoria
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            {/* Bottom Bar - Modo Edição */}
-            {unidade?.status === 'finalizada' && modoEdicao && (
-                <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-50">
-                    <div className="max-w-4xl mx-auto">
-                        <Button 
-                            className="w-full h-12 bg-blue-600 hover:bg-blue-700"
-                            onClick={() => salvarAlteracoesMutation.mutate()}
-                            disabled={salvarAlteracoesMutation.isPending}
-                        >
-                            {salvarAlteracoesMutation.isPending ? (
-                                <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                            ) : (
-                                <Save className="h-5 w-5 mr-2" />
-                            )}
-                            Salvar Alterações
                         </Button>
                     </div>
                 </div>
@@ -1291,8 +579,22 @@ export default function VistoriarUnidade() {
                         <div className="flex gap-2">
                             <Button 
                                 className="flex-1"
-                                onClick={() => adicionarRecomendacaoMutation.mutate(novaRecomendacao)}
-                                disabled={!novaRecomendacao.trim() || adicionarRecomendacaoMutation.isPending}
+                                onClick={async () => {
+                                    if (!novaRecomendacao.trim()) return;
+                                    try {
+                                        const proximaNumeracao = await DataService.calcularProximaNumeracao(unidadeId);
+                                        await DataService.create('Recomendacao', {
+                                            unidade_fiscalizada_id: unidadeId,
+                                            numero_recomendacao: `R${proximaNumeracao.R}`,
+                                            descricao: novaRecomendacao,
+                                            origem: 'manual'
+                                        });
+                                        setNovaRecomendacao('');
+                                        setShowAddRecomendacao(false);
+                                    } catch (error) {
+                                        alert('Erro ao adicionar recomendação: ' + error.message);
+                                    }
+                                }}
                             >
                                 Salvar
                             </Button>
@@ -1300,72 +602,6 @@ export default function VistoriarUnidade() {
                                 Cancelar
                             </Button>
                         </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            {/* Dialog Constatação Manual */}
-            <ConstatacaoManualForm
-                open={showAddConstatacao}
-                onOpenChange={(open) => {
-                    setShowAddConstatacao(open);
-                    if (!open) setConstatacaoParaEditar(null);
-                }}
-                onSave={(data) => adicionarConstatacaoManualMutation.mutate(data)}
-                isSaving={adicionarConstatacaoManualMutation.isPending}
-                constatacaoParaEditar={constatacaoParaEditar}
-            />
-
-            {/* Dialog Editar NC */}
-            <EditarNCModal
-                open={showEditarNC}
-                onOpenChange={setShowEditarNC}
-                onSave={(data) => salvarNCMutation.mutate(data)}
-                isSaving={salvarNCMutation.isPending}
-                numeroNC={numerosParaNC?.numeroNC}
-                numeroDeterminacao={numerosParaNC?.numeroDeterminacao}
-                numeroRecomendacao={numerosParaNC?.numeroRecomendacao}
-                numeroConstatacao={numerosParaNC?.numeroConstatacao}
-                constatacaoTexto={constatacaoParaNC?.descricao}
-                ncExistente={numerosParaNC?.ncExistente}
-                determinacaoExistente={numerosParaNC?.determinacaoExistente}
-                recomendacaoExistente={numerosParaNC?.recomendacaoExistente}
-            />
-
-            {/* Dialog Confirmação Exclusão Constatação */}
-            <Dialog open={showConfirmaExclusao} onOpenChange={setShowConfirmaExclusao}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-red-700">
-                            <AlertCircle className="h-5 w-5" />
-                            Excluir Constatação
-                        </DialogTitle>
-                        <DialogDescription>
-                            Tem certeza que deseja excluir a constatação <strong>{constatacaoParaExcluir?.numero_constatacao}</strong>?
-                            {constatacaoParaExcluir?.gera_nc && (
-                                <span className="block mt-2 text-yellow-700 font-medium">
-                                    Esta ação também excluirá as Não Conformidades, Determinações e Recomendações associadas.
-                                </span>
-                            )}
-                            <span className="block mt-2">
-                                Todas as constatações seguintes serão renumeradas automaticamente.
-                            </span>
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex gap-2">
-                        <Button 
-                            className="flex-1 bg-red-600 hover:bg-red-700"
-                            onClick={() => excluirConstatacaoManualMutation.mutate(constatacaoParaExcluir?.id)}
-                            disabled={excluirConstatacaoManualMutation.isPending}
-                        >
-                            {excluirConstatacaoManualMutation.isPending ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            ) : null}
-                            Sim, Excluir
-                        </Button>
-                        <Button variant="outline" onClick={() => setShowConfirmaExclusao(false)}>
-                            Cancelar
-                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -1385,11 +621,10 @@ export default function VistoriarUnidade() {
                     <div className="flex gap-2">
                         <Button 
                             className="flex-1 bg-yellow-600 hover:bg-yellow-700"
-                            onClick={() => {
+                            onClick={async () => {
                                 setShowConfirmaSemFotos(false);
-                                finalizarUnidadeMutation.mutate();
+                                await handleFinalizar();
                             }}
-                            disabled={finalizarUnidadeMutation.isPending}
                         >
                             Sim, Finalizar
                         </Button>
@@ -1399,6 +634,6 @@ export default function VistoriarUnidade() {
                     </div>
                 </DialogContent>
             </Dialog>
-            </div>
-            );
-            }
+        </div>
+    );
+}
