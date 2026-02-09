@@ -1062,6 +1062,7 @@ export default function VistoriarUnidade() {
                 isSaving={salvarNCMutation.isPending}
                 numeroNC={numerosParaNC?.numeroNC}
                 numeroDeterminacao={numerosParaNC?.numeroDeterminacao}
+                numeroRecomendacao={numerosParaNC?.numeroRecomendacao}
                 numeroConstatacao={numerosParaNC?.numeroConstatacao}
                 constatacaoTexto={constatacaoParaNC?.descricao}
             />
