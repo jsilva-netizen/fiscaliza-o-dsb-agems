@@ -23,9 +23,11 @@ export default function SyncPanel({ isOpen, onClose }) {
     const updateStatus = async () => {
       setIsOnline(navigator.onLine);
       try {
-        const status = await DataService.getSyncStatus();
-        setPendingCount(status.pendingCount);
-        setFailedCount(status.failedCount);
+        if (DataService && typeof DataService.getSyncStatus === 'function') {
+          const status = await DataService.getSyncStatus();
+          setPendingCount(status.pendingCount);
+          setFailedCount(status.failedCount);
+        }
       } catch (error) {
         console.error('Erro ao atualizar status:', error);
       }
