@@ -1,7 +1,23 @@
-
 import Dexie from 'dexie';
 
 console.log('>>> [OFFLINE DB] Inicializando instância do Dexie...');
+
+// Verificar se IndexedDB é suportado
+const isIndexedDBSupported = () => {
+  try {
+    const test = 'indexeddb-test-' + Date.now();
+    const request = indexedDB.open(test);
+    request.onsuccess = () => {
+      indexedDB.deleteDatabase(test);
+    };
+    return true;
+  } catch (e) {
+    console.error('>>> [OFFLINE DB] IndexedDB não suportado:', e);
+    return false;
+  }
+};
+
+console.log('>>> [OFFLINE DB] IndexedDB suportado?', isIndexedDBSupported());
 
 export const db = new Dexie('AgemsFiscalizacaoOffline');
 
@@ -34,6 +50,15 @@ db.on('ready', () => {
 db.on('error', (error) => {
   console.error('>>> [OFFLINE DB] ERRO:', error);
 });
+
+// Abrir banco imediatamente ao carregar o módulo
+db.open()
+  .then(() => {
+    console.log('>>> [OFFLINE DB] Banco aberto com sucesso na inicialização');
+  })
+  .catch((error) => {
+    console.error('>>> [OFFLINE DB] ERRO ao abrir banco na inicialização:', error);
+  });
 
 // Exportar como padrão para compatibilidade com imports antigos
 export default db;
