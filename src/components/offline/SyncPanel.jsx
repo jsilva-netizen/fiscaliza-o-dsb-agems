@@ -127,6 +127,11 @@ export default function SyncPanel({ isOpen, onClose }) {
           message: `⚠ ${result.success} sucesso, ${result.failed} falharam`,
         });
       }
+      // Atualiza contagem
+      if (DataService && typeof DataService.getSyncStatus === 'function') {
+        const updatedStatus = await DataService.getSyncStatus();
+        setPendingCount(updatedStatus.pendingCount);
+      }
     } catch (error) {
       setUploadStatus({
         type: 'error',
