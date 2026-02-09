@@ -7,9 +7,20 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from 'lucide-react';
 
-export default function ConstatacaoManualForm({ open, onOpenChange, onSave, isSaving }) {
+export default function ConstatacaoManualForm({ open, onOpenChange, onSave, isSaving, constatacaoParaEditar }) {
     const [descricao, setDescricao] = useState('');
     const [geraNc, setGeraNc] = useState(false);
+
+    // Preencher form quando for edição
+    React.useEffect(() => {
+        if (constatacaoParaEditar) {
+            setDescricao(constatacaoParaEditar.descricao || '');
+            setGeraNc(constatacaoParaEditar.gera_nc || false);
+        } else {
+            setDescricao('');
+            setGeraNc(false);
+        }
+    }, [constatacaoParaEditar, open]);
 
     const handleSave = () => {
         if (!descricao.trim()) return;
@@ -28,7 +39,7 @@ export default function ConstatacaoManualForm({ open, onOpenChange, onSave, isSa
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>Nova Constatação Manual</DialogTitle>
+                    <DialogTitle>{constatacaoParaEditar ? 'Editar Constatação Manual' : 'Nova Constatação Manual'}</DialogTitle>
                 </DialogHeader>
                 
                 <div className="space-y-4">
@@ -75,7 +86,7 @@ export default function ConstatacaoManualForm({ open, onOpenChange, onSave, isSa
                                     Salvando...
                                 </>
                             ) : (
-                                'Salvar Constatação'
+                                constatacaoParaEditar ? 'Salvar Alterações' : 'Salvar Constatação'
                             )}
                         </Button>
                         <Button 
