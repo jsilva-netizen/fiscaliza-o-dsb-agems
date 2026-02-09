@@ -491,17 +491,22 @@ export default function VistoriarUnidade() {
                 throw new Error('Não é possível modificar uma fiscalização finalizada');
             }
 
-            // Carregar contadores se necessário
-            let contadoresAtuais = contadores;
-            if (!contadoresCarregados || !contadoresAtuais) {
-                const contadoresCalc = await calcularProximaNumeracao(unidade.fiscalizacao_id, unidadeId, base44);
-                contadoresAtuais = contadoresCalc;
-                setContadores(contadoresCalc);
-                setContadoresCarregados(true);
-            }
+            // Buscar TODAS as constatações existentes para calcular o próximo número correto
+            const respostasComConstatacao = await base44.entities.RespostaChecklist.filter({
+                unidade_fiscalizada_id: unidadeId
+            }, 'created_date', 200);
+            
+            const constatacoesManuaisExistentes = await base44.entities.ConstatacaoManual.filter({
+                unidade_fiscalizada_id: unidadeId
+            }, 'ordem', 100);
 
-            // Gerar número da constatação
-            const numeroConstatacao = gerarNumeroConstatacao(contadoresAtuais);
+            // Contar apenas respostas que tem texto de constatação
+            const totalConstatacoes = respostasComConstatacao.filter(r => 
+                r.pergunta && r.pergunta.trim()
+            ).length + constatacoesManuaisExistentes.length;
+
+            // Gerar número da constatação baseado no total real
+            const numeroConstatacao = `C${totalConstatacoes + 1}`;
 
             // Adicionar ';' ao final se não existir
             let descricaoFinal = data.descricao;
