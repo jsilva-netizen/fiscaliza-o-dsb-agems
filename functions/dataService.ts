@@ -64,7 +64,7 @@ class DataServiceClass {
 
     // Para tabelas de referência: tenta cache, depois servidor
     if (isReference) {
-      return this.readReferenceData(table, filter, isReference);
+      return this.readReferenceData(table, filter, entityName);
     }
 
     // Para tabelas transacionais: retorna dados locais
