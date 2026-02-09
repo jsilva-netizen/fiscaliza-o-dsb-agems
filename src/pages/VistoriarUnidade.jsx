@@ -126,24 +126,18 @@ export default function VistoriarUnidade() {
         }
     }, [unidade?.fotos_unidade]);
 
-    // Carregar contadores apenas na primeira resposta do checklist
+    // Carregar contadores apenas uma vez na montagem
     useEffect(() => {
-        const carregarContadoresNaPrimeiraResposta = async () => {
-            // Se ainda não temos respostas, continua aguardando
-            if (respostasExistentes.length === 0 || contadoresCarregados) return;
-
-            // Primeira vez que teremos dados do banco, carrega contadores globais
-            if (!contadoresCarregados) {
-                const contadoresCalc = await calcularProximaNumeracao(unidade.fiscalizacao_id, unidadeId, base44);
-                setContadores(contadoresCalc);
-                setContadoresCarregados(true);
-            }
+        const carregarContadores = async () => {
+            if (contadoresCarregados || !unidadeId) return;
+            
+            const contadoresCalc = await DataService.calcularProximaNumeracao(unidadeId);
+            setContadores(contadoresCalc);
+            setContadoresCarregados(true);
         };
         
-        if (unidade?.fiscalizacao_id && respostasExistentes.length > 0) {
-            carregarContadoresNaPrimeiraResposta();
-        }
-    }, [unidade?.fiscalizacao_id, unidadeId, respostasExistentes.length, contadoresCarregados]);
+        carregarContadores();
+    }, [unidadeId, contadoresCarregados]);
 
     // Carregar respostas apenas uma vez
     useEffect(() => {
