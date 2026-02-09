@@ -24,9 +24,6 @@ class DataServiceClass {
     };
   }
 
-  /**
-   * Configura listeners para mudanças de conexão
-   */
   setupConnectionListeners() {
     window.addEventListener('online', () => {
       this.isOnline = true;
@@ -38,127 +35,94 @@ class DataServiceClass {
     });
   }
 
-  /**
-   * Verifica se está online
-   */
   isConnected() {
     return this.isOnline && navigator.onLine;
   }
 
-  /**
-   * ============================================
-   * LEITURA DE DADOS
-   * ============================================
-   */
+  // ============================================
+  // LEITURA DE DADOS
+  // ============================================
 
-  /**
-   * Lê dados de uma entidade
-   * Para referência: cache first, depois servidor
-   * Para transacionais: sempre local (pode ter pendências)
-   */
   async read(entityName, filter = {}, sort = '-created_date', limit = 100) {
     const mapping = this.entityMappings[entityName];
-    if (!mapping) throw new Error(`Entity ${entityName} não mapeada`);
+    if (!mapping) throw new Error('Entity ' + entityName + ' nao mapeada');
 
     const { table, isReference } = mapping;
 
-    // Para tabelas de referência: sempre tenta servidor primeiro se online
     if (isReference) {
       return this.readReferenceData(entityName, table, filter);
     }
 
-    // Para tabelas transacionais: retorna dados locais
     return this.readLocalData(table, filter);
   }
 
-  /**
-    * Lê dados de tabela de referência com fallback ao servidor
-    */
-   async readReferenceData(entityName, tableName, filter = {}) {
-     try {
-       let results = [];
+  async readReferenceData(entityName, tableName, filter = {}) {
+    try {
+      let results = [];
 
-       console.log(`[DataService] Lendo ${entityName} de ${tableName}`);
+      console.log('[DataService] Lendo ' + entityName + ' de ' + tableName);
 
-       // Se online, SEMPRE busca do servidor (até mesmo se houver cache)
-       if (this.isConnected()) {
-         try {
-           console.log(`[DataService] ✓ Online - buscando ${entityName} do servidor...`);
+      if (this.isConnected()) {
+        try {
+          console.log('[DataService] Online - buscando ' + entityName + ' do servidor...');
+          const serverData = await base44.entities[entityName].list('nome', 500);
+          console.log('[DataService] Servidor retornou: ' + (serverData ? serverData.length : 0) + ' registros de ' + entityName);
 
-           // Chama com parâmetros corretos (sort, limit)
-           const serverData = await base44.entities[entityName].list('nome', 500);
-           console.log(`[DataService] ✓ Servidor retornou: ${serverData?.length || 0} registros de ${entityName}`);
+          if (serverData && serverData.length > 0) {
+            await db[tableName].clear();
+            await db[tableName].bulkPut(serverData);
+            console.log('[DataService] ' + entityName + ' salvo no cache (' + serverData.length + ' itens)');
+            results = serverData;
+          } else {
+            results = await db[tableName].toArray();
+            console.log('[DataService] Servidor vazio para ' + entityName + ', usando ' + results.length + ' do cache');
+          }
+          return this.applyFilter(results, filter);
+        } catch (serverError) {
+          console.error('[DataService] Erro ao buscar ' + entityName + ' do servidor:', serverError.message);
+          results = await db[tableName].toArray();
+          console.log('[DataService] Usando cache apos erro: ' + results.length + ' itens de ' + entityName);
+          return this.applyFilter(results, filter);
+        }
+      } else {
+        console.log('[DataService] Offline - usando cache para ' + entityName);
+        results = await db[tableName].toArray();
+        console.log('[DataService] Cache retornou: ' + results.length + ' itens de ' + entityName);
+        return this.applyFilter(results, filter);
+      }
+    } catch (error) {
+      console.error('[DataService] Erro critico ao ler ' + tableName + ':', error);
+      return [];
+    }
+  }
 
-           if (serverData && serverData.length > 0) {
-             // Atualiza cache com dados do servidor
-             await db[tableName].clear();
-             await db[tableName].bulkPut(serverData);
-             console.log(`[DataService] ✓ ${entityName} salvo no cache (${serverData.length} itens)`);
-             results = serverData;
-           } else {
-             // Se servidor retornar vazio, usa cache
-             results = await db[tableName].toArray();
-             console.log(`[DataService] ⚠ Servidor vazio para ${entityName}, usando ${results.length} do cache`);
-           }
-           return this.applyFilter(results, filter);
-         } catch (serverError) {
-           console.error(`[DataService] ✗ Erro ao buscar ${entityName} do servidor:`, serverError.message);
-           // Se falhar no servidor, usa cache
-           results = await db[tableName].toArray();
-           console.log(`[DataService] ⚠ Usando cache após erro: ${results.length} itens de ${entityName}`);
-           return this.applyFilter(results, filter);
-         }
-       } else {
-         // Se offline, usa cache
-         console.log(`[DataService] 🔴 Offline - usando cache para ${entityName}`);
-         results = await db[tableName].toArray();
-         console.log(`[DataService] 🔴 Cache retornou: ${results.length} itens de ${entityName}`);
-         return this.applyFilter(results, filter);
-       }
-     } catch (error) {
-       console.error(`[DataService] ✗ Erro crítico ao ler ${tableName}:`, error);
-       return [];
-     }
-   }
-
-  /**
-   * Lê dados locais (transacionais) - sempre retorna do Dexie
-   */
   async readLocalData(tableName, filter = {}) {
     try {
       let results = await db[tableName].toArray();
       return this.applyFilter(results, filter);
     } catch (error) {
-      console.error(`Erro ao ler dados locais ${tableName}:`, error);
+      console.error('Erro ao ler dados locais ' + tableName + ':', error);
       return [];
     }
   }
 
-  /**
-   * Aplica filtro simples aos dados
-   */
   applyFilter(data, filter = {}) {
     if (!filter || Object.keys(filter).length === 0) return data;
 
-    return data.filter(item => {
-      return Object.entries(filter).every(([key, value]) => {
+    return data.filter(function(item) {
+      return Object.entries(filter).every(function([key, value]) {
         return item[key] === value;
       });
     });
   }
 
-  /**
-   * ============================================
-   * ESCRITA DE DADOS
-   * ============================================
-   */
+  // ============================================
+  // ESCRITA DE DADOS
+  // ============================================
 
-  /**
-   * Cria um novo registro
-   */
   async create(entityName, data) {
     const mapping = this.entityMappings[entityName];
-    if (!mapping) throw new Error(`Entity ${entityName} não mapeada`);
+    if (!mapping) throw new Error('Entity ' + entityName + ' nao mapeada');
 
     const { table } = mapping;
     const localId = crypto.randomUUID();
@@ -173,15 +137,12 @@ class DataServiceClass {
     };
 
     try {
-      // 1. Salva no Dexie
       await db[table].put(record);
 
-      // 2. Adiciona à fila de sync
       await db.syncQueue.add({
-        id: crypto.randomUUID(),
         operation: 'create',
-        entityName,
-        localId,
+        entityName: entityName,
+        localId: localId,
         payload: JSON.stringify(record),
         timestamp: new Date(),
         status: 'pending',
@@ -190,25 +151,21 @@ class DataServiceClass {
 
       return record;
     } catch (error) {
-      console.error(`Erro ao criar ${entityName}:`, error);
+      console.error('Erro ao criar ' + entityName + ':', error);
       throw error;
     }
   }
 
-  /**
-   * Atualiza um registro existente
-   */
   async update(entityName, id, data) {
     const mapping = this.entityMappings[entityName];
-    if (!mapping) throw new Error(`Entity ${entityName} não mapeada`);
+    if (!mapping) throw new Error('Entity ' + entityName + ' nao mapeada');
 
     const { table } = mapping;
-    const isLocal = id.toString().startsWith('temp_') || id.length === 36; // UUID
+    const isLocal = id.toString().startsWith('temp_') || id.length === 36;
 
     try {
-      // 1. Obtém registro atual
       const current = await db[table].get(id);
-      if (!current) throw new Error(`Registro ${id} não encontrado em ${table}`);
+      if (!current) throw new Error('Registro ' + id + ' nao encontrado em ' + table);
 
       const updated = {
         ...current,
@@ -218,15 +175,12 @@ class DataServiceClass {
         updated_at: new Date(),
       };
 
-      // 2. Atualiza no Dexie
       await db[table].put(updated);
 
-      // 3. Adiciona à fila de sync
       await db.syncQueue.add({
-        id: crypto.randomUUID(),
         operation: 'update',
-        entityName,
-        localId: isLocal ? id : current._localId || id,
+        entityName: entityName,
+        localId: isLocal ? id : (current._localId || id),
         remoteId: isLocal ? null : id,
         payload: JSON.stringify(updated),
         timestamp: new Date(),
@@ -236,17 +190,14 @@ class DataServiceClass {
 
       return updated;
     } catch (error) {
-      console.error(`Erro ao atualizar ${entityName}:`, error);
+      console.error('Erro ao atualizar ' + entityName + ':', error);
       throw error;
     }
   }
 
-  /**
-   * Deleta um registro
-   */
   async delete(entityName, id) {
     const mapping = this.entityMappings[entityName];
-    if (!mapping) throw new Error(`Entity ${entityName} não mapeada`);
+    if (!mapping) throw new Error('Entity ' + entityName + ' nao mapeada');
 
     const { table } = mapping;
     const isLocal = id.toString().startsWith('temp_') || id.length === 36;
@@ -254,130 +205,117 @@ class DataServiceClass {
     try {
       const current = await db[table].get(id);
 
-      // 1. Remove do Dexie
       await db[table].delete(id);
 
-      // 2. Adiciona à fila de sync
       await db.syncQueue.add({
-        id: crypto.randomUUID(),
         operation: 'delete',
-        entityName,
-        localId: isLocal ? id : current?._localId || id,
+        entityName: entityName,
+        localId: isLocal ? id : (current ? current._localId || id : id),
         remoteId: isLocal ? null : id,
-        payload: JSON.stringify({ id }),
+        payload: JSON.stringify({ id: id }),
         timestamp: new Date(),
         status: 'pending',
         attempts: 0,
       });
     } catch (error) {
-      console.error(`Erro ao deletar ${entityName}:`, error);
+      console.error('Erro ao deletar ' + entityName + ':', error);
       throw error;
     }
   }
 
-  /**
-   * ============================================
-   * SINCRONIZAÇÃO
-   * ============================================
-   */
+  // ============================================
+  // SINCRONIZACAO
+  // ============================================
 
-  /**
-    * Baixa forçadamente todos os dados auxiliares do servidor
-    * Ideal para preparar tablet offline antes de viagem
-    */
-   async downloadAllReferenceData() {
-     if (!this.isConnected()) {
-       throw new Error('Sem conexão de internet. Não é possível baixar dados.');
-     }
+  async downloadAllReferenceData() {
+    if (!this.isConnected()) {
+      throw new Error('Sem conexao de internet. Nao e possivel baixar dados.');
+    }
 
-     try {
-       const referenceEntities = [
-         { name: 'Municipio', sort: 'nome', limit: 500 },
-         { name: 'PrestadorServico', sort: 'nome', limit: 500 },
-         { name: 'TipoUnidade', sort: 'nome', limit: 500 },
-         { name: 'ItemChecklist', sort: 'ordem', limit: 1000 },
-       ];
+    try {
+      var referenceEntities = [
+        { name: 'Municipio', sort: 'nome', limit: 500 },
+        { name: 'PrestadorServico', sort: 'nome', limit: 500 },
+        { name: 'TipoUnidade', sort: 'nome', limit: 500 },
+        { name: 'ItemChecklist', sort: 'ordem', limit: 1000 },
+      ];
 
-       const results = {
-         success: [],
-         failed: [],
-       };
+      var results = {
+        success: [],
+        failed: [],
+      };
 
-       for (const entityConfig of referenceEntities) {
-         try {
-           const entityName = entityConfig.name;
-           console.log(`[DownloadRef] Iniciando download de ${entityName}...`);
+      for (var i = 0; i < referenceEntities.length; i++) {
+        var entityConfig = referenceEntities[i];
+        try {
+          var entityName = entityConfig.name;
+          console.log('[DownloadRef] Iniciando download de ' + entityName + '...');
 
-           // Chama com os mesmos parâmetros que read() usa
-           const data = await base44.entities[entityName].list(entityConfig.sort, entityConfig.limit);
+          var data = await base44.entities[entityName].list(entityConfig.sort, entityConfig.limit);
 
-           if (!data || data.length === 0) {
-             console.warn(`[DownloadRef] ${entityName} retornou vazio do servidor`);
-           }
+          if (!data || data.length === 0) {
+            console.warn('[DownloadRef] ' + entityName + ' retornou vazio do servidor');
+          }
 
-           const mapping = this.entityMappings[entityName];
-           await db[mapping.table].clear();
+          var mapping = this.entityMappings[entityName];
+          await db[mapping.table].clear();
 
-           if (data && data.length > 0) {
-             await db[mapping.table].bulkPut(data);
-           }
+          if (data && data.length > 0) {
+            await db[mapping.table].bulkPut(data);
+          }
 
-           console.log(`[DownloadRef] ✓ ${entityName}: ${data?.length || 0} registros`);
-           results.success.push(entityName);
-         } catch (error) {
-           console.error(`[DownloadRef] Erro ao baixar ${entityConfig.name}:`, error);
-           results.failed.push({ 
-             entity: entityConfig.name, 
-             error: error.message || 'Erro desconhecido'
-           });
-         }
-       }
+          console.log('[DownloadRef] OK ' + entityName + ': ' + (data ? data.length : 0) + ' registros');
+          results.success.push(entityName);
+        } catch (error) {
+          console.error('[DownloadRef] Erro ao baixar ' + entityConfig.name + ':', error);
+          results.failed.push({
+            entity: entityConfig.name,
+            error: error.message || 'Erro desconhecido'
+          });
+        }
+      }
 
-       window.dispatchEvent(
-         new CustomEvent('data-service:download-complete', { detail: results })
-       );
-       return results;
-     } catch (error) {
-       console.error('Erro no download de dados de referência:', error);
-       throw error;
-     }
-   }
+      window.dispatchEvent(
+        new CustomEvent('data-service:download-complete', { detail: results })
+      );
+      return results;
+    } catch (error) {
+      console.error('Erro no download de dados de referencia:', error);
+      throw error;
+    }
+  }
 
-  /**
-   * Processa fila de sincronização
-   * Envia dados pendentes para o servidor
-   */
   async uploadPendingData() {
     if (!this.isConnected()) {
-      console.warn('Offline: não é possível sincronizar agora');
+      console.warn('Offline: nao e possivel sincronizar agora');
       return { success: 0, failed: 0, errors: [] };
     }
 
-    const results = {
+    var results = {
       success: 0,
       failed: 0,
       errors: [],
     };
 
     try {
-      const pending = await db.syncQueue
+      var pending = await db.syncQueue
         .where('status')
         .equals('pending')
         .toArray();
 
-      for (const item of pending) {
+      for (var i = 0; i < pending.length; i++) {
+        var item = pending[i];
         try {
           await this.processSyncItem(item);
           results.success++;
         } catch (error) {
-          console.error(`Erro ao sincronizar item:`, error);
+          console.error('Erro ao sincronizar item:', error);
           results.failed++;
           results.errors.push({
             itemId: item.id,
             error: error.message,
           });
 
-          // Atualiza status do item
           await db.syncQueue.update(item.id, {
             status: 'failed',
             attempts: item.attempts + 1,
@@ -396,75 +334,71 @@ class DataServiceClass {
     }
   }
 
-  /**
-   * Processa um item individual da fila
-   */
   async processSyncItem(syncItem) {
-    const { operation, entityName, localId, remoteId, payload } = syncItem;
-    const data = JSON.parse(payload);
+    var operation = syncItem.operation;
+    var entityName = syncItem.entityName;
+    var localId = syncItem.localId;
+    var remoteId = syncItem.remoteId;
+    var data = JSON.parse(syncItem.payload);
 
-    switch (operation) {
-      case 'create': {
-        // Remove campos locais antes de enviar
-        const { _localId, _syncStatus, _syncError, created_at, updated_at, ...createData } = data;
-        const result = await base44.entities[entityName].create(createData);
+    if (operation === 'create') {
+      var _localId = data._localId;
+      var _syncStatus = data._syncStatus;
+      var _syncError = data._syncError;
+      var created_at = data.created_at;
+      var updated_at = data.updated_at;
+      var createData = Object.assign({}, data);
+      delete createData._localId;
+      delete createData._syncStatus;
+      delete createData._syncError;
+      delete createData.created_at;
+      delete createData.updated_at;
 
-        // Atualiza Dexie com ID remoto
-        const mapping = this.entityMappings[entityName];
-        await db[mapping.table].delete(localId);
-        const updated = { ...result, _syncStatus: 'synced', _syncError: null };
-        await db[mapping.table].put(updated);
+      var result = await base44.entities[entityName].create(createData);
 
-        // Registra mapeamento de IDs
-        await db.idMappings.put({
-          localId,
-          remoteId: result.id,
-          entityName,
-          timestamp: new Date(),
-        });
+      var mapping = this.entityMappings[entityName];
+      await db[mapping.table].delete(localId);
+      var updated = Object.assign({}, result, { _syncStatus: 'synced', _syncError: null });
+      await db[mapping.table].put(updated);
 
-        break;
-      }
+      await db.idMappings.put({
+        localId: localId,
+        remoteId: result.id,
+        entityName: entityName,
+        timestamp: new Date(),
+      });
 
-      case 'update': {
-        const { _localId, _syncStatus, _syncError, created_at, updated_at, ...updateData } = data;
-        const result = await base44.entities[entityName].update(remoteId || localId, updateData);
+    } else if (operation === 'update') {
+      var updateData = Object.assign({}, data);
+      delete updateData._localId;
+      delete updateData._syncStatus;
+      delete updateData._syncError;
+      delete updateData.created_at;
+      delete updateData.updated_at;
 
-        // Atualiza Dexie
-        const mapping = this.entityMappings[entityName];
-        const updated = { ...result, _syncStatus: 'synced', _syncError: null };
-        await db[mapping.table].put(updated);
+      var result = await base44.entities[entityName].update(remoteId || localId, updateData);
 
-        break;
-      }
+      var mapping = this.entityMappings[entityName];
+      var updated = Object.assign({}, result, { _syncStatus: 'synced', _syncError: null });
+      await db[mapping.table].put(updated);
 
-      case 'delete': {
-        await base44.entities[entityName].delete(remoteId || localId);
+    } else if (operation === 'delete') {
+      await base44.entities[entityName].delete(remoteId || localId);
 
-        // Remove do Dexie
-        const mapping = this.entityMappings[entityName];
-        await db[mapping.table].delete(localId);
+      var mapping = this.entityMappings[entityName];
+      await db[mapping.table].delete(localId);
 
-        break;
-      }
-
-      default:
-        throw new Error(`Operação ${operation} não suportada`);
+    } else {
+      throw new Error('Operacao ' + operation + ' nao suportada');
     }
 
-    // Remove da fila de sync
     await db.syncQueue.delete(syncItem.id);
   }
 
-  /**
-   * ============================================
-   * UTILITÁRIOS
-   * ============================================
-   */
+  // ============================================
+  // UTILITARIOS
+  // ============================================
 
-  /**
-   * Retorna status de sincronização
-   */
   async getSyncStatus() {
     try {
       if (!db || !db.syncQueue) {
@@ -476,9 +410,9 @@ class DataServiceClass {
           hasFailed: false,
         };
       }
-      
-      const pending = await db.syncQueue.where('status').equals('pending').toArray();
-      const failed = await db.syncQueue.where('status').equals('failed').toArray();
+
+      var pending = await db.syncQueue.where('status').equals('pending').toArray();
+      var failed = await db.syncQueue.where('status').equals('failed').toArray();
 
       return {
         isOnline: this.isConnected(),
@@ -499,45 +433,32 @@ class DataServiceClass {
     }
   }
 
-  /**
-   * Limpa a fila de sincronização (usar com cuidado!)
-   */
   async clearSyncQueue() {
     await db.syncQueue.clear();
   }
 
-  /**
-   * Limpa cache de dados de referência
-   */
-  async clearReferenceCache(entityName = null) {
-    const referenceEntities = ['municipios', 'prestadores_servico', 'tipos_unidade', 'item_checklist'];
+  async clearReferenceCache(entityName) {
+    var referenceEntities = ['municipios', 'prestadores_servico', 'tipos_unidade', 'item_checklist'];
 
     if (entityName) {
-      const mapping = this.entityMappings[entityName];
+      var mapping = this.entityMappings[entityName];
       if (mapping && mapping.isReference) {
         await db[mapping.table].clear();
       }
     } else {
-      for (const table of referenceEntities) {
-        await db[table].clear();
+      for (var i = 0; i < referenceEntities.length; i++) {
+        await db[referenceEntities[i]].clear();
       }
     }
   }
 
-  /**
-   * ============================================
-   * OPERAÇÕES TRANSACIONAIS (OFFLINE-FIRST)
-   * ============================================
-   */
+  // ============================================
+  // OPERACOES TRANSACIONAIS (OFFLINE-FIRST)
+  // ============================================
 
-  /**
-   * Cria Resposta do Checklist + NC + Determinação + Recomendação de forma transacional
-   * Tudo é salvo localmente no Dexie, preparado para sincronização
-   */
   async createRespostaComNCeDeterminacao(unidadeId, itemChecklistId, itemData, respostaData) {
     try {
-      // 1. Criar Resposta do Checklist
-      const resposta = await this.create('RespostaChecklist', {
+      var resposta = await this.create('RespostaChecklist', {
         unidade_fiscalizada_id: unidadeId,
         item_checklist_id: itemChecklistId,
         pergunta: respostaData.textoConstatacao || '',
@@ -547,13 +468,11 @@ class DataServiceClass {
         observacao: respostaData.observacao || ''
       });
 
-      // 2. Se gera NC e resposta é NÃO, criar NC + Determinação + Recomendação
       if (itemData.gera_nc && respostaData.resposta === 'NAO') {
-        // Criar NC
-        const ncDescricao = itemData.texto_nc || 
-          `A constatação ${respostaData.numeroConstatacao} não cumpre o disposto no ${itemData.artigo_portaria || 'artigo não especificado'}.`;
+        var ncDescricao = itemData.texto_nc ||
+          ('A constatacao ' + respostaData.numeroConstatacao + ' nao cumpre o disposto no ' + (itemData.artigo_portaria || 'artigo nao especificado') + '.');
 
-        const nc = await this.create('NaoConformidade', {
+        var nc = await this.create('NaoConformidade', {
           unidade_fiscalizada_id: unidadeId,
           resposta_checklist_id: resposta.id,
           numero_nc: respostaData.numeroNC,
@@ -562,9 +481,8 @@ class DataServiceClass {
           fotos: []
         });
 
-        // Criar Determinação
-        const textoDet = itemData.texto_determinacao || 'regularizar a situação identificada';
-        const textoFinalDet = `Para sanar a ${respostaData.numeroNC} ${textoDet}. Prazo: 30 dias.`;
+        var textoDet = itemData.texto_determinacao || 'regularizar a situacao identificada';
+        var textoFinalDet = 'Para sanar a ' + respostaData.numeroNC + ' ' + textoDet + '. Prazo: 30 dias.';
 
         await this.create('Determinacao', {
           unidade_fiscalizada_id: unidadeId,
@@ -575,7 +493,6 @@ class DataServiceClass {
           status: 'pendente'
         });
 
-        // Criar Recomendação se existir
         if (itemData.texto_recomendacao) {
           await this.create('Recomendacao', {
             unidade_fiscalizada_id: unidadeId,
@@ -588,38 +505,32 @@ class DataServiceClass {
 
       return resposta;
     } catch (error) {
-      console.error('Erro ao criar resposta com NC e determinação:', error);
+      console.error('Erro ao criar resposta com NC e determinacao:', error);
       throw error;
     }
   }
 
-  /**
-   * Calcula próxima numeração para C, NC, D, R lendo dados locais
-   */
   async calcularProximaNumeracao(unidadeId) {
     try {
-      // Ler todas as respostas com constatação
-      const respostas = await this.readLocalData('respostas_checklist', { 
-        unidade_fiscalizada_id: unidadeId 
+      var respostas = await this.readLocalData('respostas_checklist', {
+        unidade_fiscalizada_id: unidadeId
       });
-      const respostasComConstatacao = respostas.filter(r => 
-        (r.resposta === 'SIM' || r.resposta === 'NAO') && r.pergunta?.trim()
-      ).length;
+      var respostasComConstatacao = respostas.filter(function(r) {
+        return (r.resposta === 'SIM' || r.resposta === 'NAO') && r.pergunta && r.pergunta.trim();
+      }).length;
 
-      // Ler constatações manuais
-      const constatacoes = await this.readLocalData('constatacoes_manuais', { 
-        unidade_fiscalizada_id: unidadeId 
+      var constatacoes = await this.readLocalData('constatacoes_manuais', {
+        unidade_fiscalizada_id: unidadeId
       });
 
-      // Ler NCs, Determinações e Recomendações
-      const ncs = await this.readLocalData('nao_conformidades', { 
-        unidade_fiscalizada_id: unidadeId 
+      var ncs = await this.readLocalData('nao_conformidades', {
+        unidade_fiscalizada_id: unidadeId
       });
-      const dets = await this.readLocalData('determinacoes', { 
-        unidade_fiscalizada_id: unidadeId 
+      var dets = await this.readLocalData('determinacoes', {
+        unidade_fiscalizada_id: unidadeId
       });
-      const recs = await this.readLocalData('recomendacoes', { 
-        unidade_fiscalizada_id: unidadeId 
+      var recs = await this.readLocalData('recomendacoes', {
+        unidade_fiscalizada_id: unidadeId
       });
 
       return {
@@ -629,11 +540,12 @@ class DataServiceClass {
         R: recs.length + 1
       };
     } catch (error) {
-      console.error('Erro ao calcular próxima numeração:', error);
+      console.error('Erro ao calcular proxima numeracao:', error);
       return { C: 1, NC: 1, D: 1, R: 1 };
     }
   }
 }
 
-export const DataService = new DataServiceClass();
+var DataService = new DataServiceClass();
+export { DataService };
 export default DataService;
