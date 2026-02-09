@@ -278,7 +278,7 @@ export default function VistoriarUnidade() {
                                     unidade_fiscalizada_id: unidadeId,
                                     numero_nc: numeroNC,
                                     artigo_portaria: itemResp.artigo_portaria || '',
-                                    descricao: itemResp.texto_nc || itemResp.texto_constatacao_nao || itemResp.pergunta || '',
+                                    descricao: itemResp.texto_nc || '',
                                     fotos: []
                                 });
 
