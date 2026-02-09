@@ -25,6 +25,7 @@ export default function VistoriarUnidade() {
     const navigate = useNavigate();
     const urlParams = new URLSearchParams(window.location.search);
     const unidadeId = urlParams.get('id');
+    const modoEdicao = urlParams.get('modo') === 'edicao';
 
     const [activeTab, setActiveTab] = useState('checklist');
     const [respostas, setRespostas] = useState({});
@@ -466,6 +467,44 @@ export default function VistoriarUnidade() {
          }
      });
 
+    const salvarAlteracoesMutation = useMutation({
+        mutationFn: async () => {
+            // Recarregar dados do banco para contagens precisas
+            const respostasAtuais = await base44.entities.RespostaChecklist.filter({ 
+                unidade_fiscalizada_id: unidadeId 
+            });
+            const ncsAtuais = await base44.entities.NaoConformidade.filter({ 
+                unidade_fiscalizada_id: unidadeId 
+            });
+
+            const totalConstatacoes = respostasAtuais.filter(r => 
+                r.resposta === 'SIM' || r.resposta === 'NAO'
+            ).length;
+
+            // Salvar objetos completos com url e legenda
+            const fotosCompletas = fotos.map(f => {
+                if (typeof f === 'string') {
+                    return { url: f, legenda: '' };
+                }
+                return { url: f.url, legenda: f.legenda || '' };
+            });
+            
+            await base44.entities.UnidadeFiscalizada.update(unidadeId, {
+                fotos_unidade: fotosCompletas,
+                total_constatacoes: totalConstatacoes,
+                total_ncs: ncsAtuais.length
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['unidades-fiscalizacao'] });
+            queryClient.invalidateQueries({ queryKey: ['unidade', unidadeId] });
+            navigate(createPageUrl('ExecutarFiscalizacao') + `?id=${unidade.fiscalizacao_id}`);
+        },
+        onError: (err) => {
+            alert(err.message);
+        }
+    });
+
     const handleFinalizarClick = () => {
         if (fotos.length === 0) {
             setShowConfirmaSemFotos(true);
@@ -584,7 +623,7 @@ export default function VistoriarUnidade() {
 
                     {/* Constatações Tab */}
                     <TabsContent value="constatacoes" className="mt-4 space-y-4">
-                        {fiscalizacao?.status !== 'finalizada' && (
+                        {(fiscalizacao?.status !== 'finalizada' || modoEdicao) && (
                             <Button onClick={() => setShowAddConstatacao(true)} className="w-full">
                                 <Plus className="h-4 w-4 mr-2" />
                                 Adicionar Constatação Manual
@@ -664,7 +703,7 @@ export default function VistoriarUnidade() {
                                         resposta={respostas[item.id]}
                                         onResponder={(data) => handleResponder(item.id, data)}
                                         numero={index + 1}
-                                        desabilitado={unidade?.status === 'finalizada' || !liberado || salvarRespostaMutation.isPending}
+                                        desabilitado={(unidade?.status === 'finalizada' && !modoEdicao) || !liberado || salvarRespostaMutation.isPending}
                                     />
                                 );
                             })
@@ -742,7 +781,7 @@ export default function VistoriarUnidade() {
 
                     {/* Recomendações Tab */}
                     <TabsContent value="recomendacoes" className="mt-4 space-y-4">
-                        {fiscalizacao?.status !== 'finalizada' && (
+                        {(fiscalizacao?.status !== 'finalizada' || modoEdicao) && (
                             <Button onClick={() => setShowAddRecomendacao(true)} className="w-full">
                                 <Plus className="h-4 w-4 mr-2" />
                                 Adicionar Recomendação
@@ -784,6 +823,26 @@ export default function VistoriarUnidade() {
                                 <Save className="h-5 w-5 mr-2" />
                             )}
                             Finalizar Vistoria
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* Bottom Bar - Modo Edição */}
+            {unidade?.status === 'finalizada' && modoEdicao && (
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-50">
+                    <div className="max-w-4xl mx-auto">
+                        <Button 
+                            className="w-full h-12 bg-blue-600 hover:bg-blue-700"
+                            onClick={() => salvarAlteracoesMutation.mutate()}
+                            disabled={salvarAlteracoesMutation.isPending}
+                        >
+                            {salvarAlteracoesMutation.isPending ? (
+                                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                            ) : (
+                                <Save className="h-5 w-5 mr-2" />
+                            )}
+                            Salvar Alterações
                         </Button>
                     </div>
                 </div>
