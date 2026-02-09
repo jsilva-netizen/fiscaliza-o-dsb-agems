@@ -242,13 +242,14 @@ export default function VistoriarUnidade() {
                         const nc = await base44.entities.NaoConformidade.create({
                             unidade_fiscalizada_id: unidadeId,
                             numero_nc: numeroNC,
-                            artigo_portaria: item.artigo_portaria,
-                            descricao: item.texto_nc,
+                            artigo_portaria: item.artigo_portaria || '',
+                            descricao: item.texto_nc || item.texto_constatacao_nao || item.pergunta,
                             fotos: []
                         });
 
                         // Criar Determinação
-                        const textoFinalDeterminacao = `Para sanar a ${numeroNC} ${item.texto_determinacao}. Prazo: 30 dias.`;
+                        const textoDet = item.texto_determinacao || 'regularizar a situação identificada';
+                        const textoFinalDeterminacao = `Para sanar a ${numeroNC} ${textoDet}. Prazo: 30 dias.`;
                         await base44.entities.Determinacao.create({
                             unidade_fiscalizada_id: unidadeId,
                             nao_conformidade_id: nc.id,
