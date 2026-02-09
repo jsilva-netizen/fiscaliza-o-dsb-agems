@@ -1,5 +1,6 @@
 import React from 'react';
 import OfflineStatusBar from '@/components/offline/OfflineStatusBar';
+import OfflineSyncButton from '@/components/offline/OfflineSyncButton';
 import PushNotificationInitializer from '@/components/offline/PushNotificationInitializer';
 import NotificationListener from '@/components/offline/NotificationListener';
 
