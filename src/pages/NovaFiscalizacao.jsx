@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { DataService } from '@/functions/dataService';
-import { useOnlineStatus } from '@/components/hooks/useOnlineStatus';
+import DataService from '@/functions/dataService';
+import OfflineSyncButton from '@/components/offline/OfflineSyncButton';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ const SERVICOS = ['Abastecimento de Água', 'Esgotamento Sanitário', 'Manejo de
 
 export default function NovaFiscalizacao() {
     const navigate = useNavigate();
-    const { isOnline } = useOnlineStatus();
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [formData, setFormData] = useState({
         municipio_id: '',
         servicos: [],
@@ -27,6 +27,17 @@ export default function NovaFiscalizacao() {
     const [locationError, setLocationError] = useState(null);
     const [gettingLocation, setGettingLocation] = useState(false);
     const [user, setUser] = useState(null);
+
+    useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
 
     const { data: municipios = [], isLoading: loadingMunicipios } = useQuery({
         queryKey: ['municipios'],
@@ -130,19 +141,19 @@ export default function NovaFiscalizacao() {
                 {/* Header */}
             <div className="bg-green-600 text-white">
                 <div className="max-w-lg mx-auto px-4 py-4">
-                    <div className="flex items-center gap-3">
-                        <Link to={createPageUrl('Home')}>
-                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
-                                <ArrowLeft className="h-5 w-5" />
-                            </Button>
-                        </Link>
-                        <div className="flex-1">
-                            <h1 className="text-xl font-bold">Nova Fiscalização</h1>
-                            <p className="text-green-100 text-sm">Configure os dados iniciais</p>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <Link to={createPageUrl('Home')}>
+                                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
+                                    <ArrowLeft className="h-5 w-5" />
+                                </Button>
+                            </Link>
+                            <div className="flex-1">
+                                <h1 className="text-xl font-bold">Nova Fiscalização</h1>
+                                <p className="text-green-100 text-sm">Configure os dados iniciais</p>
+                            </div>
                         </div>
-                        <div className="text-xs text-green-100">
-                            {isOnline ? '🟢 Online' : '🟡 Offline'}
-                        </div>
+                        <OfflineSyncButton />
                     </div>
                 </div>
             </div>
