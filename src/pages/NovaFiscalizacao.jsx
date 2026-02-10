@@ -2,11 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
-import DataService from '@/functions/dataService';
-import OfflineSyncButton from '@/components/offline/OfflineSyncButton';
-
-console.log('[NovaFiscalizacao] Componente carregado. DataService:', typeof DataService);
+import { useQuery, useMutation } from '@tanstack/react-query';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +15,6 @@ const SERVICOS = ['Abastecimento de Água', 'Esgotamento Sanitário', 'Manejo de
 
 export default function NovaFiscalizacao() {
     const navigate = useNavigate();
-    const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [formData, setFormData] = useState({
         municipio_id: '',
         servicos: [],
@@ -30,29 +25,14 @@ export default function NovaFiscalizacao() {
     const [gettingLocation, setGettingLocation] = useState(false);
     const [user, setUser] = useState(null);
 
-    useEffect(() => {
-        const handleOnline = () => setIsOnline(true);
-        const handleOffline = () => setIsOnline(false);
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-        return () => {
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
-        };
-    }, []);
-
-    const { data: municipios = [], isLoading: loadingMunicipios, error: errorMunicipios } = useQuery({
+    const { data: municipios = [], isLoading: loadingMunicipios } = useQuery({
         queryKey: ['municipios'],
-        queryFn: () => DataService.getMunicipios(),
-        staleTime: 1000 * 60 * 30,
-        gcTime: 1000 * 60 * 60,
+        queryFn: () => base44.entities.Municipio.list('nome', 100)
     });
 
-    const { data: prestadores = [], isLoading: loadingPrestadores, error: errorPrestadores } = useQuery({
+    const { data: prestadores = [] } = useQuery({
         queryKey: ['prestadores'],
-        queryFn: () => DataService.getPrestadores({ ativo: true }),
-        staleTime: 1000 * 60 * 30,
-        gcTime: 1000 * 60 * 60,
+        queryFn: () => base44.entities.PrestadorServico.filter({ ativo: true }, 'nome', 200)
     });
 
     useEffect(() => {
@@ -93,34 +73,28 @@ export default function NovaFiscalizacao() {
         getLocation();
     }, []);
 
-    const [isCreating, setIsCreating] = useState(false);
+    const createMutation = useMutation({
+        mutationFn: async (data) => {
+            const municipio = municipios.find(m => m.id === data.municipio_id);
+            const prestador = prestadores.find(p => p.id === data.prestador_servico_id);
+            const fiscalizacaoData = {
+                ...data,
+                municipio_nome: municipio?.nome,
+                prestador_servico_nome: prestador?.nome,
+                fiscal_nome: user?.full_name || 'Fiscal',
+                fiscal_email: user?.email,
+                data_inicio: new Date().toISOString(),
+                latitude_inicio: location?.lat,
+                longitude_inicio: location?.lng,
+                status: 'em_andamento'
+            };
 
-    const handleCreateFiscalizacao = async (data) => {
-        const municipio = municipios.find(m => m.id === data.municipio_id);
-        const prestador = prestadores.find(p => p.id === data.prestador_servico_id);
-        const fiscalizacaoData = {
-            ...data,
-            municipio_nome: municipio?.nome,
-            prestador_servico_nome: prestador?.nome,
-            fiscal_nome: user?.full_name || 'Fiscal',
-            fiscal_email: user?.email,
-            data_inicio: new Date().toISOString(),
-            latitude_inicio: location?.lat,
-            longitude_inicio: location?.lng,
-            status: 'em_andamento'
-        };
-
-        setIsCreating(true);
-        try {
-            const result = await DataService.create('Fiscalizacao', fiscalizacaoData);
-            // Otimistic UI: redireciona imediatamente
-            navigate(`/ExecutarFiscalizacao?id=${result.id}`);
-        } catch (error) {
-            console.error('Erro ao criar fiscalização:', error);
-            alert('Erro ao criar fiscalização: ' + error.message);
-            setIsCreating(false);
+            return base44.entities.Fiscalizacao.create(fiscalizacaoData);
+        },
+        onSuccess: (result) => {
+            navigate(createPageUrl('ExecutarFiscalizacao') + `?id=${result.id}`);
         }
-    };
+    });
 
     const toggleServico = (servico) => {
         setFormData(prev => ({
@@ -137,7 +111,7 @@ export default function NovaFiscalizacao() {
             alert('Preencha todos os campos obrigatórios');
             return;
         }
-        handleCreateFiscalizacao(formData);
+        createMutation.mutate(formData);
     };
 
     const municipioSelecionado = municipios.find(m => m.id === formData.municipio_id);
@@ -147,19 +121,16 @@ export default function NovaFiscalizacao() {
                 {/* Header */}
             <div className="bg-green-600 text-white">
                 <div className="max-w-lg mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Link to={createPageUrl('Home')}>
-                                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
-                                    <ArrowLeft className="h-5 w-5" />
-                                </Button>
-                            </Link>
-                            <div className="flex-1">
-                                <h1 className="text-xl font-bold">Nova Fiscalização</h1>
-                                <p className="text-green-100 text-sm">Configure os dados iniciais</p>
-                            </div>
+                    <div className="flex items-center gap-3">
+                        <Link to={createPageUrl('Home')}>
+                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
+                                <ArrowLeft className="h-5 w-5" />
+                            </Button>
+                        </Link>
+                        <div>
+                            <h1 className="text-xl font-bold">Nova Fiscalização</h1>
+                            <p className="text-green-100 text-sm">Configure os dados iniciais</p>
                         </div>
-                        <OfflineSyncButton />
                     </div>
                 </div>
             </div>
@@ -203,47 +174,27 @@ export default function NovaFiscalizacao() {
                     </Card>
 
                     {/* Município */}
-                     <div className="space-y-2">
-                         <Label>Município *</Label>
-                         {loadingMunicipios ? (
-                             <div className="flex items-center justify-center p-3 border rounded bg-gray-50">
-                                 <Loader2 className="h-4 w-4 animate-spin mr-2 text-blue-600" />
-                                 <span className="text-sm text-gray-600">Carregando municípios...</span>
-                             </div>
-                         ) : errorMunicipios ? (
-                             <div className="flex items-start gap-2 p-3 border border-red-200 rounded bg-red-50">
-                                 <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                                 <div>
-                                     <p className="text-sm font-medium text-red-800">Erro ao carregar municípios</p>
-                                     <p className="text-xs text-red-600">{errorMunicipios.message}</p>
-                                 </div>
-                             </div>
-                         ) : municipios.length === 0 ? (
-                             <div className="flex items-center justify-center p-3 border border-yellow-200 rounded bg-yellow-50">
-                                 <AlertCircle className="h-4 w-4 text-yellow-600 mr-2" />
-                                 <span className="text-sm text-yellow-800">Nenhum município disponível</span>
-                             </div>
-                         ) : (
-                             <Select 
-                                 value={formData.municipio_id} 
-                                 onValueChange={(v) => setFormData({...formData, municipio_id: v})}
-                             >
-                                 <SelectTrigger>
-                                     <SelectValue placeholder="Selecione o município..." />
-                                 </SelectTrigger>
-                                 <SelectContent>
-                                     {municipios.map(m => (
-                                         <SelectItem key={m.id} value={m.id}>
-                                             <div className="flex items-center gap-2">
-                                                 <MapPin className="h-4 w-4 text-gray-400" />
-                                                 {m.nome}
-                                             </div>
-                                         </SelectItem>
-                                     ))}
-                                 </SelectContent>
-                             </Select>
-                         )}
-                     </div>
+                    <div className="space-y-2">
+                        <Label>Município *</Label>
+                        <Select 
+                            value={formData.municipio_id} 
+                            onValueChange={(v) => setFormData({...formData, municipio_id: v})}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecione o município..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {municipios.map(m => (
+                                    <SelectItem key={m.id} value={m.id}>
+                                        <div className="flex items-center gap-2">
+                                            <MapPin className="h-4 w-4 text-gray-400" />
+                                            {m.nome}
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
 
                     {/* Serviços */}
                     <div className="space-y-3">
@@ -266,49 +217,29 @@ export default function NovaFiscalizacao() {
                     </div>
 
                     {/* Prestador de Serviço */}
-                     <div className="space-y-2">
-                         <div className="flex items-center justify-between">
-                             <Label>Prestador de Serviço *</Label>
-                             <Link to={createPageUrl('PrestadoresServico')}>
-                                 <Button type="button" size="sm" variant="outline">
-                                     <Plus className="h-3 w-3" />
-                                 </Button>
-                             </Link>
-                         </div>
-                         {loadingPrestadores ? (
-                             <div className="flex items-center justify-center p-3 border rounded bg-gray-50">
-                                 <Loader2 className="h-4 w-4 animate-spin mr-2 text-blue-600" />
-                                 <span className="text-sm text-gray-600">Carregando prestadores...</span>
-                             </div>
-                         ) : errorPrestadores ? (
-                             <div className="flex items-start gap-2 p-3 border border-red-200 rounded bg-red-50">
-                                 <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                                 <div>
-                                     <p className="text-sm font-medium text-red-800">Erro ao carregar prestadores</p>
-                                     <p className="text-xs text-red-600">{errorPrestadores.message}</p>
-                                 </div>
-                             </div>
-                         ) : prestadores.length === 0 ? (
-                             <div className="flex items-center justify-center p-3 border border-yellow-200 rounded bg-yellow-50">
-                                 <AlertCircle className="h-4 w-4 text-yellow-600 mr-2" />
-                                 <span className="text-sm text-yellow-800">Nenhum prestador disponível</span>
-                             </div>
-                         ) : (
-                             <Select 
-                                 value={formData.prestador_servico_id} 
-                                 onValueChange={(v) => setFormData({...formData, prestador_servico_id: v})}
-                             >
-                                 <SelectTrigger>
-                                     <SelectValue placeholder="Selecione o prestador..." />
-                                 </SelectTrigger>
-                                 <SelectContent>
-                                     {prestadores.map(p => (
-                                         <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                                     ))}
-                                 </SelectContent>
-                             </Select>
-                         )}
-                     </div>
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label>Prestador de Serviço *</Label>
+                            <Link to={createPageUrl('PrestadoresServico')}>
+                                <Button type="button" size="sm" variant="outline">
+                                    <Plus className="h-3 w-3" />
+                                </Button>
+                            </Link>
+                        </div>
+                        <Select 
+                            value={formData.prestador_servico_id} 
+                            onValueChange={(v) => setFormData({...formData, prestador_servico_id: v})}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecione o prestador..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {prestadores.map(p => (
+                                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
 
                     {/* Fiscal Info */}
                     {user && (
@@ -326,9 +257,9 @@ export default function NovaFiscalizacao() {
                     <Button 
                         type="submit" 
                         className="w-full h-14 text-lg bg-green-600 hover:bg-green-700"
-                        disabled={isCreating || !formData.municipio_id || formData.servicos.length === 0 || !formData.prestador_servico_id}
+                        disabled={createMutation.isPending || !formData.municipio_id || formData.servicos.length === 0 || !formData.prestador_servico_id}
                     >
-                        {isCreating ? (
+                        {createMutation.isPending ? (
                             <>
                                 <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                                 Criando...

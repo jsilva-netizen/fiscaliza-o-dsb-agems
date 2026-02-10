@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import DataService from '@/functions/dataService';
-import db from '@/functions/offlineDb';
-import OfflineSyncButton from '@/components/offline/OfflineSyncButton';
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,27 +27,18 @@ export default function AdicionarUnidade() {
 
     const { data: fiscalizacao } = useQuery({
         queryKey: ['fiscalizacao', fiscalizacaoId],
-        queryFn: async () => {
-            const result = await db.table('fiscalizacoes').get(fiscalizacaoId);
-            return result || null;
-        },
+        queryFn: () => base44.entities.Fiscalizacao.filter({ id: fiscalizacaoId }).then(r => r[0]),
         enabled: !!fiscalizacaoId
     });
 
     const { data: tipos = [] } = useQuery({
         queryKey: ['tipos-unidade'],
-        queryFn: async () => {
-            const result = await db.table('tipos_unidade').toArray();
-            return Array.isArray(result) ? result : [];
-        }
+        queryFn: () => base44.entities.TipoUnidade.list('nome', 100)
     });
 
     const { data: unidadesExistentes = [] } = useQuery({
         queryKey: ['unidades-existentes', fiscalizacaoId],
-        queryFn: async () => {
-            const result = await db.table('unidades_fiscalizadas').where('fiscalizacao_id').equals(fiscalizacaoId).toArray();
-            return Array.isArray(result) ? result : [];
-        },
+        queryFn: () => base44.entities.UnidadeFiscalizada.filter({ fiscalizacao_id: fiscalizacaoId }, 'created_date', 500),
         enabled: !!fiscalizacaoId
     });
 
@@ -133,7 +122,7 @@ export default function AdicionarUnidade() {
                 fotos_unidade: []
             };
 
-            return DataService.create('UnidadeFiscalizada', unidadeData);
+            return base44.entities.UnidadeFiscalizada.create(unidadeData);
         },
         onSuccess: (result) => {
             navigate(createPageUrl('VistoriarUnidade') + `?id=${result.id}`);
@@ -154,19 +143,16 @@ export default function AdicionarUnidade() {
             {/* Header */}
             <div className="bg-blue-900 text-white">
                 <div className="max-w-lg mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Link to={createPageUrl('ExecutarFiscalizacao') + `?id=${fiscalizacaoId}`}>
-                                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
-                                    <ArrowLeft className="h-5 w-5" />
-                                </Button>
-                            </Link>
-                            <div>
-                                <h1 className="text-xl font-bold">Adicionar Unidade</h1>
-                                <p className="text-blue-200 text-sm">{fiscalizacao?.municipio_nome} • {fiscalizacao?.servicos?.join(', ')}</p>
-                            </div>
+                    <div className="flex items-center gap-3">
+                        <Link to={createPageUrl('ExecutarFiscalizacao') + `?id=${fiscalizacaoId}`}>
+                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
+                                <ArrowLeft className="h-5 w-5" />
+                            </Button>
+                        </Link>
+                        <div>
+                            <h1 className="text-xl font-bold">Adicionar Unidade</h1>
+                            <p className="text-blue-200 text-sm">{fiscalizacao?.municipio_nome} • {fiscalizacao?.servicos?.join(', ')}</p>
                         </div>
-                        <OfflineSyncButton />
                     </div>
                 </div>
             </div>

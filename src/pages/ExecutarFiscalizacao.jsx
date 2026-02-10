@@ -3,8 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import DataService from '@/functions/dataService';
-import OfflineSyncButton from '@/components/offline/OfflineSyncButton';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +24,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import db from '@/functions/offlineDb';
 
 export default function ExecutarFiscalizacao() {
     const queryClient = useQueryClient();
@@ -44,10 +41,7 @@ export default function ExecutarFiscalizacao() {
 
     const { data: fiscalizacao, isLoading: loadingFiscalizacao } = useQuery({
         queryKey: ['fiscalizacao', fiscalizacaoId],
-        queryFn: async () => {
-            const result = await db.table('fiscalizacoes').get(fiscalizacaoId);
-            return result || null;
-        },
+        queryFn: () => base44.entities.Fiscalizacao.filter({ id: fiscalizacaoId }).then(r => r[0]),
         enabled: !!fiscalizacaoId,
         staleTime: 60000,
         gcTime: 300000
@@ -55,10 +49,7 @@ export default function ExecutarFiscalizacao() {
 
     const { data: unidades = [], isLoading: loadingUnidades } = useQuery({
         queryKey: ['unidades-fiscalizacao', fiscalizacaoId],
-        queryFn: async () => {
-            const result = await db.table('unidades_fiscalizadas').where('fiscalizacao_id').equals(fiscalizacaoId).toArray();
-            return Array.isArray(result) ? result : [];
-        },
+        queryFn: () => base44.entities.UnidadeFiscalizada.filter({ fiscalizacao_id: fiscalizacaoId }, '-created_date', 50),
         enabled: !!fiscalizacaoId,
         staleTime: 30000,
         gcTime: 300000
@@ -66,10 +57,7 @@ export default function ExecutarFiscalizacao() {
 
     const { data: tipos = [] } = useQuery({
         queryKey: ['tipos-unidade'],
-        queryFn: async () => {
-            const result = await db.table('tipos_unidade').toArray();
-            return Array.isArray(result) ? result : [];
-        },
+        queryFn: () => base44.entities.TipoUnidade.list('nome', 100),
         staleTime: 3600000,
         gcTime: 86400000
     });
@@ -93,7 +81,9 @@ export default function ExecutarFiscalizacao() {
             const ano = dataFim.getFullYear();
             
             // Buscar fiscalizações finalizadas no mesmo ano
-            const fiscalizacoesDoAno = await DataService.read('Fiscalizacao', { status: 'finalizada' }, '-data_fim', 1000);
+            const fiscalizacoesDoAno = await base44.entities.Fiscalizacao.filter({
+                status: 'finalizada'
+            }, '-data_fim', 1000);
             
             const fiscalizacoesAnoAtual = fiscalizacoesDoAno.filter(f => {
                 if (!f.data_fim) return false;
@@ -104,7 +94,7 @@ export default function ExecutarFiscalizacao() {
             const proximoNumero = fiscalizacoesAnoAtual.length + 1;
             const numeroTermo = `${String(proximoNumero).padStart(3, '0')}/${ano}`;
             
-            return DataService.update('Fiscalizacao', fiscalizacaoId, {
+            return base44.entities.Fiscalizacao.update(fiscalizacaoId, {
                 status: 'finalizada',
                 data_fim: dataFim.toISOString(),
                 numero_termo: numeroTermo
@@ -190,7 +180,7 @@ export default function ExecutarFiscalizacao() {
                                     <ArrowLeft className="h-5 w-5" />
                                 </Button>
                             </Link>
-                            <div className="flex-1">
+                            <div>
                                 <h1 className="font-bold">{fiscalizacao.municipio_nome}</h1>
                                 <div className="flex items-center gap-2 text-sm text-blue-200">
                                     <Badge variant="secondary" className="text-xs">
@@ -201,12 +191,9 @@ export default function ExecutarFiscalizacao() {
                                 </div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <Badge className={fiscalizacao.status === 'finalizada' ? 'bg-green-500' : 'bg-yellow-500'}>
-                                {fiscalizacao.status === 'finalizada' ? 'Finalizada' : 'Em andamento'}
-                            </Badge>
-                            <OfflineSyncButton />
-                        </div>
+                        <Badge className={fiscalizacao.status === 'finalizada' ? 'bg-green-500' : 'bg-yellow-500'}>
+                            {fiscalizacao.status === 'finalizada' ? 'Finalizada' : 'Em andamento'}
+                        </Badge>
                     </div>
                 </div>
             </div>
