@@ -73,17 +73,19 @@ Deno.serve(async (req) => {
         for (let i = 0; i < respostasCriadas.length; i++) {
             const resposta = respostasCriadas[i];
             const metadata = respostasParaCriar[i]._metadata;
+            const respostaOriginal = respostasParaCriar[i];
             
             resultados.push({
                 success: true,
-                item_checklist_id: respostasParaCriar[i].item_checklist_id,
+                item_checklist_id: respostaOriginal.item_checklist_id,
                 resposta: {
                     id: resposta.id,
                     numero_constatacao: resposta.numero_constatacao
                 }
             });
 
-            if (resposta.resposta === 'NAO' && metadata.texto_nc) {
+            // Verificar pela resposta original enviada, não pela resposta criada
+            if (respostaOriginal.resposta === 'NAO' && metadata.texto_nc && metadata.texto_nc.trim()) {
                 const descricaoNC = `A Constatação ${resposta.numero_constatacao} não cumpre o disposto no ${metadata.artigo_portaria};`;
 
                 ncsParaCriar.push({
