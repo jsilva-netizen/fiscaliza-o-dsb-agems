@@ -77,9 +77,11 @@ export default function VistoriarUnidade() {
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
-        staleTime: 120000,
+        staleTime: 300000,
         gcTime: 300000,
-        refetchOnWindowFocus: false
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false
     });
 
     const { data: ncsExistentes = [] } = useQuery({
@@ -89,9 +91,11 @@ export default function VistoriarUnidade() {
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
-        staleTime: 120000,
+        staleTime: 300000,
         gcTime: 300000,
-        refetchOnWindowFocus: false
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false
     });
 
 
@@ -103,9 +107,11 @@ export default function VistoriarUnidade() {
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
-        staleTime: 120000,
+        staleTime: 300000,
         gcTime: 300000,
-        refetchOnWindowFocus: false
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false
     });
 
     const { data: recomendacoesExistentes = [] } = useQuery({
@@ -115,9 +121,11 @@ export default function VistoriarUnidade() {
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
-        staleTime: 120000,
+        staleTime: 300000,
         gcTime: 300000,
-        refetchOnWindowFocus: false
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false
     });
 
     const { data: constatacoesManuais = [] } = useQuery({
@@ -127,9 +135,11 @@ export default function VistoriarUnidade() {
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
-        staleTime: 120000,
+        staleTime: 300000,
         gcTime: 300000,
-        refetchOnWindowFocus: false
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false
     });
 
     useEffect(() => {
@@ -340,17 +350,16 @@ export default function VistoriarUnidade() {
                 }));
             }
             
-            // Só invalidar respostas sempre (necessário para atualizar contadores)
-            await new Promise(resolve => setTimeout(resolve, 300));
-            queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
-            
-            // Só invalidar NCs/Ds/Rs se mudou resposta OU se gera NC
+            // Invalidar queries apenas se mudou resposta ou gera NC
+            // Para respostas sequenciais iguais, não precisa invalidar
             if (mudouResposta || geraNC) {
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
+                await new Promise(resolve => setTimeout(resolve, 500));
                 queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(resolve, 500));
                 queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(resolve, 500));
                 queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
             }
         },
