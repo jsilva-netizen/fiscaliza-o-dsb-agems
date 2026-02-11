@@ -601,10 +601,10 @@ export default function VistoriarUnidade() {
     const handleResponder = (itemId, data) => {
         salvarRespostaMutation.mutate({ itemId, data });
         
-        // Forçar re-render após 1s para liberar próxima pergunta
+        // Forçar re-render após 2s para liberar próxima pergunta
         setTimeout(() => {
             setUltimaRespostaTimestamp(0);
-        }, 1000);
+        }, 2000);
     };
 
     const handleAddFoto = async (fotoData) => {
@@ -852,9 +852,9 @@ export default function VistoriarUnidade() {
                                 const itemAnterior = index > 0 ? itensChecklist[index - 1] : null;
                                 const itemAnteriorRespondido = !itemAnterior || respostas[itemAnterior.id]?.resposta;
                                 
-                                // Delay de 1s após última resposta
+                                // Delay de 2s após última resposta
                                 const tempoDecorrido = Date.now() - ultimaRespostaTimestamp;
-                                const aguardandoDelay = itemAnteriorRespondido && tempoDecorrido < 1000;
+                                const aguardandoDelay = itemAnteriorRespondido && tempoDecorrido < 2000;
                                 
                                 const liberado = itemAnteriorRespondido && !aguardandoDelay;
                                 
