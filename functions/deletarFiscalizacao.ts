@@ -15,6 +15,8 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'fiscalizacao_id é obrigatório' }, { status: 400 });
         }
 
+        console.log('🔵 Iniciando deleção de fiscalização:', fiscalizacao_id);
+
         // Buscar fiscalização e verificar permissão
         const fiscalizacao = await base44.asServiceRole.entities.Fiscalizacao.filter({ id: fiscalizacao_id });
         if (!fiscalizacao || fiscalizacao.length === 0) {
@@ -34,10 +36,14 @@ Deno.serve(async (req) => {
             fiscalizacao_id 
         }, 'created_date', 500);
 
+        console.log('🔵 Total de unidades:', unidades.length);
+
         // Coletar todos os IDs para deleção em massa
         const unidadeIds = unidades.map(u => u.id);
 
         if (unidadeIds.length > 0) {
+            console.log('🔵 Buscando registros relacionados...');
+            
             // Buscar todos os registros relacionados
             const [respostas, ncs, determinacoes, recomendacoes, fotos, constatacoesManuais] = await Promise.all([
                 Promise.all(unidadeIds.map(id => 
@@ -58,36 +64,44 @@ Deno.serve(async (req) => {
                 )).then(r => r.flat())
             ]);
 
-            // Deletar em lotes menores para evitar rate limit (com delay entre lotes)
-            const deleteBatch = async (items, entityName) => {
-                const batchSize = 10;
-                for (let i = 0; i < items.length; i += batchSize) {
-                    const batch = items.slice(i, i + batchSize);
-                    await Promise.all(batch.map(item => 
-                        base44.asServiceRole.entities[entityName].delete(item.id).catch(err => {
-                            console.error(`Erro ao deletar ${entityName} ${item.id}:`, err);
-                            return null;
-                        })
-                    ));
-                    // Delay entre lotes para evitar rate limit
-                    if (i + batchSize < items.length) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
+            console.log('🔵 Totais:', {
+                respostas: respostas.length,
+                ncs: ncs.length,
+                determinacoes: determinacoes.length,
+                recomendacoes: recomendacoes.length,
+                fotos: fotos.length,
+                constatacoesManuais: constatacoesManuais.length
+            });
+
+            // Deletar sequencialmente (um por vez) para evitar rate limit
+            const deleteSequentially = async (items, entityName) => {
+                console.log(`🔵 Deletando ${items.length} ${entityName}...`);
+                for (let i = 0; i < items.length; i++) {
+                    try {
+                        await base44.asServiceRole.entities[entityName].delete(items[i].id);
+                        // Delay entre cada deleção
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                    } catch (err) {
+                        console.error(`❌ Erro ao deletar ${entityName} ${items[i].id}:`, err.message);
                     }
                 }
+                console.log(`✅ ${entityName} deletados`);
             };
 
             // Deletar em ordem (dependências primeiro)
-            await deleteBatch(respostas, 'RespostaChecklist');
-            await deleteBatch(determinacoes, 'Determinacao');
-            await deleteBatch(recomendacoes, 'Recomendacao');
-            await deleteBatch(ncs, 'NaoConformidade');
-            await deleteBatch(constatacoesManuais, 'ConstatacaoManual');
-            await deleteBatch(fotos, 'FotoEvidencia');
-            await deleteBatch(unidades, 'UnidadeFiscalizada');
+            await deleteSequentially(respostas, 'RespostaChecklist');
+            await deleteSequentially(determinacoes, 'Determinacao');
+            await deleteSequentially(recomendacoes, 'Recomendacao');
+            await deleteSequentially(ncs, 'NaoConformidade');
+            await deleteSequentially(constatacoesManuais, 'ConstatacaoManual');
+            await deleteSequentially(fotos, 'FotoEvidencia');
+            await deleteSequentially(unidades, 'UnidadeFiscalizada');
         }
 
         // Deletar a fiscalização
+        console.log('🔵 Deletando fiscalização principal...');
         await base44.asServiceRole.entities.Fiscalizacao.delete(fiscalizacao_id);
+        console.log('✅ Fiscalização deletada com sucesso');
 
         return Response.json({ 
             success: true,
@@ -95,9 +109,10 @@ Deno.serve(async (req) => {
         });
 
     } catch (error) {
-        console.error('Erro ao deletar fiscalização:', error);
+        console.error('❌ Erro ao deletar fiscalização:', error);
         return Response.json({ 
-            error: error.message 
+            error: error.message,
+            details: error.stack
         }, { status: 500 });
     }
 });
