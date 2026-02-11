@@ -15,10 +15,14 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'unidade_fiscalizada_id obrigatório' }, { status: 400 });
         }
 
-        // 1. Buscar todas as respostas do checklist
+        // 1. Buscar respostas do checklist e constatações manuais
         const respostas = await base44.asServiceRole.entities.RespostaChecklist.filter({
             unidade_fiscalizada_id
         }, 'created_date', 200);
+
+        const constatacoesManuais = await base44.asServiceRole.entities.ConstatacaoManual.filter({
+            unidade_fiscalizada_id
+        }, 'ordem', 100);
 
         // 2. Buscar itens do checklist para pegar configurações
         const idsItens = [...new Set(respostas.map(r => r.item_checklist_id))];
@@ -31,29 +35,7 @@ Deno.serve(async (req) => {
             itensMap[item.id] = item;
         });
 
-        // 3. Numerar constatações (SIM e NÃO com texto)
-        let contadorC = 1;
-        const respostasComNumero = [];
-        
-        for (const resposta of respostas) {
-            if ((resposta.resposta === 'SIM' || resposta.resposta === 'NAO') && resposta.pergunta && resposta.pergunta.trim()) {
-                const numeroConstatacao = `C${contadorC}`;
-                respostasComNumero.push({
-                    ...resposta,
-                    numero_constatacao: numeroConstatacao
-                });
-                
-                // Atualizar no banco
-                await base44.asServiceRole.entities.RespostaChecklist.update(resposta.id, {
-                    numero_constatacao: numeroConstatacao,
-                    gera_nc: resposta.resposta === 'NAO' && itensMap[resposta.item_checklist_id]?.gera_nc
-                });
-                
-                contadorC++;
-            }
-        }
-
-        // 4. Criar NCs para respostas NAO que geram NC
+        // 3. Criar NCs (tanto do checklist quanto manuais)
         const ncsParaCriar = [];
         const determinacoesParaCriar = [];
         const recomendacoesParaCriar = [];
@@ -61,11 +43,12 @@ Deno.serve(async (req) => {
         let contadorD = 1;
         let contadorR = 1;
 
-        for (const resposta of respostasComNumero) {
+        // 3.1 NCs do checklist
+        for (const resposta of respostas) {
             const item = itensMap[resposta.item_checklist_id];
             if (!item) continue;
 
-            if (resposta.resposta === 'NAO' && item.gera_nc && item.texto_nc && item.texto_nc.trim()) {
+            if (resposta.resposta === 'NAO' && resposta.gera_nc && item.texto_nc && item.texto_nc.trim()) {
                 const numeroNC = `NC${contadorNC}`;
                 const descricaoNC = `A Constatação ${resposta.numero_constatacao} não cumpre o disposto no ${item.artigo_portaria};`;
 
@@ -77,7 +60,29 @@ Deno.serve(async (req) => {
                     descricao: descricaoNC,
                     _index: ncsParaCriar.length,
                     _item: item,
-                    _numero_nc: numeroNC
+                    _numero_nc: numeroNC,
+                    _tipo: 'checklist'
+                });
+
+                contadorNC++;
+            }
+        }
+
+        // 3.2 NCs das constatações manuais
+        for (const constatacao of constatacoesManuais) {
+            if (constatacao.gera_nc) {
+                const numeroNC = `NC${contadorNC}`;
+                const descricaoNC = `A Constatação ${constatacao.numero_constatacao} não cumpre o disposto no ${constatacao.artigo_portaria || 'artigo não especificado'};`;
+
+                ncsParaCriar.push({
+                    unidade_fiscalizada_id,
+                    numero_nc: numeroNC,
+                    artigo_portaria: constatacao.artigo_portaria || '',
+                    descricao: descricaoNC,
+                    _index: ncsParaCriar.length,
+                    _constatacao_manual: constatacao,
+                    _numero_nc: numeroNC,
+                    _tipo: 'manual'
                 });
 
                 contadorNC++;
@@ -100,39 +105,80 @@ Deno.serve(async (req) => {
             // 6. Preparar Determinações e Recomendações
             for (let i = 0; i < ncsCriadas.length; i++) {
                 const nc = ncsCriadas[i];
-                const item = ncsParaCriar[i]._item;
+                const ncData = ncsParaCriar[i];
 
-                if (item.texto_determinacao && item.texto_determinacao.trim()) {
-                    const hoje = new Date();
-                    const data_limite = new Date(hoje);
-                    data_limite.setDate(data_limite.getDate() + (item.prazo_dias || 30));
-                    const data_limite_str = data_limite.toISOString().split('T')[0];
+                if (ncData._tipo === 'checklist') {
+                    const item = ncData._item;
 
-                    const numeroDeterminacao = `D${contadorD}`;
-                    const descricaoDeterminacao = `Para sanar a ${ncsParaCriar[i]._numero_nc} ${item.texto_determinacao}`;
+                    if (item.texto_determinacao && item.texto_determinacao.trim()) {
+                        const hoje = new Date();
+                        const data_limite = new Date(hoje);
+                        data_limite.setDate(data_limite.getDate() + (item.prazo_dias || 30));
+                        const data_limite_str = data_limite.toISOString().split('T')[0];
 
-                    determinacoesParaCriar.push({
-                        unidade_fiscalizada_id,
-                        nao_conformidade_id: nc.id,
-                        numero_determinacao: numeroDeterminacao,
-                        descricao: descricaoDeterminacao,
-                        prazo_dias: item.prazo_dias || 30,
-                        data_limite: data_limite_str,
-                        status: 'pendente'
-                    });
+                        const numeroDeterminacao = `D${contadorD}`;
+                        const descricaoDeterminacao = `Para sanar a ${ncData._numero_nc} ${item.texto_determinacao}`;
 
-                    contadorD++;
-                } else if (item.texto_recomendacao && item.texto_recomendacao.trim()) {
-                    const numeroRecomendacao = `R${contadorR}`;
+                        determinacoesParaCriar.push({
+                            unidade_fiscalizada_id,
+                            nao_conformidade_id: nc.id,
+                            numero_determinacao: numeroDeterminacao,
+                            descricao: descricaoDeterminacao,
+                            prazo_dias: item.prazo_dias || 30,
+                            data_limite: data_limite_str,
+                            status: 'pendente'
+                        });
 
-                    recomendacoesParaCriar.push({
-                        unidade_fiscalizada_id,
-                        numero_recomendacao: numeroRecomendacao,
-                        descricao: item.texto_recomendacao,
-                        origem: 'checklist'
-                    });
+                        contadorD++;
+                    } else if (item.texto_recomendacao && item.texto_recomendacao.trim()) {
+                        const numeroRecomendacao = `R${contadorR}`;
 
-                    contadorR++;
+                        recomendacoesParaCriar.push({
+                            unidade_fiscalizada_id,
+                            numero_recomendacao: numeroRecomendacao,
+                            descricao: item.texto_recomendacao,
+                            origem: 'checklist'
+                        });
+
+                        contadorR++;
+                    }
+                } else if (ncData._tipo === 'manual') {
+                    const constatacao = ncData._constatacao_manual;
+
+                    if (constatacao.texto_determinacao && constatacao.texto_determinacao.trim()) {
+                        const hoje = new Date();
+                        const data_limite = new Date(hoje);
+                        data_limite.setDate(data_limite.getDate() + 30);
+                        const data_limite_str = data_limite.toISOString().split('T')[0];
+
+                        const numeroDeterminacao = `D${contadorD}`;
+                        const descricaoDeterminacao = `Para sanar a ${ncData._numero_nc} ${constatacao.texto_determinacao}`;
+
+                        determinacoesParaCriar.push({
+                            unidade_fiscalizada_id,
+                            nao_conformidade_id: nc.id,
+                            numero_determinacao: numeroDeterminacao,
+                            descricao: descricaoDeterminacao,
+                            prazo_dias: 30,
+                            data_limite: data_limite_str,
+                            status: 'pendente'
+                        });
+
+                        contadorD++;
+                    }
+
+                    if (constatacao.texto_recomendacao && constatacao.texto_recomendacao.trim()) {
+                        const numeroRecomendacao = `R${contadorR}`;
+
+                        recomendacoesParaCriar.push({
+                            unidade_fiscalizada_id,
+                            numero_recomendacao: numeroRecomendacao,
+                            descricao: constatacao.texto_recomendacao,
+                            origem: 'manual'
+                        });
+
+                        contadorR++;
+                    }
                 }
             }
 
@@ -147,8 +193,12 @@ Deno.serve(async (req) => {
             }
         }
 
+        const totalConstatacoes = respostas.filter(r => 
+            (r.resposta === 'SIM' || r.resposta === 'NAO') && r.pergunta && r.pergunta.trim()
+        ).length + constatacoesManuais.length;
+
         console.log('NC/D/R gerados:', {
-            total_constatacoes: respostasComNumero.length,
+            total_constatacoes: totalConstatacoes,
             total_ncs: ncsCriadas.length,
             total_determinacoes: determinacoesParaCriar.length,
             total_recomendacoes: recomendacoesParaCriar.length
@@ -156,7 +206,7 @@ Deno.serve(async (req) => {
 
         return Response.json({
             success: true,
-            total_constatacoes: respostasComNumero.length,
+            total_constatacoes: totalConstatacoes,
             total_ncs: ncsCriadas.length,
             total_determinacoes: determinacoesParaCriar.length,
             total_recomendacoes: recomendacoesParaCriar.length

@@ -182,7 +182,7 @@ export default function VistoriarUnidade() {
         }
     }, [respostasExistentes.length]);
 
-    // Processar fila de respostas (apenas criar RespostaChecklist)
+    // Processar fila de respostas (criar RespostaChecklist + numerar constatações)
     useEffect(() => {
         if (filaRespostas.length === 0) return;
 
@@ -191,11 +191,25 @@ export default function VistoriarUnidade() {
                 const batch = [...filaRespostas];
                 setFilaRespostas([]);
 
+                // Buscar dados atuais
+                const respostasAtuais = await base44.entities.RespostaChecklist.filter({
+                    unidade_fiscalizada_id: unidadeId
+                }, 'created_date', 200);
+                
+                const constatacoesManuais = await base44.entities.ConstatacaoManual.filter({
+                    unidade_fiscalizada_id: unidadeId
+                }, 'ordem', 100);
+
+                let contadorC = respostasAtuais.filter(r => {
+                    if (r.resposta !== 'SIM' && r.resposta !== 'NAO') return false;
+                    return r.pergunta && r.pergunta.trim();
+                }).length + constatacoesManuais.length + 1;
+
                 for (const { itemId, data } of batch) {
                     const item = itensChecklist.find(i => i.id === itemId);
                     if (!item) continue;
 
-                    const respostaExistente = respostasExistentes.find(r => r.item_checklist_id === itemId);
+                    const respostaExistente = respostasAtuais.find(r => r.item_checklist_id === itemId);
                     
                     let textoConstatacao = data.resposta === 'SIM' 
                         ? item.texto_constatacao_sim 
@@ -203,36 +217,38 @@ export default function VistoriarUnidade() {
                             ? item.texto_constatacao_nao 
                             : null;
                     
-                    if (textoConstatacao && textoConstatacao.trim()) {
-                        if (!textoConstatacao.trim().endsWith(';')) {
-                            textoConstatacao = textoConstatacao.trim() + ';';
-                        }
-                    } else {
+                    const temTexto = textoConstatacao && textoConstatacao.trim();
+                    if (temTexto && !textoConstatacao.trim().endsWith(';')) {
+                        textoConstatacao = textoConstatacao.trim() + ';';
+                    } else if (!temTexto) {
                         textoConstatacao = null;
                     }
+
+                    const numeroConstatacao = temTexto ? `C${contadorC}` : null;
                     
                     if (respostaExistente?.id) {
-                        // Atualizar resposta existente
                         await base44.entities.RespostaChecklist.update(respostaExistente.id, {
                             resposta: data.resposta,
                             observacao: data.observacao || '',
-                            pergunta: textoConstatacao || ''
+                            pergunta: textoConstatacao || '',
+                            numero_constatacao: numeroConstatacao,
+                            gera_nc: data.resposta === 'NAO' && item.gera_nc
                         });
                     } else {
-                        // Criar nova resposta (sem NC/D)
                         await base44.entities.RespostaChecklist.create({
                             unidade_fiscalizada_id: unidadeId,
                             item_checklist_id: itemId,
                             pergunta: textoConstatacao,
                             resposta: data.resposta,
-                            gera_nc: false, // Será atualizado ao finalizar
-                            numero_constatacao: null, // Será gerado ao finalizar
+                            gera_nc: data.resposta === 'NAO' && item.gera_nc,
+                            numero_constatacao: numeroConstatacao,
                             observacao: data.observacao || ''
                         });
                     }
+
+                    if (temTexto) contadorC++;
                 }
 
-                // Invalidar apenas respostas
                 await queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
 
             } catch (err) {
@@ -243,7 +259,7 @@ export default function VistoriarUnidade() {
 
         const timer = setTimeout(processarBatch, 300);
         return () => clearTimeout(timer);
-    }, [filaRespostas, unidadeId, itensChecklist, respostasExistentes]);
+    }, [filaRespostas, unidadeId, itensChecklist]);
 
     const salvarRespostaMutation = useMutation({
         mutationFn: async ({ itemId, data }) => {
@@ -349,10 +365,10 @@ export default function VistoriarUnidade() {
                     gera_nc: data.gera_nc
                 });
 
-                return { constatacao: { ...constatacaoParaEditar, descricao: descricaoFinal, gera_nc: data.gera_nc }, numeroConstatacao: constatacaoParaEditar.numero_constatacao };
+                return { constatacao: { ...constatacaoParaEditar, descricao: descricaoFinal, gera_nc: data.gera_nc } };
             }
 
-            // Se for nova constatação, criar
+            // Se for nova constatação, criar (NC/D geradas apenas ao finalizar)
             const respostasComConstatacao = await base44.entities.RespostaChecklist.filter({
                 unidade_fiscalizada_id: unidadeId
             }, 'created_date', 200);
@@ -380,79 +396,12 @@ export default function VistoriarUnidade() {
                 ordem: Date.now()
             });
 
-            const contadoresAtualizados = await calcularProximaNumeracao(unidade.fiscalizacao_id, unidadeId, base44);
-            setContadores(contadoresAtualizados);
-
-            return { constatacao, novosContadores: contadoresAtualizados, numeroConstatacao };
+            return { constatacao };
         },
-        onSuccess: async ({ constatacao, novosContadores, numeroConstatacao }) => {
+        onSuccess: async ({ constatacao }) => {
             queryClient.invalidateQueries({ queryKey: ['constatacoes-manuais', unidadeId] });
             setShowAddConstatacao(false);
             setConstatacaoParaEditar(null);
-
-            // Se for edição, não abrir modal de NC
-            if (constatacaoParaEditar) {
-                return;
-            }
-
-            // Se gera NC e é nova constatação, abrir modal de edição
-            if (constatacao.gera_nc) {
-                // Calcular posição correta da NC baseada na ordem das constatações
-                // Buscar todas as respostas e constatações manuais para determinar ordem
-                const respostasComNC = await base44.entities.RespostaChecklist.filter({
-                    unidade_fiscalizada_id: unidadeId,
-                    gera_nc: true,
-                    resposta: 'NAO'
-                }, 'created_date', 200);
-                
-                const constatacoesManuaisComNC = await base44.entities.ConstatacaoManual.filter({
-                    unidade_fiscalizada_id: unidadeId,
-                    gera_nc: true
-                }, 'ordem', 100);
-
-                // Contar quantas constatações com NC existem ANTES desta
-                // Extrair número da constatação atual (ex: C7 -> 7)
-                const numeroConstatacaoAtual = parseInt(numeroConstatacao.replace('C', ''));
-                
-                // Contar respostas do checklist que geram NC e têm número menor
-                const respostasAnteriores = respostasComNC.filter(r => {
-                    if (!r.numero_constatacao) return false;
-                    const num = parseInt(r.numero_constatacao.replace('C', ''));
-                    return num < numeroConstatacaoAtual;
-                }).length;
-                
-                // Contar constatações manuais anteriores que geram NC
-                const constatacoesManuaisAnteriores = constatacoesManuaisComNC.filter(c => {
-                    if (c.id === constatacao.id) return false; // Não contar ela mesma
-                    if (!c.numero_constatacao) return false;
-                    const num = parseInt(c.numero_constatacao.replace('C', ''));
-                    return num < numeroConstatacaoAtual;
-                }).length;
-
-                const posicaoNC = respostasAnteriores + constatacoesManuaisAnteriores + 1;
-
-                // Buscar determinações e recomendações para próximos números
-                const determinacoesExistentesAgora = await base44.entities.Determinacao.filter({
-                    unidade_fiscalizada_id: unidadeId
-                });
-
-                const recomendacoesExistentesAgora = await base44.entities.Recomendacao.filter({
-                    unidade_fiscalizada_id: unidadeId
-                });
-
-                const numeroNC = `NC${posicaoNC}`;
-                const numeroDeterminacao = `D${determinacoesExistentesAgora.length + 1}`;
-                const numeroRecomendacao = `R${recomendacoesExistentesAgora.length + 1}`;
-                
-                setConstatacaoParaNC(constatacao);
-                setNumerosParaNC({
-                    numeroNC,
-                    numeroDeterminacao,
-                    numeroRecomendacao,
-                    numeroConstatacao
-                });
-                setShowEditarNC(true);
-            }
         },
         onError: (err) => {
             alert(err.message);
