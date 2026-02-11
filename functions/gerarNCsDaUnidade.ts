@@ -15,6 +15,8 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'unidade_fiscalizada_id obrigatório' }, { status: 400 });
         }
 
+        console.log('🔵 [gerarNCsDaUnidade] Iniciando para unidade:', unidade_fiscalizada_id);
+
         // 1. Buscar respostas do checklist e constatações manuais
         const respostas = await base44.asServiceRole.entities.RespostaChecklist.filter({
             unidade_fiscalizada_id
@@ -35,6 +37,12 @@ Deno.serve(async (req) => {
             itensMap[item.id] = item;
         });
 
+        console.log('🔵 Dados carregados:', {
+            respostas: respostas.length,
+            constatacoesManuais: constatacoesManuais.length,
+            itensChecklist: itensChecklist.length
+        });
+
         // 3. Criar NCs (tanto do checklist quanto manuais)
         const ncsParaCriar = [];
         const determinacoesParaCriar = [];
@@ -46,11 +54,23 @@ Deno.serve(async (req) => {
         // 3.1 NCs do checklist
         for (const resposta of respostas) {
             const item = itensMap[resposta.item_checklist_id];
-            if (!item) continue;
+            if (!item) {
+                console.log('⚠️ Item checklist não encontrado para resposta:', resposta.id);
+                continue;
+            }
+
+            console.log('🔍 Verificando resposta:', {
+                id: resposta.id,
+                resposta: resposta.resposta,
+                gera_nc: resposta.gera_nc,
+                tem_texto_nc: !!item.texto_nc
+            });
 
             if (resposta.resposta === 'NAO' && resposta.gera_nc && item.texto_nc && item.texto_nc.trim()) {
                 const numeroNC = `NC${contadorNC}`;
                 const descricaoNC = `A Constatação ${resposta.numero_constatacao} não cumpre o disposto no ${item.artigo_portaria};`;
+
+                console.log('✅ Criando NC do checklist:', numeroNC);
 
                 ncsParaCriar.push({
                     unidade_fiscalizada_id,
@@ -70,9 +90,18 @@ Deno.serve(async (req) => {
 
         // 3.2 NCs das constatações manuais
         for (const constatacao of constatacoesManuais) {
+            console.log('🔍 Verificando constatação manual:', {
+                id: constatacao.id,
+                numero: constatacao.numero_constatacao,
+                gera_nc: constatacao.gera_nc,
+                tem_artigo: !!constatacao.artigo_portaria
+            });
+
             if (constatacao.gera_nc) {
                 const numeroNC = `NC${contadorNC}`;
                 const descricaoNC = `A Constatação ${constatacao.numero_constatacao} não cumpre o disposto no ${constatacao.artigo_portaria || 'artigo não especificado'};`;
+
+                console.log('✅ Criando NC manual:', numeroNC);
 
                 ncsParaCriar.push({
                     unidade_fiscalizada_id,
@@ -89,9 +118,12 @@ Deno.serve(async (req) => {
             }
         }
 
+        console.log('🔵 Total de NCs para criar:', ncsParaCriar.length);
+
         // 5. Criar NCs em batch
         let ncsCriadas = [];
         if (ncsParaCriar.length > 0) {
+            console.log('🔵 Criando NCs em batch...');
             ncsCriadas = await base44.asServiceRole.entities.NaoConformidade.bulkCreate(
                 ncsParaCriar.map(nc => ({
                     unidade_fiscalizada_id: nc.unidade_fiscalizada_id,
@@ -101,6 +133,7 @@ Deno.serve(async (req) => {
                     descricao: nc.descricao
                 }))
             );
+            console.log('✅ NCs criadas:', ncsCriadas.length);
 
             // 6. Preparar Determinações e Recomendações
             for (let i = 0; i < ncsCriadas.length; i++) {
@@ -181,13 +214,19 @@ Deno.serve(async (req) => {
             }
 
             // 7. Criar Determinações em batch
+            console.log('🔵 Total de Determinações para criar:', determinacoesParaCriar.length);
             if (determinacoesParaCriar.length > 0) {
+                console.log('🔵 Criando Determinações em batch...');
                 await base44.asServiceRole.entities.Determinacao.bulkCreate(determinacoesParaCriar);
+                console.log('✅ Determinações criadas');
             }
 
             // 8. Criar Recomendações em batch
+            console.log('🔵 Total de Recomendações para criar:', recomendacoesParaCriar.length);
             if (recomendacoesParaCriar.length > 0) {
+                console.log('🔵 Criando Recomendações em batch...');
                 await base44.asServiceRole.entities.Recomendacao.bulkCreate(recomendacoesParaCriar);
+                console.log('✅ Recomendações criadas');
             }
         }
 

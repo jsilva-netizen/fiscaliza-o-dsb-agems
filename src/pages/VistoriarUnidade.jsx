@@ -497,10 +497,15 @@ export default function VistoriarUnidade() {
 
     const finalizarUnidadeMutation = useMutation({
         mutationFn: async () => {
+            console.log('🔵 Iniciando finalização da unidade:', unidadeId);
+            
             // 1. Gerar todas as NC/D/R baseado no checklist completo
+            console.log('🔵 Chamando gerarNCsDaUnidade...');
             const { data: result } = await base44.functions.invoke('gerarNCsDaUnidade', {
                 unidade_fiscalizada_id: unidadeId
             });
+            
+            console.log('🔵 Resultado gerarNCsDaUnidade:', result);
 
             if (!result.success) {
                 throw new Error(result.error || 'Erro ao gerar NC/D/R');
@@ -514,18 +519,29 @@ export default function VistoriarUnidade() {
                 return { url: f.url, legenda: f.legenda || '' };
             });
             
+            console.log('🔵 Atualizando unidade com totais:', {
+                total_constatacoes: result.total_constatacoes,
+                total_ncs: result.total_ncs
+            });
+            
             await base44.entities.UnidadeFiscalizada.update(unidadeId, {
                 status: 'finalizada',
                 fotos_unidade: fotosCompletas,
                 total_constatacoes: result.total_constatacoes || 0,
                 total_ncs: result.total_ncs || 0
             });
+            
+            console.log('🟢 Finalização concluída com sucesso');
         },
         onSuccess: () => {
              queryClient.invalidateQueries({ queryKey: ['unidades-fiscalizacao'] });
+             queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
+             queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
+             queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
              navigate(createPageUrl('ExecutarFiscalizacao') + `?id=${unidade.fiscalizacao_id}`);
          },
          onError: (err) => {
+             console.error('🔴 Erro ao finalizar unidade:', err);
              alert(err.message);
          }
      });
