@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
                         const data_limite_str = data_limite.toISOString().split('T')[0];
 
                         const numeroDeterminacao = `D${contadorD}`;
-                        const descricaoDeterminacao = `Para sanar a ${ncData._numero_nc} ${constatacao.texto_determinacao}`;
+                        const descricaoDeterminacao = `Para sanar a ${ncData._numero_nc} ${constatacao.texto_determinacao}. Prazo: 30 dias.`;
 
                         determinacoesParaCriar.push({
                             unidade_fiscalizada_id,
@@ -165,9 +165,7 @@ Deno.serve(async (req) => {
                         });
 
                         contadorD++;
-                    }
-
-                    if (constatacao.texto_recomendacao && constatacao.texto_recomendacao.trim()) {
+                    } else if (constatacao.texto_recomendacao && constatacao.texto_recomendacao.trim()) {
                         const numeroRecomendacao = `R${contadorR}`;
 
                         recomendacoesParaCriar.push({
@@ -201,7 +199,9 @@ Deno.serve(async (req) => {
             total_constatacoes: totalConstatacoes,
             total_ncs: ncsCriadas.length,
             total_determinacoes: determinacoesParaCriar.length,
-            total_recomendacoes: recomendacoesParaCriar.length
+            total_recomendacoes: recomendacoesParaCriar.length,
+            respostas_com_nc: respostas.filter(r => r.resposta === 'NAO' && r.gera_nc).length,
+            constatacoes_manuais_com_nc: constatacoesManuais.filter(c => c.gera_nc).length
         });
 
         return Response.json({
