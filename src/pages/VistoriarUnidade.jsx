@@ -554,19 +554,42 @@ export default function VistoriarUnidade() {
 
     const salvarAlteracoesMutation = useMutation({
         mutationFn: async () => {
-            // Recarregar dados do banco para contagens precisas
-            const respostasAtuais = await base44.entities.RespostaChecklist.filter({ 
+            console.log('🔵 Iniciando salvamento de alterações da unidade:', unidadeId);
+            
+            // 1. Primeiro excluir NC/D/R antigas
+            console.log('🔵 Excluindo NC/D/R antigas...');
+            const ncsAntigas = await base44.entities.NaoConformidade.filter({ 
                 unidade_fiscalizada_id: unidadeId 
             });
-            const ncsAtuais = await base44.entities.NaoConformidade.filter({ 
+            const determinacoesAntigas = await base44.entities.Determinacao.filter({ 
                 unidade_fiscalizada_id: unidadeId 
             });
+            const recomendacoesAntigas = await base44.entities.Recomendacao.filter({ 
+                unidade_fiscalizada_id: unidadeId,
+                origem: 'checklist'
+            });
 
-            const totalConstatacoes = respostasAtuais.filter(r => 
-                r.resposta === 'SIM' || r.resposta === 'NAO'
-            ).length;
+            for (const nc of ncsAntigas) {
+                await base44.entities.NaoConformidade.delete(nc.id);
+            }
+            for (const det of determinacoesAntigas) {
+                await base44.entities.Determinacao.delete(det.id);
+            }
+            for (const rec of recomendacoesAntigas) {
+                await base44.entities.Recomendacao.delete(rec.id);
+            }
 
-            // Salvar objetos completos com url e legenda
+            // 2. Regenerar NC/D/R com base nas respostas atuais
+            console.log('🔵 Regenerando NC/D/R...');
+            const { data: result } = await base44.functions.invoke('gerarNCsDaUnidade', {
+                unidade_fiscalizada_id: unidadeId
+            });
+
+            if (!result.success) {
+                throw new Error(result.error || 'Erro ao regenerar NC/D/R');
+            }
+
+            // 3. Atualizar fotos e totais da unidade
             const fotosCompletas = fotos.map(f => {
                 if (typeof f === 'string') {
                     return { url: f, legenda: '' };
@@ -576,16 +599,22 @@ export default function VistoriarUnidade() {
             
             await base44.entities.UnidadeFiscalizada.update(unidadeId, {
                 fotos_unidade: fotosCompletas,
-                total_constatacoes: totalConstatacoes,
-                total_ncs: ncsAtuais.length
+                total_constatacoes: result.total_constatacoes || 0,
+                total_ncs: result.total_ncs || 0
             });
+
+            console.log('🟢 Salvamento concluído com sucesso');
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['unidades-fiscalizacao'] });
             queryClient.invalidateQueries({ queryKey: ['unidade', unidadeId] });
+            queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
+            queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
+            queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
             navigate(createPageUrl('ExecutarFiscalizacao') + `?id=${unidade.fiscalizacao_id}`);
         },
         onError: (err) => {
+            console.error('🔴 Erro ao salvar alterações:', err);
             alert(err.message);
         }
     });
