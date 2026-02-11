@@ -475,6 +475,14 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                         const novoNumDet = `D${mapeamento.determinacoes[det.id]}`;
                         let texto = det.descricao;
                         
+                        // Encontrar NC relacionada e substituir referência no texto
+                        const ncRelacionada = ncs.find(nc => nc.id === det.nao_conformidade_id);
+                        if (ncRelacionada) {
+                            const novoNumNC = `NC${mapeamento.ncs[ncRelacionada.id]}`;
+                            // Substituir qualquer referência a NC no texto (NC1, NC2, etc.)
+                            texto = texto.replace(/NC\d+/g, novoNumNC);
+                        }
+                        
                         // Adicionar ponto final se não tiver
                         if (!texto.trim().endsWith('.')) {
                             texto = texto.trim() + '.';
