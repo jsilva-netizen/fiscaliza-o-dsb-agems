@@ -26,18 +26,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
         });
     };
 
-    const addTimbradoToPage = (pdf, timbradoBase64) => {
-        try {
-            if (timbradoBase64) {
-                const pageWidth = pdf.internal.pageSize.getWidth();
-                const pageHeight = pdf.internal.pageSize.getHeight();
-                pdf.addImage(timbradoBase64, 'JPEG', 0, 0, pageWidth, pageHeight);
-            }
-        } catch (err) {
-            console.error('Erro ao adicionar timbrado:', err);
-        }
-    };
-
     const gerarRelatorio = async () => {
         setIsGenerating(true);
         try {
@@ -86,14 +74,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
             const topMargin = 35;
             const bottomMargin = 25;
             let yPos = topMargin;
-
-            let timbradoBase64 = null;
-            try {
-                const timbradoUrl = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/69331445067a2821c02acff8/4fe7a4846_timbrado.pdf';
-                timbradoBase64 = await loadImageAsBase64(timbradoUrl);
-            } catch (err) {
-                console.error('Erro ao carregar timbrado:', err);
-            }
 
             pdf.setFillColor(25, 75, 145);
             pdf.rect(0, 0, pageWidth, 40, 'F');
@@ -278,7 +258,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                 const mapeamento = mapeamentosNumeracao[idx];
 
                 pdf.addPage();
-                addTimbradoToPage(pdf, timbradoBase64);
                 yPos = topMargin;
 
                 pdf.setFontSize(9);
