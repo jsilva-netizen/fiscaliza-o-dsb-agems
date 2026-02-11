@@ -250,9 +250,9 @@ export default function VistoriarUnidade() {
 
                     if (temTexto) contadorC++;
                     
-                    // Delay entre operações para evitar rate limit (200ms)
+                    // Delay entre operações para evitar rate limit (300ms)
                     if (i < batch.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 200));
+                        await new Promise(resolve => setTimeout(resolve, 300));
                     }
                 }
 

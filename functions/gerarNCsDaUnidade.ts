@@ -239,15 +239,25 @@ Deno.serve(async (req) => {
             }
         }
 
+        // Buscar recomendações manuais existentes (criadas durante a vistoria)
+        const recomendacoesManuaisExistentes = await base44.asServiceRole.entities.Recomendacao.filter({
+            unidade_fiscalizada_id,
+            origem: 'manual'
+        });
+
         const totalConstatacoes = respostas.filter(r => 
             (r.resposta === 'SIM' || r.resposta === 'NAO') && r.pergunta && r.pergunta.trim()
         ).length + constatacoesManuais.length;
+
+        const totalRecomendacoes = recomendacoesParaCriar.length + recomendacoesManuaisExistentes.length;
 
         console.log('NC/D/R gerados:', {
             total_constatacoes: totalConstatacoes,
             total_ncs: ncsCriadas.length,
             total_determinacoes: determinacoesParaCriar.length,
-            total_recomendacoes: recomendacoesParaCriar.length,
+            total_recomendacoes_novas: recomendacoesParaCriar.length,
+            total_recomendacoes_manuais: recomendacoesManuaisExistentes.length,
+            total_recomendacoes: totalRecomendacoes,
             respostas_com_nc: respostas.filter(r => r.resposta === 'NAO' && r.gera_nc).length,
             constatacoes_manuais_com_nc: constatacoesManuais.filter(c => c.gera_nc).length
         });
@@ -257,7 +267,7 @@ Deno.serve(async (req) => {
             total_constatacoes: totalConstatacoes,
             total_ncs: ncsCriadas.length,
             total_determinacoes: determinacoesParaCriar.length,
-            total_recomendacoes: recomendacoesParaCriar.length
+            total_recomendacoes: totalRecomendacoes
         });
 
     } catch (error) {
