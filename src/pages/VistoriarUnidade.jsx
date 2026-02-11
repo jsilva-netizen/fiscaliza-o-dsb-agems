@@ -1007,28 +1007,29 @@ export default function VistoriarUnidade() {
                     {/* Fotos Tab */}
                     <TabsContent value="fotos" className="mt-4">
                     <PhotoGrid
-                    fotos={fotos}
-                    minFotos={2}
-                    onAddFoto={handleAddFoto}
-                    onRemoveFoto={handleRemoveFoto}
-                    onUpdateLegenda={handleUpdateLegenda}
-                    titulo="Fotos da Unidade"
-                    fiscalizacaoId={unidade?.fiscalizacao_id}
-                    unidadeId={unidadeId}
+                        fotos={fotos}
+                        minFotos={2}
+                        onAddFoto={handleAddFoto}
+                        onRemoveFoto={handleRemoveFoto}
+                        onUpdateLegenda={handleUpdateLegenda}
+                        titulo="Fotos da Unidade"
+                        fiscalizacaoId={unidade?.fiscalizacao_id}
+                        unidadeId={unidadeId}
+                        isEditable={unidade?.status !== 'finalizada' || modoEdicao}
                     />
-                    {unidade?.status === 'finalizada' && (fotos.length > 0 || fotosParaSalvar.length > 0) && (
-                    <Button
-                    className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
-                    onClick={() => salvarFotosMutation.mutate(fotos)}
-                    disabled={salvarFotosMutation.isPending}
-                    >
-                    {salvarFotosMutation.isPending ? (
-                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                     <Save className="h-4 w-4 mr-2" />
-                    )}
-                    Salvar Alterações
-                    </Button>
+                    {(unidade?.status !== 'finalizada' || modoEdicao) && (fotos.length > 0 || fotosParaSalvar.length > 0) && (
+                        <Button
+                            className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
+                            onClick={() => salvarFotosMutation.mutate(fotos)}
+                            disabled={salvarFotosMutation.isPending}
+                        >
+                            {salvarFotosMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                                <Save className="h-4 w-4 mr-2" />
+                            )}
+                            Salvar Alterações
+                        </Button>
                     )}
                     </TabsContent>
 

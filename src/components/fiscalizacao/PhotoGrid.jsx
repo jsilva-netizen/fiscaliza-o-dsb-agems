@@ -16,7 +16,8 @@ export default function PhotoGrid({
     onUpdateLegenda,
     titulo = "Fotos da Unidade",
     fiscalizacaoId,
-    unidadeId
+    unidadeId,
+    isEditable = true
 }) {
     const [selectedFoto, setSelectedFoto] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -110,7 +111,7 @@ export default function PhotoGrid({
                         onClick={() => fileInputRef.current?.click()} 
                         size="sm"
                         variant="outline"
-                        disabled={isUploading}
+                        disabled={isUploading || !isEditable}
                     >
                         {isUploading ? (
                             <>
@@ -127,7 +128,7 @@ export default function PhotoGrid({
                     <Button 
                         onClick={() => cameraInputRef.current?.click()} 
                         size="sm"
-                        disabled={isUploading}
+                        disabled={isUploading || !isEditable}
                     >
                         {isUploading ? (
                             <>
@@ -158,46 +159,56 @@ export default function PhotoGrid({
                                 className="w-full h-32 object-cover cursor-pointer"
                                 onClick={() => setSelectedFoto(foto)}
                             />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => onRemoveFoto(index)}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 flex gap-1">
-                                <Input
-                                    placeholder="Legenda..."
-                                    value={editingLegenda[index] ? (tempLegendas[index] ?? foto.legenda ?? '') : (foto.legenda || '')}
-                                    onChange={(e) => setTempLegendas(prev => ({ ...prev, [index]: e.target.value }))}
-                                    readOnly={!editingLegenda[index]}
-                                    className="h-6 text-xs bg-transparent border-none text-white placeholder:text-gray-300"
-                                />
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 w-6 p-0 text-white hover:bg-white/20"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (editingLegenda[index]) {
-                                            let legenda = tempLegendas[index] ?? foto.legenda ?? '';
-                                            // Adicionar ponto final se não tiver
-                                            if (legenda && !legenda.trim().endsWith('.')) {
-                                                legenda = legenda.trim() + '.';
+                            {isEditable && (
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => onRemoveFoto(index)}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            )}
+                            {isEditable ? (
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 flex gap-1">
+                                    <Input
+                                        placeholder="Legenda..."
+                                        value={editingLegenda[index] ? (tempLegendas[index] ?? foto.legenda ?? '') : (foto.legenda || '')}
+                                        onChange={(e) => setTempLegendas(prev => ({ ...prev, [index]: e.target.value }))}
+                                        readOnly={!editingLegenda[index]}
+                                        className="h-6 text-xs bg-transparent border-none text-white placeholder:text-gray-300"
+                                    />
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 w-6 p-0 text-white hover:bg-white/20"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (editingLegenda[index]) {
+                                                let legenda = tempLegendas[index] ?? foto.legenda ?? '';
+                                                // Adicionar ponto final se não tiver
+                                                if (legenda && !legenda.trim().endsWith('.')) {
+                                                    legenda = legenda.trim() + '.';
+                                                }
+                                                onUpdateLegenda(index, legenda);
+                                                setEditingLegenda(prev => ({ ...prev, [index]: false }));
+                                            } else {
+                                                setEditingLegenda(prev => ({ ...prev, [index]: true }));
+                                                setTempLegendas(prev => ({ ...prev, [index]: foto.legenda || '' }));
                                             }
-                                            onUpdateLegenda(index, legenda);
-                                            setEditingLegenda(prev => ({ ...prev, [index]: false }));
-                                        } else {
-                                            setEditingLegenda(prev => ({ ...prev, [index]: true }));
-                                            setTempLegendas(prev => ({ ...prev, [index]: foto.legenda || '' }));
-                                        }
-                                    }}
-                                >
-                                    {editingLegenda[index] ? <Save className="h-3 w-3" /> : <Edit2 className="h-3 w-3" />}
-                                </Button>
-                            </div>
+                                        }}
+                                    >
+                                        {editingLegenda[index] ? <Save className="h-3 w-3" /> : <Edit2 className="h-3 w-3" />}
+                                    </Button>
+                                </div>
+                            ) : (
+                                foto.legenda && (
+                                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1">
+                                        <p className="px-1">{foto.legenda}</p>
+                                    </div>
+                                )
+                            )}
 
                         </div>
                     ))}
