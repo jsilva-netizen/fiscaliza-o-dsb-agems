@@ -488,11 +488,41 @@ export default function VistoriarUnidade() {
 
             // Se gera NC e é nova constatação, abrir modal de edição
             if (constatacao.gera_nc) {
-                // Buscar contagem REAL de NCs e Determinações do banco
-                const ncsExistentesAgora = await base44.entities.NaoConformidade.filter({
-                    unidade_fiscalizada_id: unidadeId
-                });
+                // Calcular posição correta da NC baseada na ordem das constatações
+                // Buscar todas as respostas e constatações manuais para determinar ordem
+                const respostasComNC = await base44.entities.RespostaChecklist.filter({
+                    unidade_fiscalizada_id: unidadeId,
+                    gera_nc: true,
+                    resposta: 'NAO'
+                }, 'created_date', 200);
                 
+                const constatacoesManuaisComNC = await base44.entities.ConstatacaoManual.filter({
+                    unidade_fiscalizada_id: unidadeId,
+                    gera_nc: true
+                }, 'ordem', 100);
+
+                // Contar quantas constatações com NC existem ANTES desta
+                // Extrair número da constatação atual (ex: C7 -> 7)
+                const numeroConstatacaoAtual = parseInt(numeroConstatacao.replace('C', ''));
+                
+                // Contar respostas do checklist que geram NC e têm número menor
+                const respostasAnteriores = respostasComNC.filter(r => {
+                    if (!r.numero_constatacao) return false;
+                    const num = parseInt(r.numero_constatacao.replace('C', ''));
+                    return num < numeroConstatacaoAtual;
+                }).length;
+                
+                // Contar constatações manuais anteriores que geram NC
+                const constatacoesManuaisAnteriores = constatacoesManuaisComNC.filter(c => {
+                    if (c.id === constatacao.id) return false; // Não contar ela mesma
+                    if (!c.numero_constatacao) return false;
+                    const num = parseInt(c.numero_constatacao.replace('C', ''));
+                    return num < numeroConstatacaoAtual;
+                }).length;
+
+                const posicaoNC = respostasAnteriores + constatacoesManuaisAnteriores + 1;
+
+                // Buscar determinações e recomendações para próximos números
                 const determinacoesExistentesAgora = await base44.entities.Determinacao.filter({
                     unidade_fiscalizada_id: unidadeId
                 });
@@ -501,7 +531,7 @@ export default function VistoriarUnidade() {
                     unidade_fiscalizada_id: unidadeId
                 });
 
-                const numeroNC = `NC${ncsExistentesAgora.length + 1}`;
+                const numeroNC = `NC${posicaoNC}`;
                 const numeroDeterminacao = `D${determinacoesExistentesAgora.length + 1}`;
                 const numeroRecomendacao = `R${recomendacoesExistentesAgora.length + 1}`;
                 
