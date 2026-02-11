@@ -45,6 +45,7 @@ export default function VistoriarUnidade() {
     const [showConfirmaExclusao, setShowConfirmaExclusao] = useState(false);
     const [constatacaoParaExcluir, setConstatacaoParaExcluir] = useState(null);
     const [filaRespostas, setFilaRespostas] = useState([]);
+    const [ultimaRespostaTimestamp, setUltimaRespostaTimestamp] = useState(0);
 
     // Queries
     const { data: unidade, isLoading: loadingUnidade } = useQuery({
@@ -291,6 +292,9 @@ export default function VistoriarUnidade() {
                     }
                 }));
             }
+            
+            // Marcar timestamp da última resposta (delay 1s para próxima)
+            setUltimaRespostaTimestamp(Date.now());
             
             // Adicionar à fila para processamento em batch
             setFilaRespostas(prev => [...prev, { itemId, data }]);
@@ -620,6 +624,11 @@ export default function VistoriarUnidade() {
 
     const handleResponder = (itemId, data) => {
         salvarRespostaMutation.mutate({ itemId, data });
+        
+        // Forçar re-render após 1s para liberar próxima pergunta
+        setTimeout(() => {
+            setUltimaRespostaTimestamp(0);
+        }, 1000);
     };
 
     const handleAddFoto = async (fotoData) => {
@@ -865,7 +874,13 @@ export default function VistoriarUnidade() {
                             itensChecklist.map((item, index) => {
                                 // Verificar se é o primeiro item OU se o item anterior já foi respondido
                                 const itemAnterior = index > 0 ? itensChecklist[index - 1] : null;
-                                const liberado = !itemAnterior || respostas[itemAnterior.id]?.resposta;
+                                const itemAnteriorRespondido = !itemAnterior || respostas[itemAnterior.id]?.resposta;
+                                
+                                // Delay de 1s após última resposta
+                                const tempoDecorrido = Date.now() - ultimaRespostaTimestamp;
+                                const aguardandoDelay = itemAnteriorRespondido && tempoDecorrido < 1000;
+                                
+                                const liberado = itemAnteriorRespondido && !aguardandoDelay;
                                 
                                 return (
                                     <ChecklistItem
