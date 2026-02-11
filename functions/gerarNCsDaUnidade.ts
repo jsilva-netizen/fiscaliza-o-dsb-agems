@@ -66,17 +66,20 @@ Deno.serve(async (req) => {
                 tem_texto_nc: !!item.texto_nc
             });
 
-            if (resposta.resposta === 'NAO' && resposta.gera_nc && item.texto_nc && item.texto_nc.trim()) {
+            if (resposta.resposta === 'NAO' && resposta.gera_nc) {
                 const numeroNC = `NC${contadorNC}`;
-                const descricaoNC = `A Constatação ${resposta.numero_constatacao} não cumpre o disposto no ${item.artigo_portaria};`;
+                const descricaoNC = `A Constatação ${resposta.numero_constatacao} não cumpre o disposto no ${item.artigo_portaria || 'artigo aplicável'};`;
 
-                console.log('✅ Criando NC do checklist:', numeroNC);
+                console.log('✅ Criando NC do checklist:', numeroNC, {
+                    artigo: item.artigo_portaria,
+                    tem_texto_nc: !!item.texto_nc
+                });
 
                 ncsParaCriar.push({
                     unidade_fiscalizada_id,
                     resposta_checklist_id: resposta.id,
                     numero_nc: numeroNC,
-                    artigo_portaria: item.artigo_portaria,
+                    artigo_portaria: item.artigo_portaria || '',
                     descricao: descricaoNC,
                     _index: ncsParaCriar.length,
                     _item: item,
