@@ -211,6 +211,9 @@ export default function VistoriarUnidade() {
                         setContadores(result.contadores);
                     }
 
+                    // Aguardar 300ms antes de invalidar queries para evitar rate limit
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
                     // Forçar recarregamento dos dados após renumeração
                     await queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
                     await queryClient.invalidateQueries({ queryKey: ['constatacoes-manuais', unidadeId] });
