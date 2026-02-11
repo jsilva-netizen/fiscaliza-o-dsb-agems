@@ -674,7 +674,7 @@ export default function VistoriarUnidade() {
             {/* Tabs */}
             <div className="max-w-4xl mx-auto px-4 py-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="w-full grid grid-cols-5">
+                    <TabsList className="w-full grid grid-cols-4">
                         <TabsTrigger value="checklist" className="text-xs">
                             <ClipboardCheck className="h-4 w-4 mr-1" />
                             Checklist
@@ -687,10 +687,6 @@ export default function VistoriarUnidade() {
                             <Camera className="h-4 w-4 mr-1" />
                             Fotos
                             {fotos.length === 0 && <span className="ml-1 text-red-500">!</span>}
-                        </TabsTrigger>
-                        <TabsTrigger value="ncs" className="text-xs">
-                            <AlertTriangle className="h-4 w-4 mr-1" />
-                            NC/D ({ncsExistentes.length})
                         </TabsTrigger>
                         <TabsTrigger value="recomendacoes" className="text-xs">
                             <FileText className="h-4 w-4 mr-1" />
@@ -887,46 +883,7 @@ export default function VistoriarUnidade() {
                     />
                     </TabsContent>
 
-                    {/* NCs Tab */}
-                    <TabsContent value="ncs" className="mt-4 space-y-4">
-                        {ncsExistentes.length === 0 ? (
-                            <Card>
-                                <CardContent className="p-6 text-center text-gray-500">
-                                    <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-green-500 opacity-50" />
-                                    <p>Nenhuma Não Conformidade identificada.</p>
-                                    <p className="text-xs mt-2">NCs são geradas automaticamente ao responder "NÃO" em itens do checklist.</p>
-                                </CardContent>
-                            </Card>
-                        ) : (
-                            ncsExistentes.map((nc, index) => (
-                                <Card key={nc.id} className="border-red-200 bg-red-50">
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-lg flex items-center gap-2 text-red-700">
-                                            <AlertTriangle className="h-5 w-5" />
-                                            {nc.numero_nc}
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3">
-                                        <p className="text-sm">{nc.descricao}</p>
-                                        {nc.artigo_portaria && (
-                                            <Badge variant="outline">{nc.artigo_portaria}</Badge>
-                                        )}
 
-                                        {/* Determinação relacionada */}
-                                        {determinacoesExistentes.filter(d => d.nao_conformidade_id === nc.id).map(det => (
-                                            <div key={det.id} className="bg-white p-3 rounded border">
-                                                <p className="text-xs font-medium text-blue-700">{det.numero_determinacao}</p>
-                                                <p className="text-sm">{det.descricao}</p>
-                                                <p className="text-xs text-gray-500 mt-1">Prazo: {det.prazo_dias} dias</p>
-                                            </div>
-                                        ))}
-
-
-                                    </CardContent>
-                                </Card>
-                            ))
-                        )}
-                    </TabsContent>
 
                     {/* Recomendações Tab */}
                     <TabsContent value="recomendacoes" className="mt-4 space-y-4">
