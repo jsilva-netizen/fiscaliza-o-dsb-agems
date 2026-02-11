@@ -44,6 +44,7 @@ export default function VistoriarUnidade() {
     const [constatacaoParaEditar, setConstatacaoParaEditar] = useState(null);
     const [showConfirmaExclusao, setShowConfirmaExclusao] = useState(false);
     const [constatacaoParaExcluir, setConstatacaoParaExcluir] = useState(null);
+    const [estaSalvandoResposta, setEstaSalvandoResposta] = useState(false);
 
     // Queries
     const { data: unidade, isLoading: loadingUnidade } = useQuery({
@@ -183,6 +184,7 @@ export default function VistoriarUnidade() {
 
     const salvarRespostaMutation = useMutation({
         mutationFn: async ({ itemId, data }) => {
+            setEstaSalvandoResposta(true);
             if (fiscalizacao?.status === 'finalizada' && !modoEdicao) {
                 throw new Error('Não é possível modificar uma fiscalização finalizada');
             }
@@ -362,8 +364,13 @@ export default function VistoriarUnidade() {
                 await new Promise(resolve => setTimeout(resolve, 500));
                 queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
             }
+            
+            // Delay adicional antes de liberar próxima resposta
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            setEstaSalvandoResposta(false);
         },
         onError: (err) => {
+            setEstaSalvandoResposta(false);
             alert(err.message);
         }
     });
@@ -986,8 +993,8 @@ export default function VistoriarUnidade() {
                                 // Verificar se é o primeiro item OU se o item anterior já foi respondido
                                 const itemAnterior = index > 0 ? itensChecklist[index - 1] : null;
                                 const itemAnteriorRespondido = !itemAnterior || respostas[itemAnterior.id]?.resposta;
-                                // Bloquear próximas respostas enquanto está salvando
-                                const estaSalvando = salvarRespostaMutation.isPending;
+                                // Bloquear próximas respostas enquanto está salvando (controle duplo)
+                                const estaSalvando = salvarRespostaMutation.isPending || estaSalvandoResposta;
                                 const liberado = itemAnteriorRespondido && !estaSalvando;
                                 
                                 return (
