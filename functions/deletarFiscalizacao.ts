@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
 
         if (unidadeIds.length > 0) {
             // Buscar todos os registros relacionados
-            const [respostas, ncs, determinacoes, recomendacoes, fotos] = await Promise.all([
+            const [respostas, ncs, determinacoes, recomendacoes, fotos, constatacoesManuais] = await Promise.all([
                 Promise.all(unidadeIds.map(id => 
                     base44.asServiceRole.entities.RespostaChecklist.filter({ unidade_fiscalizada_id: id }, 'created_date', 500)
                 )).then(r => r.flat()),
@@ -52,7 +52,10 @@ Deno.serve(async (req) => {
                 Promise.all(unidadeIds.map(id => 
                     base44.asServiceRole.entities.Recomendacao.filter({ unidade_fiscalizada_id: id }, 'created_date', 500)
                 )).then(r => r.flat()),
-                base44.asServiceRole.entities.FotoEvidencia.filter({ fiscalizacao_id }, 'created_date', 500)
+                base44.asServiceRole.entities.FotoEvidencia.filter({ fiscalizacao_id }, 'created_date', 500),
+                Promise.all(unidadeIds.map(id => 
+                    base44.asServiceRole.entities.ConstatacaoManual.filter({ unidade_fiscalizada_id: id }, 'ordem', 500)
+                )).then(r => r.flat())
             ]);
 
             // Deletar em lotes menores para evitar rate limit
@@ -71,6 +74,7 @@ Deno.serve(async (req) => {
             await deleteBatch(determinacoes, 'Determinacao');
             await deleteBatch(recomendacoes, 'Recomendacao');
             await deleteBatch(ncs, 'NaoConformidade');
+            await deleteBatch(constatacoesManuais, 'ConstatacaoManual');
             await deleteBatch(fotos, 'FotoEvidencia');
             await deleteBatch(unidades, 'UnidadeFiscalizada');
         }
