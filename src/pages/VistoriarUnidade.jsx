@@ -185,6 +185,9 @@ export default function VistoriarUnidade() {
     const salvarRespostaMutation = useMutation({
         mutationFn: async ({ itemId, data }) => {
             setEstaSalvandoResposta(true);
+            // Delay progressivo para evitar rate limit
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
             if (fiscalizacao?.status === 'finalizada' && !modoEdicao) {
                 throw new Error('Não é possível modificar uma fiscalização finalizada');
             }
@@ -228,8 +231,8 @@ export default function VistoriarUnidade() {
                         setContadores(result.contadores);
                     }
 
-                    // Aguardar 300ms antes de invalidar queries para evitar rate limit
-                    await new Promise(resolve => setTimeout(resolve, 300));
+                    // Aguardar 500ms antes de invalidar queries para evitar rate limit
+                    await new Promise(resolve => setTimeout(resolve, 500));
                     
                     // Forçar recarregamento dos dados após renumeração
                     await queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
@@ -355,18 +358,18 @@ export default function VistoriarUnidade() {
             // Invalidar queries apenas se mudou resposta ou gera NC
             // Para respostas sequenciais iguais, não precisa invalidar
             if (mudouResposta || geraNC) {
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await new Promise(resolve => setTimeout(resolve, 1500));
                 queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 600));
                 queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 600));
                 queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 600));
                 queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
             }
             
             // Delay adicional antes de liberar próxima resposta
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 1500));
             setEstaSalvandoResposta(false);
         },
         onError: (err) => {
