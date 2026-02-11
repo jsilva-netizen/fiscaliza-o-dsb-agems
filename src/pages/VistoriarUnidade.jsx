@@ -406,6 +406,34 @@ export default function VistoriarUnidade() {
             queryClient.invalidateQueries({ queryKey: ['constatacoes-manuais', unidadeId] });
             setShowAddConstatacao(false);
             setConstatacaoParaEditar(null);
+
+            // Se gera NC e é nova constatação, abrir modal para definir NC/D/R
+            if (constatacao.gera_nc && !constatacaoParaEditar) {
+                // Buscar dados atuais para calcular próximos números
+                const ncsAtuais = await base44.entities.NaoConformidade.filter({
+                    unidade_fiscalizada_id: unidadeId
+                });
+                const determinacoesAtuais = await base44.entities.Determinacao.filter({
+                    unidade_fiscalizada_id: unidadeId
+                });
+                const recomendacoesAtuais = await base44.entities.Recomendacao.filter({
+                    unidade_fiscalizada_id: unidadeId
+                });
+
+                // Calcular números sequenciais
+                const numeroNC = `NC${ncsAtuais.length + 1}`;
+                const numeroDeterminacao = `D${determinacoesAtuais.length + 1}`;
+                const numeroRecomendacao = `R${recomendacoesAtuais.length + 1}`;
+
+                setConstatacaoParaNC(constatacao);
+                setNumerosParaNC({
+                    numeroNC,
+                    numeroDeterminacao,
+                    numeroRecomendacao,
+                    numeroConstatacao: constatacao.numero_constatacao
+                });
+                setShowEditarNC(true);
+            }
         },
         onError: (err) => {
             alert(err.message);
@@ -443,95 +471,21 @@ export default function VistoriarUnidade() {
         mutationFn: async (data) => {
             if (!constatacaoParaNC || !numerosParaNC) return;
 
-            // Atualizar o texto da constatação manual
+            // Salvar artigo, texto_determinacao e texto_recomendacao na constatação manual
             let textoConstatacaoFinal = data.texto_constatacao;
             if (textoConstatacaoFinal && !textoConstatacaoFinal.trim().endsWith(';')) {
                 textoConstatacaoFinal = textoConstatacaoFinal.trim() + ';';
             }
+            
             await base44.entities.ConstatacaoManual.update(constatacaoParaNC.id, {
-                descricao: textoConstatacaoFinal
+                descricao: textoConstatacaoFinal,
+                artigo_portaria: data.artigo_portaria,
+                texto_determinacao: data.gera_determinacao ? data.texto_determinacao : null,
+                texto_recomendacao: data.gera_recomendacao ? data.texto_recomendacao : null
             });
-
-            let nc;
-            // Se tem NC existente, atualizar; senão criar
-            if (data.nc_id) {
-                await base44.entities.NaoConformidade.update(data.nc_id, {
-                    artigo_portaria: data.artigo_portaria,
-                    descricao: data.texto_nc
-                });
-                nc = { id: data.nc_id };
-            } else {
-                nc = await base44.entities.NaoConformidade.create({
-                    unidade_fiscalizada_id: unidadeId,
-                    numero_nc: numerosParaNC.numeroNC,
-                    artigo_portaria: data.artigo_portaria,
-                    descricao: data.texto_nc,
-                    fotos: []
-                });
-            }
-
-            let incrementoD = 0;
-            let incrementoR = 0;
-
-            // Determinação: atualizar, criar ou deletar
-            if (data.gera_determinacao && data.texto_determinacao) {
-                const textoFinalDeterminacao = `Para sanar a ${numerosParaNC.numeroNC} ${data.texto_determinacao}. Prazo: 30 dias.`;
-                
-                if (data.determinacao_id) {
-                    await base44.entities.Determinacao.update(data.determinacao_id, {
-                        descricao: textoFinalDeterminacao
-                    });
-                } else {
-                    await base44.entities.Determinacao.create({
-                        unidade_fiscalizada_id: unidadeId,
-                        nao_conformidade_id: nc.id,
-                        numero_determinacao: numerosParaNC.numeroDeterminacao,
-                        descricao: textoFinalDeterminacao,
-                        prazo_dias: 30,
-                        status: 'pendente'
-                    });
-                    incrementoD = 1;
-                }
-            } else if (data.determinacao_id && !data.gera_determinacao) {
-                // Se tinha determinação mas agora não gera mais, deletar
-                await base44.entities.Determinacao.delete(data.determinacao_id);
-            }
-
-            // Recomendação: atualizar, criar ou deletar
-            if (data.gera_recomendacao && data.texto_recomendacao) {
-                if (data.recomendacao_id) {
-                    await base44.entities.Recomendacao.update(data.recomendacao_id, {
-                        descricao: data.texto_recomendacao
-                    });
-                } else {
-                    await base44.entities.Recomendacao.create({
-                        unidade_fiscalizada_id: unidadeId,
-                        numero_recomendacao: numerosParaNC.numeroRecomendacao,
-                        descricao: data.texto_recomendacao,
-                        origem: 'manual'
-                    });
-                    incrementoR = 1;
-                }
-            } else if (data.recomendacao_id && !data.gera_recomendacao) {
-                // Se tinha recomendação mas agora não gera mais, deletar
-                await base44.entities.Recomendacao.delete(data.recomendacao_id);
-            }
-
-            // Incrementar contadores apenas se criou novos
-            if (incrementoD > 0 || incrementoR > 0) {
-                setContadores(prev => ({
-                    ...prev,
-                    NC: data.nc_id ? prev.NC : prev.NC + 1,
-                    D: prev.D + incrementoD,
-                    R: prev.R + incrementoR
-                }));
-            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['constatacoes-manuais', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
             setShowEditarNC(false);
             setConstatacaoParaNC(null);
             setNumerosParaNC(null);
