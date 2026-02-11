@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { base44 } from '@/api/base44Client';
 import OptimizedImage from './OptimizedImage';
+import { resizeAndCompressImage } from '@/components/utils/imageUtils';
 
 export default function PhotoGrid({ 
     fotos = [], 
@@ -42,7 +43,10 @@ export default function PhotoGrid({
             // Processar uma imagem por vez (fila sequencial)
             for (const file of filesArray) {
                 try {
-                    const { file_url } = await base44.integrations.Core.UploadFile({ file: file });
+                    // Redimensionar e comprimir imagem antes do upload
+                    const resizedFile = await resizeAndCompressImage(file, 341, 263, 0.8);
+                    
+                    const { file_url } = await base44.integrations.Core.UploadFile({ file: resizedFile });
                     
                     const novaFoto = {
                         url: file_url,
