@@ -44,7 +44,6 @@ export default function VistoriarUnidade() {
     const [constatacaoParaEditar, setConstatacaoParaEditar] = useState(null);
     const [showConfirmaExclusao, setShowConfirmaExclusao] = useState(false);
     const [constatacaoParaExcluir, setConstatacaoParaExcluir] = useState(null);
-    const [estaSalvandoResposta, setEstaSalvandoResposta] = useState(false);
     const [filaRespostas, setFilaRespostas] = useState([]);
 
     // Queries
@@ -185,10 +184,9 @@ export default function VistoriarUnidade() {
 
     // Processar fila de respostas em batch
     useEffect(() => {
-        if (filaRespostas.length === 0 || estaSalvandoResposta) return;
+        if (filaRespostas.length === 0) return;
 
         const processarBatch = async () => {
-            setEstaSalvandoResposta(true);
             
             try {
                 const batch = [...filaRespostas];
@@ -330,15 +328,13 @@ export default function VistoriarUnidade() {
             } catch (err) {
                 console.error('Erro ao processar batch:', err);
                 alert(err.message);
-            } finally {
-                setEstaSalvandoResposta(false);
             }
         };
 
         // Delay de 300ms para acumular respostas rápidas
         const timer = setTimeout(processarBatch, 300);
         return () => clearTimeout(timer);
-    }, [filaRespostas, estaSalvandoResposta, unidadeId, itensChecklist, respostasExistentes, unidade?.tipo_unidade_id]);
+    }, [filaRespostas, unidadeId, itensChecklist, respostasExistentes, unidade?.tipo_unidade_id]);
 
     const salvarRespostaMutation = useMutation({
         mutationFn: async ({ itemId, data }) => {
@@ -1013,10 +1009,7 @@ export default function VistoriarUnidade() {
                             itensChecklist.map((item, index) => {
                                 // Verificar se é o primeiro item OU se o item anterior já foi respondido
                                 const itemAnterior = index > 0 ? itensChecklist[index - 1] : null;
-                                const itemAnteriorRespondido = !itemAnterior || respostas[itemAnterior.id]?.resposta;
-                                // Bloquear próximas respostas enquanto está salvando (controle duplo)
-                                const estaSalvando = salvarRespostaMutation.isPending || estaSalvandoResposta;
-                                const liberado = itemAnteriorRespondido && !estaSalvando;
+                                const liberado = !itemAnterior || respostas[itemAnterior.id]?.resposta;
                                 
                                 return (
                                     <ChecklistItem
@@ -1025,7 +1018,7 @@ export default function VistoriarUnidade() {
                                         resposta={respostas[item.id]}
                                         onResponder={(data) => handleResponder(item.id, data)}
                                         numero={index + 1}
-                                        desabilitado={(unidade?.status === 'finalizada' && !modoEdicao) || !liberado || salvarRespostaMutation.isPending}
+                                        desabilitado={(unidade?.status === 'finalizada' && !modoEdicao) || !liberado}
                                     />
                                 );
                             })
