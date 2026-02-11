@@ -206,7 +206,8 @@ export default function VistoriarUnidade() {
                     return r.pergunta && r.pergunta.trim();
                 }).length + constatacoesManuais.length + 1;
 
-                for (const { itemId, data } of batch) {
+                for (let i = 0; i < batch.length; i++) {
+                    const { itemId, data } = batch[i];
                     const item = itensChecklist.find(i => i.id === itemId);
                     if (!item) continue;
 
@@ -248,6 +249,11 @@ export default function VistoriarUnidade() {
                     }
 
                     if (temTexto) contadorC++;
+                    
+                    // Delay entre operações para evitar rate limit (200ms)
+                    if (i < batch.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                    }
                 }
 
                 await queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
