@@ -650,33 +650,33 @@ export default function VistoriarUnidade() {
     });
 
     const finalizarUnidadeMutation = useMutation({
-    mutationFn: async () => {
-         // Recarregar dados do banco para contagens precisas
-         const respostasAtuais = await base44.entities.RespostaChecklist.filter({ 
-             unidade_fiscalizada_id: unidadeId 
-         });
-         const ncsAtuais = await base44.entities.NaoConformidade.filter({ 
-             unidade_fiscalizada_id: unidadeId 
-         });
+        mutationFn: async () => {
+            // Recarregar dados do banco para contagens precisas
+            const respostasAtuais = await base44.entities.RespostaChecklist.filter({ 
+                unidade_fiscalizada_id: unidadeId 
+            });
+            const ncsAtuais = await base44.entities.NaoConformidade.filter({ 
+                unidade_fiscalizada_id: unidadeId 
+            });
 
-         const totalConstatacoes = respostasAtuais.filter(r => 
-             r.resposta === 'SIM' || r.resposta === 'NAO'
-         ).length;
+            const totalConstatacoes = respostasAtuais.filter(r => 
+                r.resposta === 'SIM' || r.resposta === 'NAO'
+            ).length;
 
-         // Salvar objetos completos com url e legenda
-         const fotosCompletas = fotos.map(f => {
-             if (typeof f === 'string') {
-                 return { url: f, legenda: '' };
-             }
-             return { url: f.url, legenda: f.legenda || '' };
-         });
-         await base44.entities.UnidadeFiscalizada.update(unidadeId, {
-             status: 'finalizada',
-             fotos_unidade: fotosCompletas,
-             total_constatacoes: totalConstatacoes,
-             total_ncs: ncsAtuais.length
-         });
-         },
+            // Salvar objetos completos com url e legenda
+            const fotosCompletas = fotos.map(f => {
+                if (typeof f === 'string') {
+                    return { url: f, legenda: '' };
+                }
+                return { url: f.url, legenda: f.legenda || '' };
+            });
+            await base44.entities.UnidadeFiscalizada.update(unidadeId, {
+                status: 'finalizada',
+                fotos_unidade: fotosCompletas,
+                total_constatacoes: totalConstatacoes,
+                total_ncs: ncsAtuais.length
+            });
+        },
         onSuccess: () => {
              queryClient.invalidateQueries({ queryKey: ['unidades-fiscalizacao'] });
              navigate(createPageUrl('ExecutarFiscalizacao') + `?id=${unidade.fiscalizacao_id}`);
@@ -741,29 +741,16 @@ export default function VistoriarUnidade() {
         setFotosParaSalvar(prev => [...prev, fotoData]);
     };
 
-    const handleRemoveFoto = async (index) => {
+    const handleRemoveFoto = (index) => {
         const novasFotos = fotos.filter((_, i) => i !== index);
         setFotos(novasFotos);
-        await salvarFotosMutation.mutateAsync(novasFotos);
     };
 
-    const handleUpdateLegenda = async (index, legenda) => {
+    const handleUpdateLegenda = (index, legenda) => {
         const novasFotos = [...fotos];
         novasFotos[index] = { ...novasFotos[index], legenda };
         setFotos(novasFotos);
-        await salvarFotosMutation.mutateAsync(novasFotos);
     };
-
-    // Debounce para salvar fotos após 2 segundos sem adicionar mais
-    React.useEffect(() => {
-        if (fotosParaSalvar.length === 0) return;
-
-        const timer = setTimeout(() => {
-            salvarFotosMutation.mutate(fotos);
-        }, 2000);
-
-        return () => clearTimeout(timer);
-    }, [fotosParaSalvar]);
 
     if (loadingUnidade) {
         return (
@@ -1024,20 +1011,6 @@ export default function VistoriarUnidade() {
                         unidadeId={unidadeId}
                         isEditable={unidade?.status !== 'finalizada' || modoEdicao}
                     />
-                    {(unidade?.status !== 'finalizada' || modoEdicao) && (fotos.length > 0 || fotosParaSalvar.length > 0) && (
-                        <Button
-                            className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
-                            onClick={() => salvarFotosMutation.mutate(fotos)}
-                            disabled={salvarFotosMutation.isPending}
-                        >
-                            {salvarFotosMutation.isPending ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            ) : (
-                                <Save className="h-4 w-4 mr-2" />
-                            )}
-                            Salvar Alterações
-                        </Button>
-                    )}
                     </TabsContent>
 
                     {/* NCs Tab */}
