@@ -194,9 +194,21 @@ Deno.serve(async (req) => {
             }
         }
 
+        // Log para debug
+        console.log('Batch processado:', {
+            respostas_recebidas: respostas.length,
+            respostas_criadas: respostasCriadas.length,
+            ncs_para_criar: ncsParaCriar.length,
+            determinacoes_criadas: determinacoesParaCriar.length,
+            recomendacoes_criadas: recomendacoesParaCriar.length
+        });
+
         return Response.json({ 
             success: true, 
             processados: resultados.length,
+            total_ncs: ncsParaCriar.length,
+            total_determinacoes: determinacoesParaCriar.length,
+            total_recomendacoes: recomendacoesParaCriar.length,
             resultados 
         });
     } catch (error) {
