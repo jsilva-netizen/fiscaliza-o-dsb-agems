@@ -58,14 +58,21 @@ Deno.serve(async (req) => {
                 )).then(r => r.flat())
             ]);
 
-            // Deletar em lotes menores para evitar rate limit
+            // Deletar em lotes menores para evitar rate limit (com delay entre lotes)
             const deleteBatch = async (items, entityName) => {
-                const batchSize = 20;
+                const batchSize = 10;
                 for (let i = 0; i < items.length; i += batchSize) {
                     const batch = items.slice(i, i + batchSize);
                     await Promise.all(batch.map(item => 
-                        base44.asServiceRole.entities[entityName].delete(item.id)
+                        base44.asServiceRole.entities[entityName].delete(item.id).catch(err => {
+                            console.error(`Erro ao deletar ${entityName} ${item.id}:`, err);
+                            return null;
+                        })
                     ));
+                    // Delay entre lotes para evitar rate limit
+                    if (i + batchSize < items.length) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
                 }
             };
 
