@@ -311,8 +311,12 @@ export default function VistoriarUnidade() {
             return { itemId, data };
         },
         onSuccess: async ({ itemId, data }) => {
-            // Atualizar estado local imediatamente para feedback instantâneo
+            const item = itensChecklist.find(i => i.id === itemId);
             const respostaAtual = respostasExistentes.find(r => r.item_checklist_id === itemId);
+            const mudouResposta = respostaAtual?.resposta !== data.resposta;
+            const geraNC = item?.gera_nc && data.resposta === 'NAO';
+            
+            // Atualizar estado local imediatamente para feedback instantâneo
             if (respostaAtual) {
                 setRespostas(prev => ({
                     ...prev,
@@ -323,19 +327,32 @@ export default function VistoriarUnidade() {
                         pergunta: data.pergunta
                     }
                 }));
+            } else {
+                // Se é nova resposta, adicionar ao estado
+                setRespostas(prev => ({
+                    ...prev,
+                    [itemId]: { 
+                        item_checklist_id: itemId,
+                        resposta: data.resposta, 
+                        observacao: data.observacao,
+                        pergunta: data.pergunta
+                    }
+                }));
             }
             
-            // Pequeno delay antes de invalidar para evitar rate limit
-            await new Promise(resolve => setTimeout(resolve, 200));
+            // Só invalidar respostas sempre (necessário para atualizar contadores)
+            await new Promise(resolve => setTimeout(resolve, 300));
+            queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
             
-            // Invalidar queries de forma sequencial com delay
-            await queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
-            await new Promise(resolve => setTimeout(resolve, 50));
-            await queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
-            await new Promise(resolve => setTimeout(resolve, 50));
-            await queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
-            await new Promise(resolve => setTimeout(resolve, 50));
-            await queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
+            // Só invalidar NCs/Ds/Rs se mudou resposta OU se gera NC
+            if (mudouResposta || geraNC) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
+                await new Promise(resolve => setTimeout(resolve, 100));
+                queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
+                await new Promise(resolve => setTimeout(resolve, 100));
+                queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
+            }
         },
         onError: (err) => {
             alert(err.message);
