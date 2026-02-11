@@ -77,8 +77,9 @@ export default function VistoriarUnidade() {
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
-        staleTime: 30000,
-        gcTime: 300000
+        staleTime: 120000,
+        gcTime: 300000,
+        refetchOnWindowFocus: false
     });
 
     const { data: ncsExistentes = [] } = useQuery({
@@ -88,8 +89,9 @@ export default function VistoriarUnidade() {
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
-        staleTime: 30000,
-        gcTime: 300000
+        staleTime: 120000,
+        gcTime: 300000,
+        refetchOnWindowFocus: false
     });
 
 
@@ -101,8 +103,9 @@ export default function VistoriarUnidade() {
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
-        staleTime: 30000,
-        gcTime: 300000
+        staleTime: 120000,
+        gcTime: 300000,
+        refetchOnWindowFocus: false
     });
 
     const { data: recomendacoesExistentes = [] } = useQuery({
@@ -112,8 +115,9 @@ export default function VistoriarUnidade() {
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
-        staleTime: 30000,
-        gcTime: 300000
+        staleTime: 120000,
+        gcTime: 300000,
+        refetchOnWindowFocus: false
     });
 
     const { data: constatacoesManuais = [] } = useQuery({
@@ -123,8 +127,9 @@ export default function VistoriarUnidade() {
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
-        staleTime: 30000,
-        gcTime: 300000
+        staleTime: 120000,
+        gcTime: 300000,
+        refetchOnWindowFocus: false
     });
 
     useEffect(() => {
@@ -305,7 +310,7 @@ export default function VistoriarUnidade() {
             
             return { itemId, data };
         },
-        onSuccess: ({ itemId, data }) => {
+        onSuccess: async ({ itemId, data }) => {
             // Atualizar estado local imediatamente para feedback instantâneo
             const respostaAtual = respostasExistentes.find(r => r.item_checklist_id === itemId);
             if (respostaAtual) {
@@ -320,11 +325,17 @@ export default function VistoriarUnidade() {
                 }));
             }
             
-            // Invalidar queries - React Query faz refetch automaticamente
-            queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
-            queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
+            // Pequeno delay antes de invalidar para evitar rate limit
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            // Invalidar queries de forma sequencial com delay
+            await queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
+            await new Promise(resolve => setTimeout(resolve, 50));
+            await queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
+            await new Promise(resolve => setTimeout(resolve, 50));
+            await queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
+            await new Promise(resolve => setTimeout(resolve, 50));
+            await queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
         },
         onError: (err) => {
             alert(err.message);
@@ -949,7 +960,9 @@ export default function VistoriarUnidade() {
                                 // Verificar se é o primeiro item OU se o item anterior já foi respondido
                                 const itemAnterior = index > 0 ? itensChecklist[index - 1] : null;
                                 const itemAnteriorRespondido = !itemAnterior || respostas[itemAnterior.id]?.resposta;
-                                const liberado = itemAnteriorRespondido && !salvarRespostaMutation.isPending;
+                                // Bloquear próximas respostas enquanto está salvando
+                                const estaSalvando = salvarRespostaMutation.isPending;
+                                const liberado = itemAnteriorRespondido && !estaSalvando;
                                 
                                 return (
                                     <ChecklistItem
