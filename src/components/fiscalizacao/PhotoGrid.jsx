@@ -34,26 +34,42 @@ export default function PhotoGrid({
         setTotalUploads(files.length);
         setUploadProgress(0);
 
+        const filesArray = Array.from(files);
+        let processados = 0;
+        let erros = 0;
+
         try {
-            let processados = 0;
-
             // Processar uma imagem por vez (fila sequencial)
-            for (const file of Array.from(files)) {
-                const { file_url } = await base44.integrations.Core.UploadFile({ file: file });
-                
-                const novaFoto = {
-                    url: file_url,
-                    data_hora: new Date().toISOString()
-                };
+            for (const file of filesArray) {
+                try {
+                    const { file_url } = await base44.integrations.Core.UploadFile({ file: file });
+                    
+                    const novaFoto = {
+                        url: file_url,
+                        data_hora: new Date().toISOString()
+                    };
 
-                // Adicionar imediatamente após upload
-                onAddFoto(novaFoto);
+                    // Adicionar imediatamente após upload
+                    onAddFoto(novaFoto);
 
-                processados++;
-                setUploadProgress(processados);
+                    processados++;
+                    setUploadProgress(processados);
+                    
+                    // Delay entre uploads para evitar rate limit
+                    if (processados < filesArray.length) {
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                    }
+                } catch (fileErr) {
+                    console.error('Erro ao fazer upload do arquivo:', file.name, fileErr);
+                    erros++;
+                }
+            }
+            
+            if (erros > 0) {
+                alert(`${erros} arquivo(s) não puderam ser enviados. ${processados} enviados com sucesso.`);
             }
         } catch (err) {
-            console.error('Erro upload:', err);
+            console.error('Erro geral no upload:', err);
             alert('Erro ao fazer upload: ' + err.message);
         } finally {
             setIsUploading(false);
