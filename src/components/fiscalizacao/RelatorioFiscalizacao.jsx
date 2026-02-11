@@ -302,7 +302,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
                     if (yPos + cellHeight > pageHeight - bottomMargin) {
                         pdf.addPage();
-                        addTimbradoToPage(pdf, timbradoBase64);
                         yPos = topMargin;
                     }
 
@@ -324,7 +323,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
                     if (yPos + cellHeight > pageHeight - bottomMargin) {
                         pdf.addPage();
-                        addTimbradoToPage(pdf, timbradoBase64);
                         yPos = topMargin;
                     }
 
@@ -339,7 +337,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
                 if (yPos + rowHeight > pageHeight - bottomMargin) {
                     pdf.addPage();
-                    addTimbradoToPage(pdf, timbradoBase64);
                     yPos = topMargin;
                 }
                 drawCell('Não Conformidades', margin, yPos, tableWidth, rowHeight, true, true, [189, 214, 238]);
@@ -437,7 +434,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
                 if (yPos + rowHeight > pageHeight - bottomMargin) {
                     pdf.addPage();
-                    addTimbradoToPage(pdf, timbradoBase64);
                     yPos = topMargin;
                 }
                 drawCell('Determinações', margin, yPos, tableWidth, rowHeight, true, true, [189, 214, 238]);
@@ -531,7 +527,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
                     for (let i = 0; i < fotosBase64.length; i += 2) {
                         if (yPos + totalCellHeight + 10 > pageHeight - bottomMargin) {
                             pdf.addPage();
-                            addTimbradoToPage(pdf, timbradoBase64);
                             yPos = topMargin;
                         }
 
