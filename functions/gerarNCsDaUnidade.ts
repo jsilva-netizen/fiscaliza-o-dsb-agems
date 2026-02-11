@@ -52,6 +52,11 @@ Deno.serve(async (req) => {
         let contadorR = 1;
 
         // 3.1 NCs do checklist
+        console.log('🔍 Total de respostas para processar:', respostas.length);
+        console.log('🔍 Respostas NAO:', respostas.filter(r => r.resposta === 'NAO').length);
+        console.log('🔍 Respostas com gera_nc=true:', respostas.filter(r => r.gera_nc).length);
+        console.log('🔍 Respostas NAO com gera_nc=true:', respostas.filter(r => r.resposta === 'NAO' && r.gera_nc).length);
+        
         for (const resposta of respostas) {
             const item = itensMap[resposta.item_checklist_id];
             if (!item) {
@@ -61,9 +66,10 @@ Deno.serve(async (req) => {
 
             console.log('🔍 Verificando resposta:', {
                 id: resposta.id,
+                pergunta_curta: resposta.pergunta?.substring(0, 50),
                 resposta: resposta.resposta,
                 gera_nc: resposta.gera_nc,
-                tem_texto_nc: !!item.texto_nc
+                item_gera_nc: item.gera_nc
             });
 
             if (resposta.resposta === 'NAO' && resposta.gera_nc) {
