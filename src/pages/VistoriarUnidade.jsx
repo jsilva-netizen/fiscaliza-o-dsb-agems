@@ -556,28 +556,22 @@ export default function VistoriarUnidade() {
         mutationFn: async () => {
             console.log('🔵 Iniciando salvamento de alterações da unidade:', unidadeId);
             
-            // 1. Primeiro excluir NC/D/R antigas
+            // 1. Primeiro excluir NC/D/R antigas (em paralelo)
             console.log('🔵 Excluindo NC/D/R antigas...');
-            const ncsAntigas = await base44.entities.NaoConformidade.filter({ 
-                unidade_fiscalizada_id: unidadeId 
-            });
-            const determinacoesAntigas = await base44.entities.Determinacao.filter({ 
-                unidade_fiscalizada_id: unidadeId 
-            });
-            const recomendacoesAntigas = await base44.entities.Recomendacao.filter({ 
-                unidade_fiscalizada_id: unidadeId,
-                origem: 'checklist'
-            });
+            const [ncsAntigas, determinacoesAntigas, recomendacoesAntigas] = await Promise.all([
+                base44.entities.NaoConformidade.filter({ unidade_fiscalizada_id: unidadeId }),
+                base44.entities.Determinacao.filter({ unidade_fiscalizada_id: unidadeId }),
+                base44.entities.Recomendacao.filter({ unidade_fiscalizada_id: unidadeId, origem: 'checklist' })
+            ]);
 
-            for (const nc of ncsAntigas) {
-                await base44.entities.NaoConformidade.delete(nc.id);
-            }
-            for (const det of determinacoesAntigas) {
-                await base44.entities.Determinacao.delete(det.id);
-            }
-            for (const rec of recomendacoesAntigas) {
-                await base44.entities.Recomendacao.delete(rec.id);
-            }
+            // Excluir tudo em paralelo
+            const deletePromises = [
+                ...ncsAntigas.map(nc => base44.entities.NaoConformidade.delete(nc.id)),
+                ...determinacoesAntigas.map(det => base44.entities.Determinacao.delete(det.id)),
+                ...recomendacoesAntigas.map(rec => base44.entities.Recomendacao.delete(rec.id))
+            ];
+            
+            await Promise.all(deletePromises);
 
             // 2. Regenerar NC/D/R com base nas respostas atuais
             console.log('🔵 Regenerando NC/D/R...');
