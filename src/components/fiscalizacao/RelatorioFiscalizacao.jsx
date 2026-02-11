@@ -375,12 +375,23 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
                     ncsSorted.forEach((nc) => {
                         const respostaRelacionada = respostas.find(r => r.id === nc.resposta_checklist_id);
-                        const numConstatacaoNovo = respostaRelacionada ? `C${mapeamento.constatacoes[respostaRelacionada.id]}` : '';
-                        const novoNumNC = `NC${mapeamento.ncs[nc.id]}`;
-                        const numConstaCorrigido = numConstatacaoNovo || (respostaRelacionada?.numero_constatacao || '');
+                        const constatacaoManualRelacionada = constatacoesManuais.find(cm => 
+                            !nc.resposta_checklist_id && 
+                            nc.descricao && 
+                            nc.descricao.includes(cm.numero_constatacao)
+                        );
                         
-                        const descricaoCompleta = numConstaCorrigido 
-                            ? `A Constatação ${numConstaCorrigido} não cumpre o disposto no ${nc.artigo_portaria || 'artigo'};`
+                        let numConstatacaoNovo = '';
+                        if (respostaRelacionada) {
+                            numConstatacaoNovo = `C${mapeamento.constatacoes[respostaRelacionada.id]}`;
+                        } else if (constatacaoManualRelacionada) {
+                            numConstatacaoNovo = `C${mapeamento.constatacoes[constatacaoManualRelacionada.id]}`;
+                        }
+                        
+                        const novoNumNC = `NC${mapeamento.ncs[nc.id]}`;
+                        
+                        const descricaoCompleta = numConstatacaoNovo 
+                            ? `A Constatação ${numConstatacaoNovo} não cumpre o disposto no ${nc.artigo_portaria || 'artigo'};`
                             : nc.descricao;
                         
                         const restLines = pdf.splitTextToSize(descricaoCompleta, tableWidth - 15);
@@ -462,7 +473,18 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
                     detsSorted.forEach((det) => {
                         const novoNumDet = `D${mapeamento.determinacoes[det.id]}`;
-                        const texto = det.descricao;
+                        let texto = det.descricao;
+                        
+                        // Adicionar ponto final se não tiver
+                        if (!texto.trim().endsWith('.')) {
+                            texto = texto.trim() + '.';
+                        }
+                        
+                        // Se não tiver prazo no final, adicionar
+                        if (!texto.includes('Prazo:')) {
+                            texto = `${texto} Prazo: ${det.prazo_dias} dias.`;
+                        }
+                        
                         const restLines = pdf.splitTextToSize(texto, tableWidth - 15);
                         const cellHeight = Math.max(rowHeight, restLines.length * 5 + 4);
 
