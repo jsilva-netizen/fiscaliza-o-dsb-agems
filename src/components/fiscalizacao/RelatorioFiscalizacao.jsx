@@ -375,7 +375,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
                         if (yPos + cellHeight > pageHeight - bottomMargin) {
                             pdf.addPage();
-                            addTimbradoToPage(pdf, timbradoBase64);
                             yPos = topMargin;
                         }
 
@@ -418,7 +417,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
                         if (yPos + cellHeight > pageHeight - bottomMargin) {
                             pdf.addPage();
-                            addTimbradoToPage(pdf, timbradoBase64);
                             yPos = topMargin;
                         }
 
@@ -473,7 +471,6 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
                         if (yPos + cellHeight > pageHeight - bottomMargin) {
                             pdf.addPage();
-                            addTimbradoToPage(pdf, timbradoBase64);
                             yPos = topMargin;
                         }
 
