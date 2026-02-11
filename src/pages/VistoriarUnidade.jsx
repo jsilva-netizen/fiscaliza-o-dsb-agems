@@ -182,19 +182,14 @@ export default function VistoriarUnidade() {
         }
     }, [respostasExistentes.length]);
 
-    // Processar fila de respostas em batch
+    // Processar fila de respostas (apenas criar RespostaChecklist)
     useEffect(() => {
         if (filaRespostas.length === 0) return;
 
         const processarBatch = async () => {
-            
             try {
                 const batch = [...filaRespostas];
                 setFilaRespostas([]);
-
-                // Separar respostas novas de atualizações
-                const respostasNovas = [];
-                const atualizacoes = [];
 
                 for (const { itemId, data } of batch) {
                     const item = itensChecklist.find(i => i.id === itemId);
@@ -202,128 +197,43 @@ export default function VistoriarUnidade() {
 
                     const respostaExistente = respostasExistentes.find(r => r.item_checklist_id === itemId);
                     
-                    if (respostaExistente?.id) {
-                        atualizacoes.push({ itemId, data, item, respostaExistente });
-                    } else {
-                        respostasNovas.push({ itemId, data, item });
-                    }
-                }
-
-                // Processar atualizações individualmente
-                for (const { itemId, data, item, respostaExistente } of atualizacoes) {
-                    const respostaAnterior = respostaExistente.resposta;
-                    const mudouResposta = respostaAnterior !== data.resposta;
-
                     let textoConstatacao = data.resposta === 'SIM' 
                         ? item.texto_constatacao_sim 
                         : data.resposta === 'NAO' 
                             ? item.texto_constatacao_nao 
                             : null;
                     
-                    if (!textoConstatacao || !textoConstatacao.trim()) {
-                        textoConstatacao = null;
-                    } else if (!textoConstatacao.trim().endsWith(';')) {
-                        textoConstatacao = textoConstatacao.trim() + ';';
-                    }
-
-                    await base44.entities.RespostaChecklist.update(respostaExistente.id, {
-                        resposta: data.resposta,
-                        observacao: data.observacao || '',
-                        pergunta: textoConstatacao || ''
-                    });
-
-                    if (mudouResposta) {
-                        const { data: result } = await base44.functions.invoke('renumerarConstatacoes', {
-                            unidade_fiscalizada_id: unidadeId,
-                            tipo_unidade_id: unidade.tipo_unidade_id
-                        });
-                        
-                        if (result.success) {
-                            setContadores(result.contadores);
-                        }
-                    }
-                }
-
-                // Processar respostas novas em batch
-                if (respostasNovas.length > 0) {
-                    const respostasExistentesAgora = await base44.entities.RespostaChecklist.filter({
-                        unidade_fiscalizada_id: unidadeId
-                    }, 'created_date', 200);
-                    
-                    const constatacoesManuaisExistentesAgora = await base44.entities.ConstatacaoManual.filter({
-                        unidade_fiscalizada_id: unidadeId
-                    }, 'ordem', 100);
-                    
-                    const ncsExistentesAgora = await base44.entities.NaoConformidade.filter({
-                        unidade_fiscalizada_id: unidadeId
-                    });
-                    
-                    const determinacoesExistentesAgora = await base44.entities.Determinacao.filter({
-                        unidade_fiscalizada_id: unidadeId
-                    });
-
-                    let contadorC = respostasExistentesAgora.filter(r => {
-                        if (r.resposta !== 'SIM' && r.resposta !== 'NAO') return false;
-                        return r.pergunta && r.pergunta.trim();
-                    }).length + constatacoesManuaisExistentesAgora.length + 1;
-                    
-                    let contadorNC = ncsExistentesAgora.length + 1;
-                    let contadorD = determinacoesExistentesAgora.length + 1;
-
-                    const batchData = [];
-
-                    for (const { itemId, data, item } of respostasNovas) {
-                        let textoConstatacao = data.resposta === 'SIM' 
-                            ? item.texto_constatacao_sim 
-                            : data.resposta === 'NAO' 
-                                ? item.texto_constatacao_nao 
-                                : null;
-                        
-                        const temTextoConstatacao = textoConstatacao && textoConstatacao.trim();
-                        
-                        if (temTextoConstatacao && !textoConstatacao.trim().endsWith(';')) {
+                    if (textoConstatacao && textoConstatacao.trim()) {
+                        if (!textoConstatacao.trim().endsWith(';')) {
                             textoConstatacao = textoConstatacao.trim() + ';';
-                        } else if (!temTextoConstatacao) {
-                            textoConstatacao = null;
                         }
-
-                        const numeroConstatacao = temTextoConstatacao ? `C${contadorC}` : null;
-
-                        batchData.push({
+                    } else {
+                        textoConstatacao = null;
+                    }
+                    
+                    if (respostaExistente?.id) {
+                        // Atualizar resposta existente
+                        await base44.entities.RespostaChecklist.update(respostaExistente.id, {
+                            resposta: data.resposta,
+                            observacao: data.observacao || '',
+                            pergunta: textoConstatacao || ''
+                        });
+                    } else {
+                        // Criar nova resposta (sem NC/D)
+                        await base44.entities.RespostaChecklist.create({
                             unidade_fiscalizada_id: unidadeId,
                             item_checklist_id: itemId,
                             pergunta: textoConstatacao,
-                            numero_constatacao: numeroConstatacao,
-                            numero_nc: `NC${contadorNC}`,
-                            numero_determinacao: `D${contadorD}`,
-                            numero_recomendacao: `R${contadorNC}`,
-                            artigo_portaria: item.artigo_portaria,
-                            texto_nc: item.texto_nc,
-                            texto_determinacao: item.texto_determinacao,
-                            texto_recomendacao: item.texto_recomendacao,
-                            prazo_dias: item.prazo_dias || 30,
-                            resposta_value: data.resposta
+                            resposta: data.resposta,
+                            gera_nc: false, // Será atualizado ao finalizar
+                            numero_constatacao: null, // Será gerado ao finalizar
+                            observacao: data.observacao || ''
                         });
-
-                        if (temTextoConstatacao) contadorC++;
-                        if (item.gera_nc && data.resposta === 'NAO') {
-                            contadorNC++;
-                            contadorD++;
-                        }
                     }
-
-                    // Enviar batch para backend
-                    await base44.functions.invoke('criarNcComDeterminacaoBatch', {
-                        respostas: batchData
-                    });
                 }
 
-                // Invalidar queries uma única vez após tudo
+                // Invalidar apenas respostas
                 await queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
-                await queryClient.invalidateQueries({ queryKey: ['constatacoes-manuais', unidadeId] });
-                await queryClient.invalidateQueries({ queryKey: ['ncs', unidadeId] });
-                await queryClient.invalidateQueries({ queryKey: ['determinacoes', unidadeId] });
-                await queryClient.invalidateQueries({ queryKey: ['recomendacoes', unidadeId] });
 
             } catch (err) {
                 console.error('Erro ao processar batch:', err);
@@ -331,10 +241,9 @@ export default function VistoriarUnidade() {
             }
         };
 
-        // Delay de 300ms para acumular respostas rápidas
         const timer = setTimeout(processarBatch, 300);
         return () => clearTimeout(timer);
-    }, [filaRespostas, unidadeId, itensChecklist, respostasExistentes, unidade?.tipo_unidade_id]);
+    }, [filaRespostas, unidadeId, itensChecklist, respostasExistentes]);
 
     const salvarRespostaMutation = useMutation({
         mutationFn: async ({ itemId, data }) => {
@@ -681,30 +590,28 @@ export default function VistoriarUnidade() {
 
     const finalizarUnidadeMutation = useMutation({
         mutationFn: async () => {
-            // Recarregar dados do banco para contagens precisas
-            const respostasAtuais = await base44.entities.RespostaChecklist.filter({ 
-                unidade_fiscalizada_id: unidadeId 
-            });
-            const ncsAtuais = await base44.entities.NaoConformidade.filter({ 
-                unidade_fiscalizada_id: unidadeId 
+            // 1. Gerar todas as NC/D/R baseado no checklist completo
+            const { data: result } = await base44.functions.invoke('gerarNCsDaUnidade', {
+                unidade_fiscalizada_id: unidadeId
             });
 
-            const totalConstatacoes = respostasAtuais.filter(r => 
-                r.resposta === 'SIM' || r.resposta === 'NAO'
-            ).length;
+            if (!result.success) {
+                throw new Error(result.error || 'Erro ao gerar NC/D/R');
+            }
 
-            // Salvar objetos completos com url e legenda
+            // 2. Atualizar status e fotos da unidade
             const fotosCompletas = fotos.map(f => {
                 if (typeof f === 'string') {
                     return { url: f, legenda: '' };
                 }
                 return { url: f.url, legenda: f.legenda || '' };
             });
+            
             await base44.entities.UnidadeFiscalizada.update(unidadeId, {
                 status: 'finalizada',
                 fotos_unidade: fotosCompletas,
-                total_constatacoes: totalConstatacoes,
-                total_ncs: ncsAtuais.length
+                total_constatacoes: result.total_constatacoes || 0,
+                total_ncs: result.total_ncs || 0
             });
         },
         onSuccess: () => {
