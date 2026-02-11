@@ -16,8 +16,13 @@ Deno.serve(async (req) => {
         }
 
         const resultados = [];
+        
+        // Preparar dados para bulk operations
+        const respostasParaCriar = [];
+        const ncsParaCriar = [];
+        const determinacoesParaCriar = [];
+        const recomendacoesParaCriar = [];
 
-        // Processar cada resposta sequencialmente
         for (const respostaData of respostas) {
             const { 
                 unidade_fiscalizada_id,
@@ -41,85 +46,150 @@ Deno.serve(async (req) => {
                 perguntaFormatada = perguntaFormatada.trim() + ';';
             }
 
-            // Criar RespostaChecklist
-            const resposta = await base44.entities.RespostaChecklist.create({
+            respostasParaCriar.push({
                 unidade_fiscalizada_id,
                 item_checklist_id,
                 pergunta: perguntaFormatada,
                 resposta: resposta_value,
                 gera_nc: resposta_value === 'NAO' && !!texto_nc,
                 numero_constatacao,
-                observacao: ''
+                observacao: '',
+                _metadata: { artigo_portaria, texto_nc, texto_determinacao, texto_recomendacao, numero_nc, numero_determinacao, numero_recomendacao, prazo_dias }
             });
+        }
 
-            let resultado = {
+        // Criar todas as respostas de uma vez
+        const respostasCriadas = await base44.asServiceRole.entities.RespostaChecklist.bulkCreate(respostasParaCriar.map(r => ({
+            unidade_fiscalizada_id: r.unidade_fiscalizada_id,
+            item_checklist_id: r.item_checklist_id,
+            pergunta: r.pergunta,
+            resposta: r.resposta,
+            gera_nc: r.gera_nc,
+            numero_constatacao: r.numero_constatacao,
+            observacao: r.observacao
+        })));
+
+        // Preparar NCs, Determinações e Recomendações baseado nas respostas criadas
+        for (let i = 0; i < respostasCriadas.length; i++) {
+            const resposta = respostasCriadas[i];
+            const metadata = respostasParaCriar[i]._metadata;
+            
+            resultados.push({
                 success: true,
-                item_checklist_id,
+                item_checklist_id: respostasParaCriar[i].item_checklist_id,
                 resposta: {
                     id: resposta.id,
-                    numero_constatacao
+                    numero_constatacao: resposta.numero_constatacao
                 }
-            };
+            });
 
-            // Se gera NC
-            if (resposta_value === 'NAO' && texto_nc) {
-                const descricaoNC = `A Constatação ${numero_constatacao} não cumpre o disposto no ${artigo_portaria};`;
+            if (resposta.resposta === 'NAO' && metadata.texto_nc) {
+                const descricaoNC = `A Constatação ${resposta.numero_constatacao} não cumpre o disposto no ${metadata.artigo_portaria};`;
 
-                const nc = await base44.entities.NaoConformidade.create({
-                    unidade_fiscalizada_id,
+                ncsParaCriar.push({
+                    unidade_fiscalizada_id: resposta.unidade_fiscalizada_id,
                     resposta_checklist_id: resposta.id,
-                    numero_nc,
-                    artigo_portaria,
-                    descricao: descricaoNC
+                    numero_nc: metadata.numero_nc,
+                    artigo_portaria: metadata.artigo_portaria,
+                    descricao: descricaoNC,
+                    _index: i,
+                    _metadata: metadata
                 });
+            }
+        }
 
-                resultado.nc = {
+        // Criar todas as NCs de uma vez
+        if (ncsParaCriar.length > 0) {
+            const ncsCriadas = await base44.asServiceRole.entities.NaoConformidade.bulkCreate(ncsParaCriar.map(nc => ({
+                unidade_fiscalizada_id: nc.unidade_fiscalizada_id,
+                resposta_checklist_id: nc.resposta_checklist_id,
+                numero_nc: nc.numero_nc,
+                artigo_portaria: nc.artigo_portaria,
+                descricao: nc.descricao
+            })));
+
+            // Preparar Determinações e Recomendações
+            for (let i = 0; i < ncsCriadas.length; i++) {
+                const nc = ncsCriadas[i];
+                const metadata = ncsParaCriar[i]._metadata;
+                const resultIndex = ncsParaCriar[i]._index;
+
+                resultados[resultIndex].nc = {
                     id: nc.id,
-                    numero_nc
+                    numero_nc: nc.numero_nc
                 };
 
-                // Criar Determinação se houver
-                if (texto_determinacao) {
+                if (metadata.texto_determinacao) {
                     const hoje = new Date();
                     const data_limite = new Date(hoje);
-                    data_limite.setDate(data_limite.getDate() + prazo_dias);
+                    data_limite.setDate(data_limite.getDate() + metadata.prazo_dias);
                     const data_limite_str = data_limite.toISOString().split('T')[0];
 
-                    const descricaoDeterminacao = `Para sanar a ${numero_nc} ${texto_determinacao}`;
+                    const descricaoDeterminacao = `Para sanar a ${nc.numero_nc} ${metadata.texto_determinacao}`;
 
-                    const det = await base44.entities.Determinacao.create({
-                        unidade_fiscalizada_id,
+                    determinacoesParaCriar.push({
+                        unidade_fiscalizada_id: nc.unidade_fiscalizada_id,
                         nao_conformidade_id: nc.id,
-                        numero_determinacao,
+                        numero_determinacao: metadata.numero_determinacao,
                         descricao: descricaoDeterminacao,
-                        prazo_dias,
+                        prazo_dias: metadata.prazo_dias,
                         data_limite: data_limite_str,
-                        status: 'pendente'
+                        status: 'pendente',
+                        _index: resultIndex,
+                        _data_limite_str: data_limite_str
                     });
-
-                    resultado.determinacao = {
-                        id: det.id,
-                        numero_determinacao,
-                        data_limite: data_limite_str
-                    };
+                } else if (metadata.texto_recomendacao) {
+                    recomendacoesParaCriar.push({
+                        unidade_fiscalizada_id: nc.unidade_fiscalizada_id,
+                        numero_recomendacao: metadata.numero_recomendacao,
+                        descricao: metadata.texto_recomendacao,
+                        origem: 'checklist',
+                        _index: resultIndex
+                    });
                 }
-                // Criar Recomendação se houver
-                else if (texto_recomendacao) {
-                    const rec = await base44.entities.Recomendacao.create({
-                        unidade_fiscalizada_id,
-                        numero_recomendacao,
-                        descricao: texto_recomendacao,
-                        origem: 'checklist'
-                    });
+            }
 
-                    resultado.recomendacao = {
-                        id: rec.id,
-                        numero_recomendacao
+            // Criar todas as Determinações de uma vez
+            if (determinacoesParaCriar.length > 0) {
+                const detsCriadas = await base44.asServiceRole.entities.Determinacao.bulkCreate(determinacoesParaCriar.map(d => ({
+                    unidade_fiscalizada_id: d.unidade_fiscalizada_id,
+                    nao_conformidade_id: d.nao_conformidade_id,
+                    numero_determinacao: d.numero_determinacao,
+                    descricao: d.descricao,
+                    prazo_dias: d.prazo_dias,
+                    data_limite: d.data_limite,
+                    status: d.status
+                })));
+
+                for (let i = 0; i < detsCriadas.length; i++) {
+                    const det = detsCriadas[i];
+                    const resultIndex = determinacoesParaCriar[i]._index;
+                    resultados[resultIndex].determinacao = {
+                        id: det.id,
+                        numero_determinacao: det.numero_determinacao,
+                        data_limite: determinacoesParaCriar[i]._data_limite_str
                     };
                 }
             }
 
-            resultados.push(resultado);
+            // Criar todas as Recomendações de uma vez
+            if (recomendacoesParaCriar.length > 0) {
+                const recsCriadas = await base44.asServiceRole.entities.Recomendacao.bulkCreate(recomendacoesParaCriar.map(r => ({
+                    unidade_fiscalizada_id: r.unidade_fiscalizada_id,
+                    numero_recomendacao: r.numero_recomendacao,
+                    descricao: r.descricao,
+                    origem: r.origem
+                })));
+
+                for (let i = 0; i < recsCriadas.length; i++) {
+                    const rec = recsCriadas[i];
+                    const resultIndex = recomendacoesParaCriar[i]._index;
+                    resultados[resultIndex].recomendacao = {
+                        id: rec.id,
+                        numero_recomendacao: rec.numero_recomendacao
+                    };
+                }
+            }
         }
 
         return Response.json({ 
