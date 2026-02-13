@@ -45,7 +45,6 @@ export default function VistoriarUnidade() {
     const [showConfirmaExclusao, setShowConfirmaExclusao] = useState(false);
     const [constatacaoParaExcluir, setConstatacaoParaExcluir] = useState(null);
     const [filaRespostas, setFilaRespostas] = useState([]);
-    const [ultimaRespostaTimestamp, setUltimaRespostaTimestamp] = useState(0);
 
     // Queries
     const { data: unidade, isLoading: loadingUnidade } = useQuery({
@@ -190,7 +189,7 @@ export default function VistoriarUnidade() {
         }
     }, [respostasExistentes.length]);
 
-    // Processar fila de respostas (criar RespostaChecklist + numerar constatações)
+    // Debouncing inteligente: aguarda 3s após última resposta para salvar tudo de uma vez
     useEffect(() => {
         if (filaRespostas.length === 0) return;
 
@@ -199,24 +198,25 @@ export default function VistoriarUnidade() {
                 const batch = [...filaRespostas];
                 setFilaRespostas([]);
 
-                // Buscar dados atuais
-                const respostasAtuais = await base44.entities.RespostaChecklist.filter({
-                    unidade_fiscalizada_id: unidadeId
-                }, 'created_date', 200);
-                
-                const constatacoesManuais = await base44.entities.ConstatacaoManual.filter({
-                    unidade_fiscalizada_id: unidadeId
-                }, 'ordem', 100);
+                // Buscar dados atuais uma única vez
+                const [respostasAtuais, constatacoesManuais] = await Promise.all([
+                    base44.entities.RespostaChecklist.filter({
+                        unidade_fiscalizada_id: unidadeId
+                    }, 'created_date', 200),
+                    base44.entities.ConstatacaoManual.filter({
+                        unidade_fiscalizada_id: unidadeId
+                    }, 'ordem', 100)
+                ]);
 
                 let contadorC = respostasAtuais.filter(r => {
                     if (r.resposta !== 'SIM' && r.resposta !== 'NAO') return false;
                     return r.pergunta && r.pergunta.trim();
                 }).length + constatacoesManuais.length + 1;
 
-                for (let i = 0; i < batch.length; i++) {
-                    const { itemId, data } = batch[i];
+                // Processar todas as respostas em paralelo (muito mais rápido!)
+                const operacoes = batch.map(async ({ itemId, data }) => {
                     const item = itensChecklist.find(i => i.id === itemId);
-                    if (!item) continue;
+                    if (!item) return;
 
                     const respostaExistente = respostasAtuais.find(r => r.item_checklist_id === itemId);
                     
@@ -233,36 +233,28 @@ export default function VistoriarUnidade() {
                         textoConstatacao = null;
                     }
 
-                    const numeroConstatacao = temTexto ? `C${contadorC}` : null;
+                    const numeroConstatacao = temTexto ? `C${contadorC++}` : null;
                     
+                    const respostaData = {
+                        resposta: data.resposta,
+                        observacao: data.observacao || '',
+                        pergunta: textoConstatacao || '',
+                        numero_constatacao: numeroConstatacao,
+                        gera_nc: data.resposta === 'NAO' && item.gera_nc
+                    };
+
                     if (respostaExistente?.id) {
-                        await base44.entities.RespostaChecklist.update(respostaExistente.id, {
-                            resposta: data.resposta,
-                            observacao: data.observacao || '',
-                            pergunta: textoConstatacao || '',
-                            numero_constatacao: numeroConstatacao,
-                            gera_nc: data.resposta === 'NAO' && item.gera_nc
-                        });
+                        return base44.entities.RespostaChecklist.update(respostaExistente.id, respostaData);
                     } else {
-                        await base44.entities.RespostaChecklist.create({
+                        return base44.entities.RespostaChecklist.create({
                             unidade_fiscalizada_id: unidadeId,
                             item_checklist_id: itemId,
-                            pergunta: textoConstatacao,
-                            resposta: data.resposta,
-                            gera_nc: data.resposta === 'NAO' && item.gera_nc,
-                            numero_constatacao: numeroConstatacao,
-                            observacao: data.observacao || ''
+                            ...respostaData
                         });
                     }
+                });
 
-                    if (temTexto) contadorC++;
-                    
-                    // Delay maior entre operações para evitar rate limit (600ms)
-                    if (i < batch.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 600));
-                    }
-                }
-
+                await Promise.all(operacoes);
                 await queryClient.invalidateQueries({ queryKey: ['respostas', unidadeId] });
 
             } catch (err) {
@@ -271,7 +263,8 @@ export default function VistoriarUnidade() {
             }
         };
 
-        const timer = setTimeout(processarBatch, 800);
+        // Debounce de 3s - só salva após usuário parar de responder
+        const timer = setTimeout(processarBatch, 3000);
         return () => clearTimeout(timer);
     }, [filaRespostas, unidadeId, itensChecklist]);
 
@@ -285,7 +278,7 @@ export default function VistoriarUnidade() {
         onSuccess: ({ itemId, data }) => {
             const respostaAtual = respostasExistentes.find(r => r.item_checklist_id === itemId);
             
-            // Atualizar estado local imediatamente para feedback instantâneo
+            // Atualizar estado local INSTANTANEAMENTE para feedback visual imediato
             if (respostaAtual) {
                 setRespostas(prev => ({
                     ...prev,
@@ -306,10 +299,7 @@ export default function VistoriarUnidade() {
                 }));
             }
             
-            // Marcar timestamp da última resposta (delay 1s para próxima)
-            setUltimaRespostaTimestamp(Date.now());
-            
-            // Adicionar à fila para processamento em batch
+            // Adicionar à fila - debounce de 3s vai processar tudo de uma vez
             setFilaRespostas(prev => [...prev, { itemId, data }]);
         },
         onError: (err) => {
@@ -630,11 +620,6 @@ export default function VistoriarUnidade() {
 
     const handleResponder = (itemId, data) => {
         salvarRespostaMutation.mutate({ itemId, data });
-        
-        // Forçar re-render após 3s para liberar próxima pergunta (aumentado para evitar rate limit)
-        setTimeout(() => {
-            setUltimaRespostaTimestamp(0);
-        }, 3000);
     };
 
     const handleAddFoto = async (fotoData) => {
@@ -873,28 +858,16 @@ export default function VistoriarUnidade() {
                                 </CardContent>
                             </Card>
                         ) : (
-                            itensChecklist.map((item, index) => {
-                                // Verificar se é o primeiro item OU se o item anterior já foi respondido
-                                const itemAnterior = index > 0 ? itensChecklist[index - 1] : null;
-                                const itemAnteriorRespondido = !itemAnterior || respostas[itemAnterior.id]?.resposta;
-                                
-                                // Delay de 3s após última resposta (aumentado para evitar rate limit)
-                                const tempoDecorrido = Date.now() - ultimaRespostaTimestamp;
-                                const aguardandoDelay = itemAnteriorRespondido && tempoDecorrido < 3000;
-                                
-                                const liberado = itemAnteriorRespondido && !aguardandoDelay;
-                                
-                                return (
-                                    <ChecklistItem
-                                        key={item.id}
-                                        item={item}
-                                        resposta={respostas[item.id]}
-                                        onResponder={(data) => handleResponder(item.id, data)}
-                                        numero={index + 1}
-                                        desabilitado={(unidade?.status === 'finalizada' && !modoEdicao) || !liberado}
-                                    />
-                                );
-                            })
+                            itensChecklist.map((item, index) => (
+                                <ChecklistItem
+                                    key={item.id}
+                                    item={item}
+                                    resposta={respostas[item.id]}
+                                    onResponder={(data) => handleResponder(item.id, data)}
+                                    numero={index + 1}
+                                    desabilitado={unidade?.status === 'finalizada' && !modoEdicao}
+                                />
+                            ))
                         )}
                     </TabsContent>
 
