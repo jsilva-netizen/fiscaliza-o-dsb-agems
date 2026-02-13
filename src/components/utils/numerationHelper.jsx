@@ -20,38 +20,50 @@ export async function calcularProximaNumeracao(fiscalizacaoId, unidadeAtualId, b
     if (unidadesAnteriores.length > 0) {
         const idsUnidadesAnteriores = unidadesAnteriores.map(u => u.id);
 
-        // Processar em lotes pequenos para evitar rate limit
-        const batchSize = 2; // Processar 2 unidades por vez
+        // Processar UMA unidade por vez, UMA entidade por vez para evitar rate limit
         let respostas = [];
         let ncs = [];
         let determinacoes = [];
         let recomendacoes = [];
 
-        for (let i = 0; i < idsUnidadesAnteriores.length; i += batchSize) {
-            const batch = idsUnidadesAnteriores.slice(i, i + batchSize);
+        for (let i = 0; i < idsUnidadesAnteriores.length; i++) {
+            const unidadeId = idsUnidadesAnteriores[i];
             
-            const [batchRespostas, batchNcs, batchDeterminacoes, batchRecomendacoes] = await Promise.all([
-                Promise.all(batch.map(id => 
-                    base44.entities.RespostaChecklist.filter({ unidade_fiscalizada_id: id }, 'created_date', 500)
-                )).then(results => results.flat()),
-                Promise.all(batch.map(id => 
-                    base44.entities.NaoConformidade.filter({ unidade_fiscalizada_id: id }, 'created_date', 500)
-                )).then(results => results.flat()),
-                Promise.all(batch.map(id => 
-                    base44.entities.Determinacao.filter({ unidade_fiscalizada_id: id }, 'created_date', 500)
-                )).then(results => results.flat()),
-                Promise.all(batch.map(id => 
-                    base44.entities.Recomendacao.filter({ unidade_fiscalizada_id: id }, 'created_date', 500)
-                )).then(results => results.flat())
-            ]);
+            // Buscar uma entidade por vez com delay entre elas
+            const unidadeRespostas = await base44.entities.RespostaChecklist.filter(
+                { unidade_fiscalizada_id: unidadeId }, 
+                'created_date', 
+                500
+            );
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            const unidadeNcs = await base44.entities.NaoConformidade.filter(
+                { unidade_fiscalizada_id: unidadeId }, 
+                'created_date', 
+                500
+            );
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            const unidadeDeterminacoes = await base44.entities.Determinacao.filter(
+                { unidade_fiscalizada_id: unidadeId }, 
+                'created_date', 
+                500
+            );
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            const unidadeRecomendacoes = await base44.entities.Recomendacao.filter(
+                { unidade_fiscalizada_id: unidadeId }, 
+                'created_date', 
+                500
+            );
 
-            respostas = [...respostas, ...batchRespostas];
-            ncs = [...ncs, ...batchNcs];
-            determinacoes = [...determinacoes, ...batchDeterminacoes];
-            recomendacoes = [...recomendacoes, ...batchRecomendacoes];
+            respostas = [...respostas, ...unidadeRespostas];
+            ncs = [...ncs, ...unidadeNcs];
+            determinacoes = [...determinacoes, ...unidadeDeterminacoes];
+            recomendacoes = [...recomendacoes, ...unidadeRecomendacoes];
 
-            // Delay entre batches para evitar rate limit
-            if (i + batchSize < idsUnidadesAnteriores.length) {
+            // Delay entre unidades
+            if (i < idsUnidadesAnteriores.length - 1) {
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
         }

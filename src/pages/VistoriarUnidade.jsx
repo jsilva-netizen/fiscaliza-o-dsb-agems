@@ -79,8 +79,8 @@ export default function VistoriarUnidade() {
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
-        staleTime: 300000,
-        gcTime: 300000,
+        staleTime: Infinity,
+        gcTime: Infinity,
         refetchOnWindowFocus: false,
         refetchOnMount: false,
         refetchOnReconnect: false
@@ -93,8 +93,8 @@ export default function VistoriarUnidade() {
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
-        staleTime: 300000,
-        gcTime: 300000,
+        staleTime: Infinity,
+        gcTime: Infinity,
         refetchOnWindowFocus: false,
         refetchOnMount: false,
         refetchOnReconnect: false
@@ -109,8 +109,8 @@ export default function VistoriarUnidade() {
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
-        staleTime: 300000,
-        gcTime: 300000,
+        staleTime: Infinity,
+        gcTime: Infinity,
         refetchOnWindowFocus: false,
         refetchOnMount: false,
         refetchOnReconnect: false
@@ -123,8 +123,8 @@ export default function VistoriarUnidade() {
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
-        staleTime: 300000,
-        gcTime: 300000,
+        staleTime: Infinity,
+        gcTime: Infinity,
         refetchOnWindowFocus: false,
         refetchOnMount: false,
         refetchOnReconnect: false
@@ -137,8 +137,8 @@ export default function VistoriarUnidade() {
             return Array.isArray(result) ? result : [];
         },
         enabled: !!unidadeId,
-        staleTime: 300000,
-        gcTime: 300000,
+        staleTime: Infinity,
+        gcTime: Infinity,
         refetchOnWindowFocus: false,
         refetchOnMount: false,
         refetchOnReconnect: false
