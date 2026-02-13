@@ -834,6 +834,12 @@ export default function VistoriarUnidade() {
                         {/* Constatações do Checklist (depois) */}
                         {respostasExistentes
                             .filter(r => (r.resposta === 'SIM' || r.resposta === 'NAO') && r.pergunta && r.pergunta.trim())
+                            .sort((a, b) => {
+                                // Ordenar pela ordem do checklist
+                                const indexA = itensChecklist.findIndex(i => i.id === a.item_checklist_id);
+                                const indexB = itensChecklist.findIndex(i => i.id === b.item_checklist_id);
+                                return indexA - indexB;
+                            })
                             .map(resp => (
                                 <Card key={resp.id}>
                                     <CardContent className="p-4">
