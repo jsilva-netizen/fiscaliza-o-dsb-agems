@@ -20,20 +20,41 @@ export async function calcularProximaNumeracao(fiscalizacaoId, unidadeAtualId, b
     if (unidadesAnteriores.length > 0) {
         const idsUnidadesAnteriores = unidadesAnteriores.map(u => u.id);
 
-        const [respostas, ncs, determinacoes, recomendacoes] = await Promise.all([
-            Promise.all(idsUnidadesAnteriores.map(id => 
-                base44.entities.RespostaChecklist.filter({ unidade_fiscalizada_id: id }, 'created_date', 500)
-            )).then(results => results.flat()),
-            Promise.all(idsUnidadesAnteriores.map(id => 
-                base44.entities.NaoConformidade.filter({ unidade_fiscalizada_id: id }, 'created_date', 500)
-            )).then(results => results.flat()),
-            Promise.all(idsUnidadesAnteriores.map(id => 
-                base44.entities.Determinacao.filter({ unidade_fiscalizada_id: id }, 'created_date', 500)
-            )).then(results => results.flat()),
-            Promise.all(idsUnidadesAnteriores.map(id => 
-                base44.entities.Recomendacao.filter({ unidade_fiscalizada_id: id }, 'created_date', 500)
-            )).then(results => results.flat())
-        ]);
+        // Processar em lotes pequenos para evitar rate limit
+        const batchSize = 2; // Processar 2 unidades por vez
+        let respostas = [];
+        let ncs = [];
+        let determinacoes = [];
+        let recomendacoes = [];
+
+        for (let i = 0; i < idsUnidadesAnteriores.length; i += batchSize) {
+            const batch = idsUnidadesAnteriores.slice(i, i + batchSize);
+            
+            const [batchRespostas, batchNcs, batchDeterminacoes, batchRecomendacoes] = await Promise.all([
+                Promise.all(batch.map(id => 
+                    base44.entities.RespostaChecklist.filter({ unidade_fiscalizada_id: id }, 'created_date', 500)
+                )).then(results => results.flat()),
+                Promise.all(batch.map(id => 
+                    base44.entities.NaoConformidade.filter({ unidade_fiscalizada_id: id }, 'created_date', 500)
+                )).then(results => results.flat()),
+                Promise.all(batch.map(id => 
+                    base44.entities.Determinacao.filter({ unidade_fiscalizada_id: id }, 'created_date', 500)
+                )).then(results => results.flat()),
+                Promise.all(batch.map(id => 
+                    base44.entities.Recomendacao.filter({ unidade_fiscalizada_id: id }, 'created_date', 500)
+                )).then(results => results.flat())
+            ]);
+
+            respostas = [...respostas, ...batchRespostas];
+            ncs = [...ncs, ...batchNcs];
+            determinacoes = [...determinacoes, ...batchDeterminacoes];
+            recomendacoes = [...recomendacoes, ...batchRecomendacoes];
+
+            // Delay entre batches para evitar rate limit
+            if (i + batchSize < idsUnidadesAnteriores.length) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
 
         // Contar apenas respostas que são constatações (SIM ou NAO)
         contadores.C = respostas.filter(r => r.resposta === 'SIM' || r.resposta === 'NAO').length;
