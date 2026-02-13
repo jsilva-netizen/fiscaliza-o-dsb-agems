@@ -213,8 +213,15 @@ export default function VistoriarUnidade() {
                     return r.pergunta && r.pergunta.trim();
                 }).length + constatacoesManuais.length + 1;
 
+                // IMPORTANTE: Ordenar batch pela ordem do checklist antes de numerar
+                const batchOrdenado = batch.sort((a, b) => {
+                    const indexA = itensChecklist.findIndex(i => i.id === a.itemId);
+                    const indexB = itensChecklist.findIndex(i => i.id === b.itemId);
+                    return indexA - indexB;
+                });
+
                 // PASSO 1: Calcular números sequencialmente (garante ordem correta)
-                const respostasComNumeros = batch.map(({ itemId, data }) => {
+                const respostasComNumeros = batchOrdenado.map(({ itemId, data }) => {
                     const item = itensChecklist.find(i => i.id === itemId);
                     if (!item) return null;
 
