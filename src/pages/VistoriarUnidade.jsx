@@ -637,8 +637,24 @@ export default function VistoriarUnidade() {
     };
 
     const handleAddFoto = async (fotoData) => {
-        setFotos(prev => [...prev, fotoData]);
-        setFotosParaSalvar(prev => [...prev, fotoData]);
+        const novasFotos = [...fotos, fotoData];
+        setFotos(novasFotos);
+        
+        // Salvar imediatamente no banco para evitar race conditions
+        try {
+            const fotosCompletas = novasFotos.map(f => ({
+                url: f.url,
+                legenda: f.legenda || ''
+            }));
+            await base44.entities.UnidadeFiscalizada.update(unidadeId, {
+                fotos_unidade: fotosCompletas
+            });
+            queryClient.invalidateQueries({ queryKey: ['unidade', unidadeId] });
+        } catch (err) {
+            console.error('Erro ao salvar foto:', err);
+            // Reverter estado local se falhar
+            setFotos(fotos);
+        }
     };
 
     const handleRemoveFoto = (index) => {
