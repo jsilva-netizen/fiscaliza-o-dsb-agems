@@ -250,9 +250,9 @@ export default function VistoriarUnidade() {
 
                     if (temTexto) contadorC++;
                     
-                    // Delay entre operações para evitar rate limit (300ms)
+                    // Delay maior entre operações para evitar rate limit (600ms)
                     if (i < batch.length - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 300));
+                        await new Promise(resolve => setTimeout(resolve, 600));
                     }
                 }
 
@@ -264,7 +264,7 @@ export default function VistoriarUnidade() {
             }
         };
 
-        const timer = setTimeout(processarBatch, 300);
+        const timer = setTimeout(processarBatch, 800);
         return () => clearTimeout(timer);
     }, [filaRespostas, unidadeId, itensChecklist]);
 
@@ -624,10 +624,10 @@ export default function VistoriarUnidade() {
     const handleResponder = (itemId, data) => {
         salvarRespostaMutation.mutate({ itemId, data });
         
-        // Forçar re-render após 2s para liberar próxima pergunta
+        // Forçar re-render após 3s para liberar próxima pergunta (aumentado para evitar rate limit)
         setTimeout(() => {
             setUltimaRespostaTimestamp(0);
-        }, 2000);
+        }, 3000);
     };
 
     const handleAddFoto = async (fotoData) => {
@@ -871,9 +871,9 @@ export default function VistoriarUnidade() {
                                 const itemAnterior = index > 0 ? itensChecklist[index - 1] : null;
                                 const itemAnteriorRespondido = !itemAnterior || respostas[itemAnterior.id]?.resposta;
                                 
-                                // Delay de 2s após última resposta
+                                // Delay de 3s após última resposta (aumentado para evitar rate limit)
                                 const tempoDecorrido = Date.now() - ultimaRespostaTimestamp;
-                                const aguardandoDelay = itemAnteriorRespondido && tempoDecorrido < 2000;
+                                const aguardandoDelay = itemAnteriorRespondido && tempoDecorrido < 3000;
                                 
                                 const liberado = itemAnteriorRespondido && !aguardandoDelay;
                                 
