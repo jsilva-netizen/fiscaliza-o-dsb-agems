@@ -148,9 +148,11 @@ export default function PhotoGrid({
             {/* Grid de fotos */}
             {fotos.length > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {fotos.map((foto, index) => (
+                    {fotos.map((foto, index) => {
+                        if (!foto || !foto.url) return null;
+                        return (
                         <div 
-                            key={foto.url || index} 
+                            key={`foto-${index}-${foto.url.split('/').pop()}`}
                             className="relative group rounded-lg overflow-hidden border"
                         >
                             <OptimizedImage 
@@ -211,7 +213,7 @@ export default function PhotoGrid({
                             )}
 
                         </div>
-                    ))}
+                    )})}
                 </div>
             )}
 
