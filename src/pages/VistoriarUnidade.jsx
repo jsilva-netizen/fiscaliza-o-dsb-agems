@@ -153,9 +153,16 @@ export default function VistoriarUnidade() {
         }
     }, [unidade?.fotos_unidade]);
 
-    // Carregar contadores apenas na primeira resposta do checklist
+    // Carregar contadores apenas se a unidade NÃO está finalizada
+    // Unidades finalizadas já têm tudo gerado, não precisam de cálculo de numeração
     useEffect(() => {
         const carregarContadoresNaPrimeiraResposta = async () => {
+            // Não carregar se unidade já finalizada
+            if (unidade?.status === 'finalizada') {
+                setContadoresCarregados(true);
+                return;
+            }
+
             // Se ainda não temos respostas, continua aguardando
             if (respostasExistentes.length === 0 || contadoresCarregados) return;
 
@@ -170,7 +177,7 @@ export default function VistoriarUnidade() {
         if (unidade?.fiscalizacao_id && respostasExistentes.length > 0) {
             carregarContadoresNaPrimeiraResposta();
         }
-    }, [unidade?.fiscalizacao_id, unidadeId, respostasExistentes.length, contadoresCarregados]);
+    }, [unidade?.fiscalizacao_id, unidade?.status, unidadeId, respostasExistentes.length, contadoresCarregados]);
 
     // Carregar respostas apenas uma vez
     useEffect(() => {
