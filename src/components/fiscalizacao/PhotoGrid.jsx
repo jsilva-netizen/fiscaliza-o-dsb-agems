@@ -150,7 +150,7 @@ export default function PhotoGrid({
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {fotos.map((foto, index) => (
                         <div 
-                            key={index} 
+                            key={foto.url || index} 
                             className="relative group rounded-lg overflow-hidden border"
                         >
                             <OptimizedImage 
