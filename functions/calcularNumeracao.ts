@@ -35,40 +35,42 @@ Deno.serve(async (req) => {
             return Response.json({ success: true, contadores });
         }
 
-        // Solução otimizada: usar os totais já calculados e salvos em cada unidade
-        // Reduz de 4*N requisições para ZERO requisições adicionais!
-        // As unidades já têm total_constatacoes e total_ncs quando são finalizadas
+        // SOLUÇÃO ELEGANTE E INTELIGENTE:
+        // NC/D/R só são geradas ao finalizar a unidade!
+        // Então só contamos de unidades com status 'finalizada'
+        // Usamos os totais já salvos = ZERO queries extras!
         
-        for (const unidade of unidadesAnteriores) {
-            // Somar constatações (total já inclui checklist + manuais)
+        const unidadesFinalizadas = unidadesAnteriores.filter(u => u.status === 'finalizada');
+        
+        for (const unidade of unidadesFinalizadas) {
             contadores.C += unidade.total_constatacoes || 0;
-            
-            // Somar NCs
             contadores.NC += unidade.total_ncs || 0;
         }
 
-        // Para D e R, precisamos contar pois não temos totais salvos na unidade
-        // Mas fazemos sequencialmente para evitar rate limit
-        const idsUnidadesAnteriores = unidadesAnteriores.map(u => u.id);
+        // Para D e R não temos totais salvos, mas só precisamos buscar de unidades finalizadas
+        const idsFinalizadas = unidadesFinalizadas.map(u => u.id);
         
-        for (const unidadeId of idsUnidadesAnteriores) {
-            const determinacoes = await base44.asServiceRole.entities.Determinacao.filter(
-                { unidade_fiscalizada_id: unidadeId }, 
-                'created_date', 
-                500
-            );
-            contadores.D += determinacoes.length;
-            
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
-            const recomendacoes = await base44.asServiceRole.entities.Recomendacao.filter(
-                { unidade_fiscalizada_id: unidadeId }, 
-                'created_date', 
-                500
-            );
-            contadores.R += recomendacoes.length;
-            
-            await new Promise(resolve => setTimeout(resolve, 300));
+        if (idsFinalizadas.length > 0) {
+            // Buscar sequencialmente para evitar rate limit
+            for (const unidadeId of idsFinalizadas) {
+                const determinacoes = await base44.asServiceRole.entities.Determinacao.filter(
+                    { unidade_fiscalizada_id: unidadeId }, 
+                    'created_date', 
+                    500
+                );
+                contadores.D += determinacoes.length;
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                const recomendacoes = await base44.asServiceRole.entities.Recomendacao.filter(
+                    { unidade_fiscalizada_id: unidadeId }, 
+                    'created_date', 
+                    500
+                );
+                contadores.R += recomendacoes.length;
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
         }
 
         return Response.json({ success: true, contadores });
