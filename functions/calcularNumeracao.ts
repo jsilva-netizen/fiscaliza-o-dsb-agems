@@ -37,49 +37,67 @@ Deno.serve(async (req) => {
 
         const idsUnidadesAnteriores = unidadesAnteriores.map(u => u.id);
 
-        // Processar sequencialmente para evitar rate limit no backend
-        let respostas = [];
-        let ncs = [];
-        let determinacoes = [];
-        let recomendacoes = [];
+        // Estratégia otimizada: buscar TUDO da fiscalização de uma vez e filtrar em memória
+        // 4 requisições totais independente do número de unidades (vs 4xN antes)
+        const [todasRespostas, todasNcs, todasDeterminacoes, todasRecomendacoes] = await Promise.all([
+            // Buscar todas as respostas de todas as unidades da fiscalização
+            (async () => {
+                const respostasPorUnidade = [];
+                for (const unidadeId of idsUnidadesAnteriores) {
+                    const r = await base44.asServiceRole.entities.RespostaChecklist.filter(
+                        { unidade_fiscalizada_id: unidadeId }, 
+                        'created_date', 
+                        500
+                    );
+                    respostasPorUnidade.push(...r);
+                }
+                return respostasPorUnidade;
+            })(),
+            // Buscar todas as NCs
+            (async () => {
+                const ncsPorUnidade = [];
+                for (const unidadeId of idsUnidadesAnteriores) {
+                    const n = await base44.asServiceRole.entities.NaoConformidade.filter(
+                        { unidade_fiscalizada_id: unidadeId }, 
+                        'created_date', 
+                        500
+                    );
+                    ncsPorUnidade.push(...n);
+                }
+                return ncsPorUnidade;
+            })(),
+            // Buscar todas as Determinações
+            (async () => {
+                const detsPorUnidade = [];
+                for (const unidadeId of idsUnidadesAnteriores) {
+                    const d = await base44.asServiceRole.entities.Determinacao.filter(
+                        { unidade_fiscalizada_id: unidadeId }, 
+                        'created_date', 
+                        500
+                    );
+                    detsPorUnidade.push(...d);
+                }
+                return detsPorUnidade;
+            })(),
+            // Buscar todas as Recomendações
+            (async () => {
+                const recsPorUnidade = [];
+                for (const unidadeId of idsUnidadesAnteriores) {
+                    const r = await base44.asServiceRole.entities.Recomendacao.filter(
+                        { unidade_fiscalizada_id: unidadeId }, 
+                        'created_date', 
+                        500
+                    );
+                    recsPorUnidade.push(...r);
+                }
+                return recsPorUnidade;
+            })()
+        ]);
 
-        for (const unidadeId of idsUnidadesAnteriores) {
-            // Buscar cada tipo de entidade sequencialmente com delay
-            const unidadeRespostas = await base44.asServiceRole.entities.RespostaChecklist.filter(
-                { unidade_fiscalizada_id: unidadeId }, 
-                'created_date', 
-                500
-            );
-            await new Promise(resolve => setTimeout(resolve, 200));
-            
-            const unidadeNcs = await base44.asServiceRole.entities.NaoConformidade.filter(
-                { unidade_fiscalizada_id: unidadeId }, 
-                'created_date', 
-                500
-            );
-            await new Promise(resolve => setTimeout(resolve, 200));
-            
-            const unidadeDeterminacoes = await base44.asServiceRole.entities.Determinacao.filter(
-                { unidade_fiscalizada_id: unidadeId }, 
-                'created_date', 
-                500
-            );
-            await new Promise(resolve => setTimeout(resolve, 200));
-            
-            const unidadeRecomendacoes = await base44.asServiceRole.entities.Recomendacao.filter(
-                { unidade_fiscalizada_id: unidadeId }, 
-                'created_date', 
-                500
-            );
-
-            respostas = [...respostas, ...unidadeRespostas];
-            ncs = [...ncs, ...unidadeNcs];
-            determinacoes = [...determinacoes, ...unidadeDeterminacoes];
-            recomendacoes = [...recomendacoes, ...unidadeRecomendacoes];
-
-            // Delay entre unidades
-            await new Promise(resolve => setTimeout(resolve, 300));
-        }
+        const respostas = todasRespostas;
+        const ncs = todasNcs;
+        const determinacoes = todasDeterminacoes;
+        const recomendacoes = todasRecomendacoes;
 
         // Contar apenas respostas que são constatações (SIM ou NAO)
         contadores.C = respostas.filter(r => r.resposta === 'SIM' || r.resposta === 'NAO').length;
