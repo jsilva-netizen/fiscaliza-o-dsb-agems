@@ -213,10 +213,10 @@ export default function VistoriarUnidade() {
                     return r.pergunta && r.pergunta.trim();
                 }).length + constatacoesManuais.length + 1;
 
-                // Processar todas as respostas em paralelo (muito mais rápido!)
-                const operacoes = batch.map(async ({ itemId, data }) => {
+                // PASSO 1: Calcular números sequencialmente (garante ordem correta)
+                const respostasComNumeros = batch.map(({ itemId, data }) => {
                     const item = itensChecklist.find(i => i.id === itemId);
-                    if (!item) return;
+                    if (!item) return null;
 
                     const respostaExistente = respostasAtuais.find(r => r.item_checklist_id === itemId);
                     
@@ -235,14 +235,21 @@ export default function VistoriarUnidade() {
 
                     const numeroConstatacao = temTexto ? `C${contadorC++}` : null;
                     
-                    const respostaData = {
-                        resposta: data.resposta,
-                        observacao: data.observacao || '',
-                        pergunta: textoConstatacao || '',
-                        numero_constatacao: numeroConstatacao,
-                        gera_nc: data.resposta === 'NAO' && item.gera_nc
+                    return {
+                        itemId,
+                        respostaExistente,
+                        respostaData: {
+                            resposta: data.resposta,
+                            observacao: data.observacao || '',
+                            pergunta: textoConstatacao || '',
+                            numero_constatacao: numeroConstatacao,
+                            gera_nc: data.resposta === 'NAO' && item.gera_nc
+                        }
                     };
+                }).filter(Boolean);
 
+                // PASSO 2: Salvar tudo em paralelo (performance)
+                const operacoes = respostasComNumeros.map(({ itemId, respostaExistente, respostaData }) => {
                     if (respostaExistente?.id) {
                         return base44.entities.RespostaChecklist.update(respostaExistente.id, respostaData);
                     } else {
