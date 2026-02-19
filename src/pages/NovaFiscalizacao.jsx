@@ -25,10 +25,12 @@ export default function NovaFiscalizacao() {
     const [gettingLocation, setGettingLocation] = useState(false);
     const [user, setUser] = useState(null);
 
-    const { data: municipios = [], isLoading: loadingMunicipios } = useQuery({
+    const { data: municipiosRaw = [], isLoading: loadingMunicipios } = useQuery({
         queryKey: ['municipios'],
         queryFn: () => base44.entities.Municipio.list('nome', 100)
     });
+
+    const municipios = [...municipiosRaw].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
     const { data: prestadores = [] } = useQuery({
         queryKey: ['prestadores'],
