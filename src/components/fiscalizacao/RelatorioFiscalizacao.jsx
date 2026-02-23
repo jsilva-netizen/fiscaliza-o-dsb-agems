@@ -344,9 +344,25 @@ export default function RelatorioFiscalizacao({ fiscalizacao }) {
 
                 if (ncs.length > 0) {
                     const ncsSorted = [...ncs].sort((a, b) => {
-                        const numA = parseInt(a.numero_nc?.replace('NC', '') || '999');
-                        const numB = parseInt(b.numero_nc?.replace('NC', '') || '999');
-                        return numA - numB;
+                        // Ordenar pela constatação relacionada, não pelo número da NC
+                        const respostaA = respostas.find(r => r.id === a.resposta_checklist_id);
+                        const respostaB = respostas.find(r => r.id === b.resposta_checklist_id);
+                        
+                        const constatacaoManualA = constatacoesManuais.find(cm => 
+                            !a.resposta_checklist_id && a.descricao && a.descricao.includes(cm.numero_constatacao)
+                        );
+                        const constatacaoManualB = constatacoesManuais.find(cm => 
+                            !b.resposta_checklist_id && b.descricao && b.descricao.includes(cm.numero_constatacao)
+                        );
+                        
+                        const numConstA = respostaA 
+                            ? parseInt(respostaA.numero_constatacao?.replace('C', '') || '999')
+                            : parseInt(constatacaoManualA?.numero_constatacao?.replace('C', '') || '999');
+                        const numConstB = respostaB 
+                            ? parseInt(respostaB.numero_constatacao?.replace('C', '') || '999')
+                            : parseInt(constatacaoManualB?.numero_constatacao?.replace('C', '') || '999');
+                        
+                        return numConstA - numConstB;
                     });
 
                     ncsSorted.forEach((nc) => {
