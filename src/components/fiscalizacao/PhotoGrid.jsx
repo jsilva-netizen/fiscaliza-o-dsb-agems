@@ -45,7 +45,7 @@ export default function PhotoGrid({
             for (const file of filesArray) {
                 try {
                     // Redimensionar e comprimir imagem antes do upload
-                    const resizedFile = await resizeAndCompressImage(file, 341, 263, 0.8);
+                    const resizedFile = await resizeAndCompressImage(file, 1024, 768, 0.88);
                     
                     const { file_url } = await base44.integrations.Core.UploadFile({ file: resizedFile });
                     
