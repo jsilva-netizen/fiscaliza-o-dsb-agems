@@ -27,7 +27,7 @@ export default function RelatorioUnidade({
                 canvas.height = img.height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0);
-                resolve(canvas.toDataURL('image/jpeg', 0.8));
+                resolve(canvas.toDataURL('image/jpeg', 0.92));
             };
             img.onerror = reject;
             img.src = url;
