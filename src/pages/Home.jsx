@@ -14,7 +14,8 @@ import {
     Building2,
     Users,
     FileText,
-    AlertTriangle
+    AlertTriangle,
+    DatabaseBackup
 } from 'lucide-react';
 
 export default function Home() {
