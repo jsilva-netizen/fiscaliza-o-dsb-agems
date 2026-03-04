@@ -78,6 +78,27 @@ export default function ExportarImportar() {
                 pacote.termos_notificacao.push(...termos);
             }
 
+            // Coletar todas as URLs de fotos do pacote
+            const fotosSet = new Set();
+            for (const unidade of pacote.unidades) {
+                if (Array.isArray(unidade.fotos_unidade)) {
+                    unidade.fotos_unidade.forEach(f => f?.url && fotosSet.add(f.url));
+                }
+            }
+            for (const nc of pacote.nao_conformidades) {
+                if (Array.isArray(nc.fotos)) {
+                    nc.fotos.forEach(url => url && fotosSet.add(url));
+                }
+            }
+            for (const termo of pacote.termos_notificacao) {
+                if (termo.arquivo_url) fotosSet.add(termo.arquivo_url);
+                if (termo.arquivo_protocolo_url) fotosSet.add(termo.arquivo_protocolo_url);
+                if (Array.isArray(termo.arquivos_resposta)) {
+                    termo.arquivos_resposta.forEach(a => a?.url && fotosSet.add(a.url));
+                }
+            }
+            pacote.fotos_urls = Array.from(fotosSet);
+
             const blob = new Blob([JSON.stringify(pacote, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
