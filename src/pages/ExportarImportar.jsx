@@ -109,7 +109,7 @@ export default function ExportarImportar() {
 
             setExportStatus({
                 tipo: 'sucesso',
-                msg: `Exportação concluída! ${fiscalizacoes.length} fiscalizações exportadas com sucesso.`
+                msg: `Exportação concluída! ${fiscalizacoes.length} fiscalizações e ${pacote.fotos_urls.length} URLs de fotos exportadas.`
             });
         } catch (err) {
             setExportStatus({ tipo: 'erro', msg: `Erro na exportação: ${err.message}` });
