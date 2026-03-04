@@ -55,6 +55,7 @@ import CamaraJulgamento from './pages/CamaraJulgamento';
 import Checklists from './pages/Checklists';
 import DetalhePrestador from './pages/DetalhePrestador';
 import ExecutarFiscalizacao from './pages/ExecutarFiscalizacao';
+import ExportarImportar from './pages/ExportarImportar';
 import Fiscalizacoes from './pages/Fiscalizacoes';
 import GerenciarTermos from './pages/GerenciarTermos';
 import GerenciarUsuarios from './pages/GerenciarUsuarios';
@@ -66,7 +67,6 @@ import PrestadoresServico from './pages/PrestadoresServico';
 import Relatorios from './pages/Relatorios';
 import TiposUnidade from './pages/TiposUnidade';
 import VistoriarUnidade from './pages/VistoriarUnidade';
-import ExportarImportar from './pages/ExportarImportar';
 import __Layout from './Layout.jsx';
 
 
@@ -79,6 +79,7 @@ export const PAGES = {
     "Checklists": Checklists,
     "DetalhePrestador": DetalhePrestador,
     "ExecutarFiscalizacao": ExecutarFiscalizacao,
+    "ExportarImportar": ExportarImportar,
     "Fiscalizacoes": Fiscalizacoes,
     "GerenciarTermos": GerenciarTermos,
     "GerenciarUsuarios": GerenciarUsuarios,
@@ -90,7 +91,6 @@ export const PAGES = {
     "Relatorios": Relatorios,
     "TiposUnidade": TiposUnidade,
     "VistoriarUnidade": VistoriarUnidade,
-    "ExportarImportar": ExportarImportar,
 }
 
 export const pagesConfig = {

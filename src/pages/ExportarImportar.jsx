@@ -26,78 +26,17 @@ export default function ExportarImportar() {
         setExportando(true);
         setExportStatus(null);
         try {
-            const addLog = (msg) => console.log(msg);
+            // Toda a coleta de dados é feita no backend para evitar rate limit
+            const response = await base44.functions.invoke('exportarFiscalizacoes', {});
+            const { pacote, aviso, error } = response.data;
 
-            addLog('Buscando fiscalizações finalizadas...');
-            const fiscalizacoes = await base44.entities.Fiscalizacao.filter({ status: 'finalizada' });
+            if (error) throw new Error(error);
 
-            if (fiscalizacoes.length === 0) {
-                setExportStatus({ tipo: 'aviso', msg: 'Nenhuma fiscalização finalizada encontrada.' });
+            if (aviso || !pacote) {
+                setExportStatus({ tipo: 'aviso', msg: aviso || 'Nenhuma fiscalização finalizada encontrada.' });
                 setExportando(false);
                 return;
             }
-
-            const pacote = {
-                versao: '1.0',
-                exportado_em: new Date().toISOString(),
-                total_fiscalizacoes: fiscalizacoes.length,
-                fiscalizacoes: [],
-                unidades: [],
-                respostas_checklist: [],
-                nao_conformidades: [],
-                determinacoes: [],
-                recomendacoes: [],
-                constatacoes_manuais: [],
-                termos_notificacao: [],
-                // Mapa de todas as URLs de fotos encontradas no pacote
-                fotos_urls: [],
-            };
-
-            for (const fisc of fiscalizacoes) {
-                pacote.fiscalizacoes.push(fisc);
-
-                const unidades = await base44.entities.UnidadeFiscalizada.filter({ fiscalizacao_id: fisc.id });
-                pacote.unidades.push(...unidades);
-
-                for (const unidade of unidades) {
-                    const [respostas, ncs, dets, recs, consts] = await Promise.all([
-                        base44.entities.RespostaChecklist.filter({ unidade_fiscalizada_id: unidade.id }),
-                        base44.entities.NaoConformidade.filter({ unidade_fiscalizada_id: unidade.id }),
-                        base44.entities.Determinacao.filter({ unidade_fiscalizada_id: unidade.id }),
-                        base44.entities.Recomendacao.filter({ unidade_fiscalizada_id: unidade.id }),
-                        base44.entities.ConstatacaoManual.filter({ unidade_fiscalizada_id: unidade.id }),
-                    ]);
-                    pacote.respostas_checklist.push(...respostas);
-                    pacote.nao_conformidades.push(...ncs);
-                    pacote.determinacoes.push(...dets);
-                    pacote.recomendacoes.push(...recs);
-                    pacote.constatacoes_manuais.push(...consts);
-                }
-
-                const termos = await base44.entities.TermoNotificacao.filter({ fiscalizacao_id: fisc.id });
-                pacote.termos_notificacao.push(...termos);
-            }
-
-            // Coletar todas as URLs de fotos do pacote
-            const fotosSet = new Set();
-            for (const unidade of pacote.unidades) {
-                if (Array.isArray(unidade.fotos_unidade)) {
-                    unidade.fotos_unidade.forEach(f => f?.url && fotosSet.add(f.url));
-                }
-            }
-            for (const nc of pacote.nao_conformidades) {
-                if (Array.isArray(nc.fotos)) {
-                    nc.fotos.forEach(url => url && fotosSet.add(url));
-                }
-            }
-            for (const termo of pacote.termos_notificacao) {
-                if (termo.arquivo_url) fotosSet.add(termo.arquivo_url);
-                if (termo.arquivo_protocolo_url) fotosSet.add(termo.arquivo_protocolo_url);
-                if (Array.isArray(termo.arquivos_resposta)) {
-                    termo.arquivos_resposta.forEach(a => a?.url && fotosSet.add(a.url));
-                }
-            }
-            pacote.fotos_urls = Array.from(fotosSet);
 
             const blob = new Blob([JSON.stringify(pacote, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -109,7 +48,7 @@ export default function ExportarImportar() {
 
             setExportStatus({
                 tipo: 'sucesso',
-                msg: `Exportação concluída! ${fiscalizacoes.length} fiscalizações e ${pacote.fotos_urls.length} URLs de fotos exportadas.`
+                msg: `Exportação concluída! ${pacote.total_fiscalizacoes} fiscalizações e ${pacote.fotos_urls.length} URLs de fotos exportadas.`
             });
         } catch (err) {
             setExportStatus({ tipo: 'erro', msg: `Erro na exportação: ${err.message}` });
