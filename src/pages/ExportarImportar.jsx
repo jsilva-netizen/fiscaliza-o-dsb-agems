@@ -143,6 +143,42 @@ export default function ExportarImportar() {
     };
 
     // ========================
+    // HELPER: Re-upload de foto por URL
+    // ========================
+    const reuploadFoto = async (urlOriginal, urlMap) => {
+        if (!urlOriginal || urlMap[urlOriginal]) return urlMap[urlOriginal] || urlOriginal;
+        try {
+            const response = await fetch(urlOriginal);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const blob = await response.blob();
+            const ext = urlOriginal.split('.').pop().split('?')[0] || 'jpg';
+            const file = new File([blob], `foto_migrada.${ext}`, { type: blob.type || 'image/jpeg' });
+            const { file_url } = await base44.integrations.Core.UploadFile({ file });
+            urlMap[urlOriginal] = file_url;
+            return file_url;
+        } catch {
+            // Se falhar, mantém URL original
+            urlMap[urlOriginal] = urlOriginal;
+            return urlOriginal;
+        }
+    };
+
+    // Substitui todas as URLs em uma estrutura de dados
+    const substituirUrls = (obj, urlMap) => {
+        if (!obj) return obj;
+        if (typeof obj === 'string') return urlMap[obj] || obj;
+        if (Array.isArray(obj)) return obj.map(item => substituirUrls(item, urlMap));
+        if (typeof obj === 'object') {
+            const novo = {};
+            for (const key of Object.keys(obj)) {
+                novo[key] = substituirUrls(obj[key], urlMap);
+            }
+            return novo;
+        }
+        return obj;
+    };
+
+    // ========================
     // IMPORTAÇÃO
     // ========================
     const importarDados = async () => {
@@ -159,6 +195,8 @@ export default function ExportarImportar() {
             const dados = previewImport.dados;
             // Mapa de IDs antigos -> novos
             const idMap = {};
+            // Mapa de URLs antigas -> novas
+            const urlMap = {};
 
             // 1. Fiscalizações
             addLog(`Importando ${dados.fiscalizacoes.length} fiscalizações...`);
