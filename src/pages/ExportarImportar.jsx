@@ -198,6 +198,20 @@ export default function ExportarImportar() {
             // Mapa de URLs antigas -> novas
             const urlMap = {};
 
+            // 0. Re-upload de fotos
+            const totalFotos = dados.fotos_urls?.length || 0;
+            if (totalFotos > 0) {
+                addLog(`Re-fazendo upload de ${totalFotos} fotos/arquivos...`);
+                let ok = 0, falhou = 0;
+                for (const url of dados.fotos_urls) {
+                    const resultado = await reuploadFoto(url, urlMap);
+                    if (resultado !== url) ok++;
+                    else falhou++;
+                    addLog(`  [${ok + falhou}/${totalFotos}] ${resultado !== url ? '✓' : '⚠ mantida original'} ${url.split('/').pop().substring(0, 40)}`);
+                }
+                addLog(`✓ Fotos: ${ok} re-uploadadas, ${falhou} mantidas como URL original`);
+            }
+
             // 1. Fiscalizações
             addLog(`Importando ${dados.fiscalizacoes.length} fiscalizações...`);
             for (const fisc of dados.fiscalizacoes) {
