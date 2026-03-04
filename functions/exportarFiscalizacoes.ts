@@ -2,18 +2,6 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-// Busca IDs em lotes sequenciais com delay para evitar rate limit
-async function fetchInBatches(ids, fetchFn, batchSize = 3, delayMs = 300) {
-    const results = [];
-    for (let i = 0; i < ids.length; i += batchSize) {
-        const batch = ids.slice(i, i + batchSize);
-        const batchResults = await Promise.all(batch.map(fetchFn));
-        results.push(...batchResults.flat());
-        if (i + batchSize < ids.length) await sleep(delayMs);
-    }
-    return results;
-}
-
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -22,51 +10,32 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const fiscalizacoes = await base44.entities.Fiscalizacao.filter({ status: 'finalizada' });
+        // Usar asServiceRole para buscar TUDO de uma vez sem rate limit por ID
+        const sr = base44.asServiceRole;
 
+        const fiscalizacoes = await sr.entities.Fiscalizacao.filter({ status: 'finalizada' }, null, 500);
         if (fiscalizacoes.length === 0) {
             return Response.json({ pacote: null, aviso: 'Nenhuma fiscalização finalizada encontrada.' });
         }
 
-        const fiscIds = fiscalizacoes.map(f => f.id);
+        const fiscIds = new Set(fiscalizacoes.map(f => f.id));
 
-        // Buscar unidades em lotes
-        const todasUnidades = await fetchInBatches(fiscIds, id =>
-            base44.entities.UnidadeFiscalizada.filter({ fiscalizacao_id: id })
-        );
+        // Buscar TODAS as entidades de uma vez (sem filtro por ID) e filtrar em memória
+        await sleep(100);
+        const todasUnidades = (await sr.entities.UnidadeFiscalizada.list(null, 1000))
+            .filter(u => fiscIds.has(u.fiscalizacao_id));
 
-        const unidadeIds = todasUnidades.map(u => u.id);
+        const unidadeIds = new Set(todasUnidades.map(u => u.id));
 
-        // Buscar dados por tipo, um tipo por vez, em lotes internos
-        await sleep(200);
-        const todasRespostas = await fetchInBatches(unidadeIds, id =>
-            base44.entities.RespostaChecklist.filter({ unidade_fiscalizada_id: id })
-        );
-
-        await sleep(200);
-        const todasNCs = await fetchInBatches(unidadeIds, id =>
-            base44.entities.NaoConformidade.filter({ unidade_fiscalizada_id: id })
-        );
-
-        await sleep(200);
-        const todasDets = await fetchInBatches(unidadeIds, id =>
-            base44.entities.Determinacao.filter({ unidade_fiscalizada_id: id })
-        );
-
-        await sleep(200);
-        const todasRecs = await fetchInBatches(unidadeIds, id =>
-            base44.entities.Recomendacao.filter({ unidade_fiscalizada_id: id })
-        );
-
-        await sleep(200);
-        const todasConsts = await fetchInBatches(unidadeIds, id =>
-            base44.entities.ConstatacaoManual.filter({ unidade_fiscalizada_id: id })
-        );
-
-        await sleep(200);
-        const todosTermos = await fetchInBatches(fiscIds, id =>
-            base44.entities.TermoNotificacao.filter({ fiscalizacao_id: id })
-        );
+        await sleep(100);
+        const [todasRespostas, todasNCs, todasDets, todasRecs, todasConsts, todosTermos] = await Promise.all([
+            sr.entities.RespostaChecklist.list(null, 2000).then(r => r.filter(x => unidadeIds.has(x.unidade_fiscalizada_id))),
+            sr.entities.NaoConformidade.list(null, 1000).then(r => r.filter(x => unidadeIds.has(x.unidade_fiscalizada_id))),
+            sr.entities.Determinacao.list(null, 1000).then(r => r.filter(x => unidadeIds.has(x.unidade_fiscalizada_id))),
+            sr.entities.Recomendacao.list(null, 1000).then(r => r.filter(x => unidadeIds.has(x.unidade_fiscalizada_id))),
+            sr.entities.ConstatacaoManual.list(null, 1000).then(r => r.filter(x => unidadeIds.has(x.unidade_fiscalizada_id))),
+            sr.entities.TermoNotificacao.list(null, 500).then(r => r.filter(x => fiscIds.has(x.fiscalizacao_id))),
+        ]);
 
         const pacote = {
             versao: '1.0',
