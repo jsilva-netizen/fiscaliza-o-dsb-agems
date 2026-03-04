@@ -49,6 +49,8 @@ export default function ExportarImportar() {
                 recomendacoes: [],
                 constatacoes_manuais: [],
                 termos_notificacao: [],
+                // Mapa de todas as URLs de fotos encontradas no pacote
+                fotos_urls: [],
             };
 
             for (const fisc of fiscalizacoes) {
