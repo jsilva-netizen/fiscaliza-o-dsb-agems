@@ -66,7 +66,6 @@ import PrestadoresServico from './pages/PrestadoresServico';
 import Relatorios from './pages/Relatorios';
 import TiposUnidade from './pages/TiposUnidade';
 import VistoriarUnidade from './pages/VistoriarUnidade';
-import ExportarImportar from './pages/ExportarImportar';
 import __Layout from './Layout.jsx';
 
 
@@ -90,7 +89,6 @@ export const PAGES = {
     "Relatorios": Relatorios,
     "TiposUnidade": TiposUnidade,
     "VistoriarUnidade": VistoriarUnidade,
-    "ExportarImportar": ExportarImportar,
 }
 
 export const pagesConfig = {
