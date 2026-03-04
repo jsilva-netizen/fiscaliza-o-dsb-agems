@@ -183,6 +183,18 @@ export default function Home() {
                             </Card>
                         </Link>
                     )}
+
+                    {isAdmin && (
+                        <Link to={createPageUrl('ExportarImportar')}>
+                            <Card className="bg-white/10 hover:bg-white/20 transition-all cursor-pointer border-white/20 h-full">
+                                <CardContent className="p-4 text-center">
+                                    <DatabaseBackup className="h-8 w-8 text-blue-300 mx-auto mb-2" />
+                                    <h3 className="text-white font-medium text-sm">Exportar / Importar</h3>
+                                    <p className="text-blue-300 text-xs">Migração de dados</p>
+                                </CardContent>
+                            </Card>
+                        </Link>
+                    )}
                 </div>
                 </>
                 )}
