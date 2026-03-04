@@ -216,7 +216,7 @@ export default function ExportarImportar() {
             addLog(`Importando ${dados.fiscalizacoes.length} fiscalizações...`);
             for (const fisc of dados.fiscalizacoes) {
                 const { id: oldId, created_date, updated_date, created_by, ...resto } = fisc;
-                const novo = await base44.entities.Fiscalizacao.create(resto);
+                const novo = await base44.entities.Fiscalizacao.create(substituirUrls(resto, urlMap));
                 idMap[oldId] = novo.id;
             }
             addLog(`✓ ${dados.fiscalizacoes.length} fiscalizações criadas`);
@@ -226,7 +226,7 @@ export default function ExportarImportar() {
             for (const unidade of dados.unidades) {
                 const { id: oldId, created_date, updated_date, created_by, ...resto } = unidade;
                 resto.fiscalizacao_id = idMap[resto.fiscalizacao_id] || resto.fiscalizacao_id;
-                const novo = await base44.entities.UnidadeFiscalizada.create(resto);
+                const novo = await base44.entities.UnidadeFiscalizada.create(substituirUrls(resto, urlMap));
                 idMap[oldId] = novo.id;
             }
             addLog(`✓ ${dados.unidades.length} unidades criadas`);
