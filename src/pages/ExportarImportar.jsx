@@ -268,7 +268,7 @@ export default function ExportarImportar() {
             for (const rec of dados.recomendacoes) {
                 const { id: oldId, created_date, updated_date, created_by, ...resto } = rec;
                 resto.unidade_fiscalizada_id = idMap[resto.unidade_fiscalizada_id] || resto.unidade_fiscalizada_id;
-                await base44.entities.Recomendacao.create(resto);
+                await base44.entities.Recomendacao.create(substituirUrls(resto, urlMap));
             }
             addLog(`✓ ${dados.recomendacoes.length} recomendações criadas`);
 
@@ -277,7 +277,7 @@ export default function ExportarImportar() {
             for (const con of dados.constatacoes_manuais) {
                 const { id: oldId, created_date, updated_date, created_by, ...resto } = con;
                 resto.unidade_fiscalizada_id = idMap[resto.unidade_fiscalizada_id] || resto.unidade_fiscalizada_id;
-                await base44.entities.ConstatacaoManual.create(resto);
+                await base44.entities.ConstatacaoManual.create(substituirUrls(resto, urlMap));
             }
             addLog(`✓ ${dados.constatacoes_manuais.length} constatações manuais criadas`);
 
@@ -286,7 +286,7 @@ export default function ExportarImportar() {
             for (const termo of dados.termos_notificacao) {
                 const { id: oldId, created_date, updated_date, created_by, ...resto } = termo;
                 resto.fiscalizacao_id = idMap[resto.fiscalizacao_id] || resto.fiscalizacao_id;
-                await base44.entities.TermoNotificacao.create(resto);
+                await base44.entities.TermoNotificacao.create(substituirUrls(resto, urlMap));
             }
             addLog(`✓ ${dados.termos_notificacao.length} termos criados`);
 
