@@ -247,7 +247,7 @@ export default function ExportarImportar() {
                 const { id: oldId, created_date, updated_date, created_by, ...resto } = nc;
                 resto.unidade_fiscalizada_id = idMap[resto.unidade_fiscalizada_id] || resto.unidade_fiscalizada_id;
                 if (resto.resposta_checklist_id) resto.resposta_checklist_id = idMap[resto.resposta_checklist_id] || resto.resposta_checklist_id;
-                const novo = await base44.entities.NaoConformidade.create(resto);
+                const novo = await base44.entities.NaoConformidade.create(substituirUrls(resto, urlMap));
                 idMap[oldId] = novo.id;
             }
             addLog(`✓ ${dados.nao_conformidades.length} NCs criadas`);
